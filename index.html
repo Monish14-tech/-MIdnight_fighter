@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MIDNIGHT - Neon Action</title>
+    <script>
+        window.onerror = function (message, source, lineno, colno, error) {
+            console.error(error);
+            const errorMsg = `GAME ERROR:\n${message}\nLine: ${lineno}`;
+            // Create a visible error overlay
+            const div = document.createElement('div');
+            div.style.position = 'fixed';
+            div.style.top = '0';
+            div.style.left = '0';
+            div.style.width = '100%';
+            div.style.background = 'rgba(255, 0, 0, 0.8)';
+            div.style.color = 'white';
+            div.style.padding = '20px';
+            div.style.zIndex = '9999';
+            div.style.fontFamily = 'monospace';
+            div.innerText = errorMsg;
+            document.body.appendChild(div);
+        };
+    </script>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    <div id="scanlines"></div>
+    <div id="vignette"></div>
+
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="ui-layer">
+            <div id="hud">
+                <div class="score-container">LEVEL: <span id="level-display">1</span></div>
+                <div class="score-container">HIGH SCORE: <span id="high-score-display">0</span></div>
+                <div class="score-container">SCORE: <span id="score-display">0</span></div>
+                <div class="health-container">HP: <div id="health-bar">
+                        <div id="health-fill"></div>
+                    </div>
+                </div>
+                <button id="pause-btn" class="icon-btn">II</button>
+            </div>
+
+            <div id="start-screen" class="screen active">
+                <h1 class="glitch" data-text="MIDNIGHT">MIDNIGHT</h1>
+                <p class="subtitle">NEON SURVIVAL</p>
+                <div class="controls-hint">
+                    <p>WASD / Joystick to Move</p>
+                    <p>SPACE / FIRE to Shoot</p>
+                    <p>SHIFT / Secondary to Missile</p>
+                </div>
+                <div class="menu-buttons">
+                    <button id="start-btn" class="neon-btn">INITIATE SEQUENCE</button>
+                    <button id="store-btn" class="neon-btn">ARMORY</button>
+                </div>
+                <p id="total-coins-display">COINS: 0</p>
+            </div>
+
+            <div id="store-screen" class="screen">
+                <h2>ARMORY</h2>
+                <div id="coins-display-store">COINS: 0</div>
+                <div id="ship-grid">
+                    <!-- Cards will be injected by JS -->
+                </div>
+                <button id="back-btn" class="neon-btn">BACK</button>
+            </div>
+
+            <div id="pause-menu" class="screen">
+                <h2>PAUSED</h2>
+                <div class="menu-buttons-vertical">
+                    <button id="resume-btn" class="neon-btn">RESUME</button>
+                    <button id="main-menu-btn" class="neon-btn">MAIN MENU</button>
+                </div>
+            </div>
+
+            <div id="game-over-screen" class="screen">
+                <h1 class="glitch" data-text="TERMINATED">TERMINATED</h1>
+                <p>FINAL SCORE: <span id="final-score">0</span></p>
+                <p>HIGH SCORE: <span id="final-high-score">0</span></p>
+                <p id="coins-earned-display" class="highlight-text"></p>
+
+                <div class="menu-buttons-vertical">
+                    <button id="restart-btn" class="neon-btn">REBOOT SYSTEM</button>
+                    <button id="go-to-store-btn" class="neon-btn">ARMORY</button>
+                    <button id="go-to-main-btn" class="neon-btn">MAIN MENU</button>
+                </div>
+            </div>
+
+            <!-- Mobile Controls -->
+            <div id="mobile-controls">
+                <div id="joystick-zone">
+                    <div id="joystick-knob"></div>
+                </div>
+                <div id="mobile-actions">
+                    <button id="missile-btn" class="mobile-btn">MISSILE</button>
+                    <button id="dash-btn" class="mobile-btn">FIRE</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="rotate-message">
+            <h2>ROTATE DEVICE</h2>
+            <p>LANDSCAPE MODE REQUIRED</p>
+        </div>
+    </div>
+
+    <script type="module" src="main.js"></script>
+</body>
+
+</html>
