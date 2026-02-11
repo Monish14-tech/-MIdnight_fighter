@@ -162,6 +162,28 @@ export class Game {
 
         // Hide pause menu initially
         document.getElementById('pause-menu').classList.remove('active');
+
+        // Setup full screen listener
+        this.fullScreenListener = () => this.enableFullScreen();
+        window.addEventListener('click', this.fullScreenListener, { once: true });
+        window.addEventListener('touchstart', this.fullScreenListener, { once: true });
+        window.addEventListener('keydown', this.fullScreenListener, { once: true });
+    }
+
+    enableFullScreen() {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
+            const docEl = document.documentElement;
+            const requestFullScreen = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
+
+            if (requestFullScreen) {
+                requestFullScreen.call(docEl).catch(err => {
+                    console.log(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+            }
+        }
+        window.removeEventListener('click', this.fullScreenListener);
+        window.removeEventListener('touchstart', this.fullScreenListener);
+        window.removeEventListener('keydown', this.fullScreenListener);
     }
 
     getShipStats(type) {

@@ -21,24 +21,34 @@ export class Enemy {
         this.color = '#ff0000';
         this.points = 100;
 
+        // Difficulty Scaling
+        const difficulty = this.game.difficultyMultiplier || 1;
+        const level = this.game.currentLevel || 1;
+
+        // Slight speed increase per difficulty level (10% per difficulty multiplier)
+        const speedMultiplier = 1 + (difficulty - 1) * 0.1;
+
+        // HP Scaling: +1 HP every 5 levels
+        const hpBonus = Math.floor((level - 1) / 5);
+
         if (this.type === 'chaser') {
-            this.speed = 150 + Math.random() * 50;
+            this.speed = (150 + Math.random() * 50) * speedMultiplier;
             this.color = '#ff3333'; // Neon Red
             this.radius = 12;
             this.points = 100;
-            this.health = 3;
+            this.health = 1 + hpBonus; // Was 3
         } else if (this.type === 'heavy') {
-            this.speed = 80;
+            this.speed = 80 * speedMultiplier;
             this.color = '#ffaa00'; // Neon Orange
             this.radius = 25;
             this.points = 300;
-            this.health = 10;
+            this.health = 5 + hpBonus; // Was 10. 5 allows for ~2-3 hits with stronger weapons or 5 with basic.
         } else if (this.type === 'shooter') {
-            this.speed = 100;
+            this.speed = 100 * speedMultiplier;
             this.color = '#ff00ff'; // Neon Pink
             this.radius = 15;
             this.points = 200;
-            this.health = 2;
+            this.health = 2 + hpBonus; // Was 2
             this.shootTimer = 0;
         }
     }
