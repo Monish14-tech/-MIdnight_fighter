@@ -36,6 +36,22 @@ export class PowerUp {
                 this.color = '#ffaa00'; // Orange
                 this.icon = '^';
                 break;
+            case 'shield':
+                this.color = '#00ccff'; // Light Blue
+                this.icon = 'S';
+                break;
+            case 'double_damage':
+                this.color = '#ff0066'; // Hot Pink
+                this.icon = 'D';
+                break;
+            case 'rapid_fire':
+                this.color = '#ffff00'; // Yellow
+                this.icon = 'R';
+                break;
+            default:
+                this.color = '#ffffff'; // White
+                this.icon = '?';
+                break;
         }
     }
 

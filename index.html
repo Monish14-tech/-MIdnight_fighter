@@ -8,7 +8,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>MIDNIGHT - Neon Action</title>
+    <title>COSMIC STRIKE - Neon Action</title>
     <script>
         window.onerror = function (message, source, lineno, colno, error) {
             console.error(error);
@@ -47,15 +47,31 @@
                 <div class="score-container">LEVEL: <span id="level-display">1</span></div>
                 <div class="score-container">HIGH SCORE: <span id="high-score-display">0</span></div>
                 <div class="score-container">SCORE: <span id="score-display">0</span></div>
+                <div class="score-container">ENEMIES: <span id="enemy-count">0</span></div>
                 <div class="health-container">HP: <div id="health-bar">
                         <div id="health-fill"></div>
+                    </div>
+                </div>
+                <div class="missile-container">MISSILE: <div id="missile-bar">
+                        <div id="missile-fill"></div>
                     </div>
                 </div>
                 <button id="pause-btn" class="icon-btn">II</button>
             </div>
 
+            <!-- AAA Features Layer -->
+            <div id="boss-hud">
+                <div class="boss-name" id="boss-name">DETECTING ANOMALY...</div>
+                <div id="boss-health-bar">
+                    <div id="boss-health-fill"></div>
+                </div>
+            </div>
+
+            <div id="warp-overlay"></div>
+            <div id="impact-overlay"></div>
+
             <div id="start-screen" class="screen active">
-                <h1 class="glitch" data-text="MIDNIGHT">MIDNIGHT</h1>
+                <h1 class="title glitch" data-text="COSMIC STRIKE">COSMIC STRIKE</h1>
                 <p class="subtitle">NEON SURVIVAL</p>
                 <div class="controls-hint">
                     <p>WASD / Joystick to Move</p>
@@ -65,6 +81,7 @@
                 <div class="menu-buttons">
                     <button id="start-btn" class="neon-btn">INITIATE SEQUENCE</button>
                     <button id="store-btn" class="neon-btn">ARMORY</button>
+                    <button id="fullscreen-btn" class="neon-btn">FULLSCREEN</button>
                 </div>
                 <p id="total-coins-display">COINS: 0</p>
             </div>

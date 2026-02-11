@@ -91,40 +91,55 @@ export class InputHandler {
     // Touch Logic
     onTouchStart(e) {
         e.preventDefault();
-        const touch = e.changedTouches[0];
-        const rect = e.target.getBoundingClientRect();
+        // Use changedTouches to handle multiple touches
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const touch = e.changedTouches[i];
+            const rect = e.target.getBoundingClientRect();
 
-        // Center of the joystick zone
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
+            // Center of the joystick zone
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
 
-        this.touch.active = true;
-        this.touch.originX = centerX;
-        this.touch.originY = centerY;
-        this.touch.currX = touch.clientX;
-        this.touch.currY = touch.clientY;
+            this.touch.active = true;
+            this.touch.id = touch.identifier; // Track specific touch ID
+            this.touch.originX = centerX;
+            this.touch.originY = centerY;
+            this.touch.currX = touch.clientX;
+            this.touch.currY = touch.clientY;
 
-        this.updateTouchDirection();
+            this.updateTouchDirection();
+        }
     }
 
     onTouchMove(e) {
         e.preventDefault();
-        const touch = e.changedTouches[0];
-        this.touch.currX = touch.clientX;
-        this.touch.currY = touch.clientY;
-        this.updateTouchDirection();
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const touch = e.changedTouches[i];
+            if (touch.identifier === this.touch.id) {
+                this.touch.currX = touch.clientX;
+                this.touch.currY = touch.clientY;
+                this.updateTouchDirection();
+                break;
+            }
+        }
     }
 
     onTouchEnd(e) {
         e.preventDefault();
-        this.touch.active = false;
-        this.touch.dx = 0;
-        this.touch.dy = 0;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === this.touch.id) {
+                this.touch.active = false;
+                this.touch.dx = 0;
+                this.touch.dy = 0;
+                this.touch.id = null;
 
-        // Reset Visuals
-        const knob = document.getElementById('joystick-knob');
-        if (knob) {
-            knob.style.transform = `translate(-50%, -50%)`;
+                // Reset Visuals
+                const knob = document.getElementById('joystick-knob');
+                if (knob) {
+                    knob.style.transform = `translate(-50%, -50%)`;
+                }
+                break;
+            }
         }
     }
 

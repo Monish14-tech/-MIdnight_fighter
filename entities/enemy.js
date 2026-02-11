@@ -1,3 +1,4 @@
+import { Projectile } from './projectile.js';
 import { Explosion } from './particle.js';
 
 export class Enemy {
@@ -69,6 +70,15 @@ export class Enemy {
         // Simple movement towards player
         this.x += Math.cos(this.angle) * effectiveSpeed * deltaTime;
         this.y += Math.sin(this.angle) * effectiveSpeed * deltaTime;
+
+        // Shooter Logic
+        if (this.type === 'shooter') {
+            this.shootTimer += deltaTime;
+            if (this.shootTimer > 2.0) {
+                this.shootTimer = 0;
+                this.game.projectiles.push(new Projectile(this.game, this.x, this.y, this.angle, 'bullet', 'enemy'));
+            }
+        }
 
         // Cleanup if way off screen
         if (this.x < -200 || this.x > this.game.width + 200 ||

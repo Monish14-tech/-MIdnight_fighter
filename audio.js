@@ -53,6 +53,13 @@ export class AudioController {
         noise.start();
     }
 
+    powerUp() {
+        // Arpeggio sound for power-up
+        this.playTone(440, 'sine', 0.1);
+        setTimeout(() => this.playTone(660, 'sine', 0.1), 50);
+        setTimeout(() => this.playTone(880, 'sine', 0.1), 100);
+    }
+
     gameOver() {
         this.playTone(100, 'sawtooth', 1.0);
         setTimeout(() => this.playTone(50, 'sawtooth', 1.0), 200);

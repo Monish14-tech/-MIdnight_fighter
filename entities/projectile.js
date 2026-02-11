@@ -1,10 +1,11 @@
 export class Projectile {
-    constructor(game, x, y, angle, type = 'bullet') {
+    constructor(game, x, y, angle, type = 'bullet', side = 'player') {
         this.game = game;
         this.x = x;
         this.y = y;
         this.angle = angle;
         this.type = type;
+        this.side = side;
         this.markedForDeletion = false;
 
         this.speed = 1000; // Default bullet speed
@@ -22,15 +23,25 @@ export class Projectile {
             this.homingRange = 5000; // Basically infinite
             this.target = null;
         }
+
+        this.isHoming = false; // Can be overridden after creation
     }
 
     update(deltaTime) {
-        if (this.type === 'missile') {
-            // Acceleration
-            if (this.speed < this.maxSpeed) {
-                this.speed += this.acceleration * deltaTime;
+        // Track age for lifetime-limited projectiles
+        if (this.lifetime !== undefined) {
+            this.age = (this.age || 0) + deltaTime;
+            if (this.age >= this.lifetime) {
+                this.markedForDeletion = true;
+                return;
             }
+        }
 
+        if (this.type === 'missile' && this.speed < this.maxSpeed) {
+            this.speed += this.acceleration * deltaTime;
+        }
+
+        if (this.type === 'missile' || this.isHoming) {
             // Homing Logic
             if (!this.target || this.target.markedForDeletion) {
                 this.findTarget();
@@ -71,16 +82,29 @@ export class Projectile {
         let closestDist = this.homingRange;
         this.target = null;
 
-        this.game.enemies.forEach(enemy => {
-            const dx = enemy.x - this.x;
-            const dy = enemy.y - this.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist < closestDist) {
-                closestDist = dist;
-                this.target = enemy;
+        if (this.side === 'player') {
+            // Player missiles target enemies and boss
+            this.game.enemies.forEach(enemy => {
+                if (enemy.markedForDeletion) return;
+                const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    this.target = enemy;
+                }
+            });
+            if (this.game.boss && !this.game.boss.markedForDeletion) {
+                const dist = Math.hypot(this.game.boss.x - this.x, this.game.boss.y - this.y);
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    this.target = this.game.boss;
+                }
             }
-        });
+        } else {
+            // Enemy missiles target player
+            if (this.game.player && !this.game.player.markedForDeletion) {
+                this.target = this.game.player;
+            }
+        }
     }
 
     draw(ctx) {

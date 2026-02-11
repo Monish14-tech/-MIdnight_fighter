@@ -78,6 +78,20 @@ export class Player {
         if (this.slowMotionTimer > 0) this.slowMotionTimer -= deltaTime;
         if (this.invulnerabilityTimer > 0) this.invulnerabilityTimer -= deltaTime;
 
+        // New power-up timers
+        if (this.doubleDamageTimer > 0) {
+            this.doubleDamageTimer -= deltaTime;
+            if (this.doubleDamageTimer <= 0 && this.baseDamage) {
+                this.damage = this.baseDamage; // Reset to normal damage
+            }
+        }
+        if (this.rapidFireTimer > 0) {
+            this.rapidFireTimer -= deltaTime;
+            if (this.rapidFireTimer <= 0 && this.baseFireRate) {
+                this.fireRate = this.baseFireRate; // Reset to normal fire rate
+            }
+        }
+
         // Weapon Cooldowns
         if (this.fireTimer > 0) this.fireTimer -= deltaTime;
         if (this.missileTimer > 0) this.missileTimer -= deltaTime;
@@ -96,9 +110,24 @@ export class Player {
         // Movement Logic
         const moveVec = input.getMovementVector();
 
-        // Update Angle if moving
-        if (moveVec.x !== 0 || moveVec.y !== 0) {
-            this.angle = Math.atan2(moveVec.y, moveVec.x);
+        // 360-Degree Face Direction (Aim Assist)
+        const nearestEnemy = this.findNearestEnemy(600); // 600px range
+        if (nearestEnemy) {
+            const dx = nearestEnemy.x - this.x;
+            const dy = nearestEnemy.y - this.y;
+            const targetAngle = Math.atan2(dy, dx);
+
+            // Smoother Aim Assist for fair play
+            let diff = targetAngle - this.angle;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            this.angle += diff * deltaTime * 8; // 8 is the "lock strength"
+        } else if (moveVec.x !== 0 || moveVec.y !== 0) {
+            const destAngle = Math.atan2(moveVec.y, moveVec.x);
+            let diff = destAngle - this.angle;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            this.angle += diff * deltaTime * 10;
         }
 
         let currentSpeed = this.speed;
@@ -149,22 +178,23 @@ export class Player {
 
     shoot(type) {
         if (type === 'bullet') {
-            // Dual fire from wings? Or single nose? Let's do Nose.
             const noseX = this.x + Math.cos(this.angle) * 20;
             const noseY = this.y + Math.sin(this.angle) * 20;
 
-            const p = new Projectile(this.game, noseX, noseY, this.angle, 'bullet');
-            p.damage = this.bulletDamage || 1; // Apply player damage stat
+            // Reduce accuracy with random spread (~10 degrees total spread)
+            const spread = (Math.random() - 0.5) * 0.18;
+            const p = new Projectile(this.game, noseX, noseY, this.angle + spread, 'bullet', 'player');
+            p.damage = this.bulletDamage || 1;
             this.game.projectiles.push(p);
 
-            if (this.game.audio) this.game.audio.dash(); // Use dash sound as shoot sound for now? Or new sound.
+            if (this.game.audio) this.game.audio.dash();
         } else if (type === 'missile') {
             const count = this.missileCount || 1;
             // Spread missiles if multiple
             for (let i = 0; i < count; i++) {
                 // Offset angle slightly for multiple missiles
                 const offset = count > 1 ? (i - (count - 1) / 2) * 0.2 : 0;
-                const p = new Projectile(this.game, this.x, this.y, this.angle + offset, 'missile');
+                const p = new Projectile(this.game, this.x, this.y, this.angle + offset, 'missile', 'player');
                 this.game.projectiles.push(p);
             }
             if (this.game.screenShake) this.game.screenShake.trigger(5, 0.2);
@@ -199,6 +229,14 @@ export class Player {
         } else if (this.speedBoostTimer > 0) {
             // Green glow for speed boost
             ctx.shadowColor = '#00ff00';
+            ctx.shadowBlur = 30;
+        } else if (this.doubleDamageTimer > 0) {
+            // Hot pink glow for double damage
+            ctx.shadowColor = '#ff0066';
+            ctx.shadowBlur = 35;
+        } else if (this.rapidFireTimer > 0) {
+            // Yellow glow for rapid fire
+            ctx.shadowColor = '#ffff00';
             ctx.shadowBlur = 30;
         } else if (this.damageFlashTimer > 0) {
             // Red flash when damaged
@@ -379,6 +417,95 @@ export class Player {
                 ctx.fillRect(-5, -15, 6, 10);
                 break;
 
+            case 'phantom': // PHANTOM - Stealth Glass Cannon
+                // Dark Purple/Black Stealth
+                const phantomGrad = ctx.createLinearGradient(-20, 0, 25, 0);
+                phantomGrad.addColorStop(0, '#1a001a');
+                phantomGrad.addColorStop(0.5, '#9900ff');
+                phantomGrad.addColorStop(1, '#cc66ff');
+                ctx.fillStyle = phantomGrad;
+
+                // Sleek Stealth Body
+                ctx.beginPath();
+                ctx.moveTo(30, 0); // Sharp nose
+                ctx.lineTo(10, 3);
+                ctx.lineTo(5, 15); // Angled wing
+                ctx.lineTo(-15, 12);
+                ctx.lineTo(-22, 0);
+                ctx.lineTo(-15, -12);
+                ctx.lineTo(5, -15);
+                ctx.lineTo(10, -3);
+                ctx.closePath();
+                ctx.fill();
+
+                // Stealth Coating Lines
+                ctx.strokeStyle = 'rgba(153,0,255,0.3)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                break;
+
+            case 'vanguard': // VANGUARD - Elite All-Rounder
+                // Cyan/Teal Elite
+                const vanguardGrad = ctx.createLinearGradient(-15, 0, 25, 0);
+                vanguardGrad.addColorStop(0, '#004d4d');
+                vanguardGrad.addColorStop(0.5, '#00ffcc');
+                vanguardGrad.addColorStop(1, '#ccffff');
+                ctx.fillStyle = vanguardGrad;
+
+                // Advanced Fighter Body
+                ctx.beginPath();
+                ctx.moveTo(25, 0);
+                ctx.lineTo(12, 6);
+                ctx.lineTo(8, 18); // Wing
+                ctx.lineTo(-8, 15);
+                ctx.lineTo(-18, 8);
+                ctx.lineTo(-18, -8);
+                ctx.lineTo(-8, -15);
+                ctx.lineTo(8, -18);
+                ctx.lineTo(12, -6);
+                ctx.closePath();
+                ctx.fill();
+
+                // Elite Markings
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(5, -2, 8, 4);
+                ctx.strokeStyle = '#00ffcc';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                break;
+
+            case 'juggernaut': // JUGGERNAUT - Ultimate Tank
+                // Orange/Bronze Heavy
+                const juggernautGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, 25);
+                juggernautGrad.addColorStop(0, '#ff9900');
+                juggernautGrad.addColorStop(0.7, '#cc6600');
+                juggernautGrad.addColorStop(1, '#663300');
+                ctx.fillStyle = juggernautGrad;
+
+                // Massive Fortress Body
+                ctx.beginPath();
+                ctx.moveTo(20, 0); // Blunt armored nose
+                ctx.lineTo(10, 10);
+                ctx.lineTo(5, 20); // Heavy wing
+                ctx.lineTo(-5, 22);
+                ctx.lineTo(-15, 18);
+                ctx.lineTo(-22, 10);
+                ctx.lineTo(-22, -10);
+                ctx.lineTo(-15, -18);
+                ctx.lineTo(-5, -22);
+                ctx.lineTo(5, -20);
+                ctx.lineTo(10, -10);
+                ctx.closePath();
+                ctx.fill();
+
+                // Heavy Armor Plating
+                ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                ctx.fillRect(-8, -8, 16, 16);
+                ctx.strokeStyle = '#ff9900';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(-8, -8, 16, 16);
+                break;
+
             default: // INTERCEPTOR (Standard)
                 // Sci-Fi Chrome/Cyan
                 const bodyGrad = ctx.createLinearGradient(-15, 0, 25, 0);
@@ -496,8 +623,21 @@ export class Player {
                 this.currentHealth = Math.min(this.currentHealth + 1, this.maxHealth);
                 break;
             case 'health_boost':
-                this.maxHealth += 1;
-                this.currentHealth += 1;
+                this.maxHealth = Math.min(this.maxHealth + 1, 10);
+                this.currentHealth = this.maxHealth;
+                break;
+            case 'shield':
+                this.invulnerableTimer = 5.0; // 5 seconds of shield
+                break;
+            case 'double_damage':
+                this.doubleDamageTimer = 10.0; // 10 seconds of double damage
+                if (!this.baseDamage) this.baseDamage = this.damage;
+                this.damage = this.baseDamage * 2;
+                break;
+            case 'rapid_fire':
+                this.rapidFireTimer = 8.0; // 8 seconds of rapid fire
+                if (!this.baseFireRate) this.baseFireRate = this.fireRate;
+                this.fireRate = this.baseFireRate * 0.5; // Double fire rate
                 break;
         }
 
@@ -509,5 +649,23 @@ export class Player {
 
     isInvulnerable() {
         return this.invulnerableTimer > 0 || this.invulnerabilityTimer > 0;
+    }
+
+    findNearestEnemy(range) {
+        let nearest = null;
+        let minDist = range;
+
+        this.game.enemies.forEach(enemy => {
+            const dx = enemy.x - this.x;
+            const dy = enemy.y - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < minDist) {
+                minDist = dist;
+                nearest = enemy;
+            }
+        });
+
+        return nearest;
     }
 }

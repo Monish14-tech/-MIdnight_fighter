@@ -3,7 +3,7 @@ import { Player } from './entities/player.js';
 import { Enemy } from './entities/enemy.js';
 import { Explosion } from './entities/particle.js';
 import { AudioController } from './audio.js';
-import { ScreenShake } from './utils.js';
+import { ScreenShake, Nebula, CosmicDust, Planet, Asteroid } from './utils.js';
 import { PowerUp } from './entities/powerup.js';
 
 export const SHIP_DATA = {
@@ -12,7 +12,10 @@ export const SHIP_DATA = {
     'scout': { name: 'RAZORBACK', price: 1500, hp: 2, speed: 400, damage: 1, fireRate: 0.12, missileCount: 1, color: '#ffff00', desc: 'High speed, fragile.' },
     'fighter': { name: 'CRIMSON FURY', price: 3000, hp: 3, speed: 320, damage: 2, fireRate: 0.15, missileCount: 1, color: '#ff0055', desc: 'Double bullet damage.' },
     'rapid': { name: 'STORM BRINGER', price: 5000, hp: 3, speed: 300, damage: 1, fireRate: 0.08, missileCount: 1, color: '#aa00ff', desc: 'Insane fire rate.' },
-    'bomber': { name: 'DOOMSDAY', price: 8000, hp: 4, speed: 280, damage: 1, fireRate: 0.18, missileCount: 2, color: '#ff6600', desc: 'Fires 2 missiles at once.' }
+    'bomber': { name: 'DOOMSDAY', price: 8000, hp: 4, speed: 280, damage: 1, fireRate: 0.18, missileCount: 2, color: '#ff6600', desc: 'Fires 2 missiles at once.' },
+    'phantom': { name: 'PHANTOM', price: 6000, hp: 2, speed: 380, damage: 2, fireRate: 0.13, missileCount: 1, color: '#9900ff', desc: 'Fast glass cannon.' },
+    'vanguard': { name: 'VANGUARD', price: 10000, hp: 4, speed: 320, damage: 2, fireRate: 0.12, missileCount: 2, color: '#00ffcc', desc: 'Elite all-rounder.' },
+    'juggernaut': { name: 'JUGGERNAUT', price: 15000, hp: 7, speed: 220, damage: 1, fireRate: 0.25, missileCount: 3, color: '#ff9900', desc: 'Ultimate tank, 3 missiles.' }
 };
 
 export class Game {
@@ -59,6 +62,19 @@ export class Game {
         this.projectiles = [];
         this.afterburners = [];
         this.powerups = [];
+        this.nebulas = [];
+        this.cosmicDust = [];
+        this.planets = [];
+        this.asteroids = [];
+
+        // AAA State
+        this.impactTimer = 0;
+        this.isWarping = false;
+        this.warpTimer = 0;
+        this.boss = null;
+        this.bossTimer = 0;
+        this.timeScale = 1.0;
+        this.slowMoTimer = 0;
 
         // Timers
         this.enemyTimer = 0;
@@ -70,7 +86,25 @@ export class Game {
         this.loop = this.loop.bind(this);
         this.resize = this.resize.bind(this);
 
+        this.initAtmosphere();
         this.addEventListeners();
+    }
+
+    initAtmosphere() {
+        import('./utils.js').then(m => {
+            for (let i = 0; i < 5; i++) this.nebulas.push(new m.Nebula(this));
+            for (let i = 0; i < 30; i++) this.cosmicDust.push(new m.CosmicDust(this));
+        });
+    }
+
+    triggerImpact(freezeTime = 0.05, flashIntense = 0.2) {
+        this.impactTimer = freezeTime;
+        const overlay = document.getElementById('impact-overlay');
+        if (overlay) {
+            overlay.style.opacity = flashIntense;
+            setTimeout(() => { if (overlay) overlay.style.opacity = 0; }, 50);
+        }
+        this.screenShake.trigger(15, 0.1);
     }
 
     addEventListeners() {
@@ -155,6 +189,10 @@ export class Game {
     init() {
         this.resize();
         this.drawBackground();
+
+        // Initialize cosmic atmosphere
+        this.initializeCosmicAtmosphere();
+
         console.log("MIDNIGHT Initialized");
         // Update coin display on start screen
         const coinEl = document.getElementById('total-coins-display');
@@ -163,28 +201,37 @@ export class Game {
         // Hide pause menu initially
         document.getElementById('pause-menu').classList.remove('active');
 
-        // Setup full screen listener
-        this.fullScreenListener = () => this.enableFullScreen();
-        window.addEventListener('click', this.fullScreenListener, { once: true });
-        window.addEventListener('touchstart', this.fullScreenListener, { once: true });
-        window.addEventListener('keydown', this.fullScreenListener, { once: true });
+        // Fullscreen Button
+        const fsBtn = document.getElementById('fullscreen-btn');
+        if (fsBtn) {
+            const toggleFs = (e) => {
+                if (e.type === 'touchstart') e.preventDefault();
+                this.toggleFullScreen();
+            };
+            fsBtn.addEventListener('click', toggleFs);
+            fsBtn.addEventListener('touchstart', toggleFs, { passive: false });
+        }
+
+        // Handle resize events
+        window.addEventListener('resize', () => this.resize());
+    }
+
+    toggleFullScreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+                console.log(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+            });
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
     }
 
     enableFullScreen() {
-        if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
-            const docEl = document.documentElement;
-            const requestFullScreen = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
-
-            if (requestFullScreen) {
-                requestFullScreen.call(docEl).catch(err => {
-                    console.log(`Error attempting to enable fullscreen: ${err.message}`);
-                });
-            }
-        }
-        window.removeEventListener('click', this.fullScreenListener);
-        window.removeEventListener('touchstart', this.fullScreenListener);
-        window.removeEventListener('keydown', this.fullScreenListener);
+        this.toggleFullScreen();
     }
+
 
     getShipStats(type) {
         return SHIP_DATA[type] || SHIP_DATA['default'];
@@ -192,33 +239,78 @@ export class Game {
 
     generateLevelThresholds() {
         const thresholds = [];
-        // Level 1: 0, Level 2: 500, Level 3: 1000, etc.
+        // Level 1: 0, Level 2: 1000, Level 3: 2000, etc.
         for (let i = 0; i <= 100; i++) {
-            thresholds.push(i * 500);
+            thresholds.push(i * 1000);
         }
         return thresholds;
     }
 
     checkLevelUp() {
-        // Safety: ensure currentLevel index is within bounds of levelThresholds
         if (this.currentLevel >= this.levelThresholds.length - 1) return;
 
         if (this.score >= this.levelThresholds[this.currentLevel]) {
             this.currentLevel++;
-            this.levelScore = this.score;
 
-            // Scaled difficulty capped at 5x
-            this.difficultyMultiplier = Math.min(5.0, 1 + (this.currentLevel - 1) * 0.15);
-
-            // Update intervals with safety bounds
-            this.enemyInterval = Math.max(0.3, 2.0 / this.difficultyMultiplier);
-            this.powerupInterval = Math.max(8, Math.min(20, 12 * this.difficultyMultiplier));
-
-            this.screenShake.trigger(30, 0.3);
-            if (this.audio) this.audio.dash();
-
-            console.log(`Level ${this.currentLevel}! Difficulty: ${this.difficultyMultiplier.toFixed(2)}x`);
+            // Trigger Boss Warp every 5 levels
+            if (this.currentLevel % 5 === 0) {
+                this.triggerWarp();
+            } else {
+                this.levelScore = this.score;
+                this.difficultyMultiplier = Math.min(5.0, 1 + (this.currentLevel - 1) * 0.15);
+                this.enemyInterval = Math.max(0.3, 2.0 / this.difficultyMultiplier);
+                this.screenShake.trigger(30, 0.3);
+                if (this.audio) this.audio.dash();
+            }
         }
+    }
+
+    triggerWarp() {
+        // Show boss alert instead of slow motion
+        this.showBossAlert();
+
+        setTimeout(() => {
+            this.spawnBoss();
+        }, 2000); // 2 second alert before boss spawns
+    }
+
+    showBossAlert() {
+        // Create alert overlay
+        const alertDiv = document.createElement('div');
+        alertDiv.id = 'boss-alert';
+        alertDiv.innerHTML = `
+            <div class="boss-alert-content">
+                <h1 class="glitch" data-text="⚠ WARNING ⚠">⚠ WARNING ⚠</h1>
+                <p class="boss-alert-text">ANOMALY DETECTED</p>
+                <p class="boss-alert-subtext">PREPARE FOR COMBAT</p>
+            </div>
+        `;
+        document.body.appendChild(alertDiv);
+
+        // Play alert sound
+        if (this.audio) this.audio.dash();
+
+        // Remove after 2 seconds
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 2000);
+    }
+
+    spawnBoss() {
+        // Clear all enemies when boss appears
+        this.enemies.forEach(enemy => {
+            enemy.markedForDeletion = true;
+            this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
+        });
+        this.enemies = [];
+
+        import('./entities/boss.js').then(m => {
+            this.boss = new m.Boss(this, this.currentLevel);
+            const bossHud = document.getElementById('boss-hud');
+            if (bossHud) bossHud.classList.add('active');
+            const bossName = document.getElementById('boss-name');
+            if (bossName) bossName.innerText = this.currentLevel % 10 === 0 ? 'ELITE ANOMALY: THE FORTRESS' : 'ANOMALY DETECTED: V-STRIKE';
+        });
     }
 
     resize() {
@@ -229,12 +321,14 @@ export class Game {
 
     startGame() {
         console.log('startGame() called');
-        this.score = 0;
-        this.currentLevel = 1;
-        this.difficultyMultiplier = 1.0;
-        this.gameOver = false;
         this.isRunning = true;
-        this.lastTime = 0;
+        this.gameOver = false;
+        this.isPaused = false;
+        this.score = 0;
+        this.currentLevel = 1; // Reset to level 1 on new game
+        this.boss = null;
+        this.difficultyMultiplier = 1.0; // Retained from original
+        this.lastTime = 0; // Retained from original
 
         this.enemies = [];
         this.particles = [];
@@ -294,13 +388,35 @@ export class Game {
         this.openStore();
     }
 
+    initializeCosmicAtmosphere() {
+        // Create nebulas for volumetric gas clouds
+        for (let i = 0; i < 5; i++) {
+            this.nebulas.push(new Nebula(this));
+        }
+
+        // Create cosmic dust particles for velocity effect
+        for (let i = 0; i < 100; i++) {
+            this.cosmicDust.push(new CosmicDust(this));
+        }
+
+        // Create planets
+        for (let i = 0; i < 3; i++) {
+            this.planets.push(new Planet(this));
+        }
+
+        // Create asteroids
+        for (let i = 0; i < 15; i++) {
+            this.asteroids.push(new Asteroid(this));
+        }
+    }
+
     loop(timestamp) {
         if (!this.isRunning) return;
 
         try {
             if (!this.lastTime || this.isPaused) { // If paused, just keep updating lastTime without processing?
-                // actually, if paused, we can just skip the whole loop body effectively, 
-                // BUT we need to handle the resume properly. 
+                // actually, if paused, we can just skip the whole loop body effectively,
+                // BUT we need to handle the resume properly.
                 // Better: if isPaused, just return early or requestFrame but don't update.
                 if (this.isPaused) {
                     this.lastTime = timestamp; // Keep clock running so no huge delta on resume
@@ -330,6 +446,21 @@ export class Game {
     update(deltaTime) {
         if (this.isPaused) return;
 
+        // Hit-Stop Impact Effect (Temporal Freeze)
+        if (this.impactTimer > 0) {
+            this.impactTimer -= deltaTime;
+            return;
+        }
+
+        // Warp Sequence handling
+        if (this.isWarping) {
+            this.cosmicDust.forEach(d => {
+                d.vy *= 10;
+                d.draw(this.ctx); // Extra speed visual during update loop too
+            });
+            return;
+        }
+
         // Safety cap for deltaTime
         const dt = Math.min(deltaTime, 0.1);
 
@@ -342,7 +473,7 @@ export class Game {
 
             // Spawn logic
             this.enemyTimer += dt;
-            if (this.enemyTimer > this.enemyInterval && this.enemies.length < 50) {
+            if (this.enemyTimer > this.enemyInterval && this.enemies.length < 50 && !this.boss) {
                 this.spawnEnemy();
                 this.enemyTimer = 0;
             }
@@ -357,6 +488,12 @@ export class Game {
             this.enemies.forEach(e => e.update(dt));
             this.projectiles.forEach(p => p.update(dt));
             this.powerups.forEach(p => p.update(dt));
+
+            if (this.boss) {
+                this.boss.update(dt);
+                this.updateBossUI();
+            }
+
             this.afterburners.forEach(a => {
                 if (a.update) a.update(dt);
                 else {
@@ -371,11 +508,6 @@ export class Game {
             this.checkPowerUpCollisions();
             this.checkLevelUp();
         } else {
-            // Game Over State: Only update particles
-            // We might want to keep updating enemies/explosions for visual flair?
-            // Let's just update particles for now to keep it clean.
-            // Actually, let's update everything except Player and Spawning to show the chaos continuing!
-
             this.enemies.forEach(e => e.update(dt));
             this.projectiles.forEach(p => p.update(dt));
             this.afterburners.forEach(a => {
@@ -394,10 +526,39 @@ export class Game {
         this.powerups = this.powerups.filter(p => !p.markedForDeletion);
         this.afterburners = this.afterburners.filter(a => !a.markedForDeletion);
 
+        // Cleanup Boss
+        if (this.boss && this.boss.markedForDeletion) {
+            this.boss = null;
+            const bossHud = document.getElementById('boss-hud');
+            if (bossHud) bossHud.classList.remove('active');
+        }
+
         this.updateUI();
     }
 
+    updateBossUI() {
+        if (!this.boss) return;
+        const fill = document.getElementById('boss-health-fill');
+        if (fill) {
+            const pct = (this.boss.health / this.boss.maxHealth) * 100;
+            fill.style.width = `${pct}%`;
+        }
+    }
+
     draw() {
+        // Cosmic Atmosphere Background Layer
+        // Draw nebulas (volumetric gas clouds)
+        this.nebulas.forEach(nebula => nebula.draw(this.ctx));
+
+        // Draw planets
+        this.planets.forEach(planet => planet.draw(this.ctx));
+
+        // Draw asteroids
+        this.asteroids.forEach(asteroid => asteroid.draw(this.ctx));
+
+        // Draw cosmic dust (high-speed particles)
+        this.cosmicDust.forEach(dust => dust.draw(this.ctx));
+
         // Background trail
         this.ctx.fillStyle = 'rgba(5, 5, 16, 0.3)';
         this.ctx.fillRect(0, 0, this.width, this.height);
@@ -407,6 +568,9 @@ export class Game {
 
         // Draw Player
         if (this.player && !this.gameOver) this.player.draw(this.ctx);
+
+        // Draw Boss
+        if (this.boss) this.boss.draw(this.ctx);
 
         // Draw Entities
         this.enemies.forEach(e => e.draw(this.ctx));
@@ -423,6 +587,10 @@ export class Game {
     drawBackground() {
         this.ctx.fillStyle = '#050510';
         this.ctx.fillRect(0, 0, this.width, this.height);
+
+        // Draw AAA Atmosphere
+        this.nebulas.forEach(n => n.draw(this.ctx));
+        this.cosmicDust.forEach(d => d.draw(this.ctx));
 
         // Grid lines
         this.ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
@@ -451,13 +619,13 @@ export class Game {
     }
 
     spawnPowerUp() {
-        const types = ['speed', 'slowmo', 'invulnerability', 'health_recover', 'health_boost'];
+        const types = ['speed', 'slowmo', 'invulnerability', 'health_recover', 'health_boost', 'shield', 'double_damage', 'rapid_fire'];
         const type = types[Math.floor(Math.random() * types.length)];
         this.powerups.push(new PowerUp(this, type));
     }
 
     checkCollisions() {
-        if (!this.player || this.gameOver) return;
+        if (!this.player || this.gameOver || this.isWarping) return;
 
         this.enemies.forEach(enemy => {
             if (enemy.markedForDeletion) return;
@@ -468,60 +636,116 @@ export class Game {
 
             if (distance < enemy.radius + this.player.radius) {
                 if (this.player.isInvulnerable()) {
-                    // Enemy dies if player has invulnerability power-up? Or just push back?
-                    // Let's kill for now if invulnerable
                     enemy.markedForDeletion = true;
                     this.score += enemy.points;
                     this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
+                    this.triggerImpact(0.05, 0.2);
                     if (this.audio) this.audio.explosion();
                 } else {
-                    // Player takes damage
                     const playerDied = this.player.takeDamage(1);
+                    this.triggerImpact(0.1, 0.5);
+                    this.hudFlashDamage();
                     if (playerDied) {
                         this.handleGameOver();
                     } else {
-                        enemy.markedForDeletion = true; // Crash destroys enemy too? Or just damages player?
-                        // Let's destroy enemy on crash to prevent getting stuck inside
+                        enemy.markedForDeletion = true;
                         this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
                         this.screenShake.trigger(20, 0.2);
                     }
                 }
             }
         });
+
+        // Boss Collision
+        if (this.boss && !this.player.isInvulnerable()) {
+            const dx = this.boss.x - this.player.x;
+            const dy = this.boss.y - this.player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < this.boss.radius + this.player.radius) {
+                const died = this.player.takeDamage(1);
+                this.triggerImpact(0.15, 0.6);
+                this.hudFlashDamage();
+                if (died) this.handleGameOver();
+            }
+        }
     }
 
     checkProjectileCollisions() {
+        if (this.isWarping) return;
+
         this.projectiles.forEach(proj => {
             if (proj.markedForDeletion) return;
 
-            this.enemies.forEach(enemy => {
-                if (enemy.markedForDeletion || proj.markedForDeletion) return;
+            // Player vs Enemies/Boss
+            if (proj.side === 'player') {
+                this.enemies.forEach(enemy => {
+                    if (enemy.markedForDeletion || proj.markedForDeletion) return;
+                    const dx = proj.x - enemy.x;
+                    const dy = proj.y - enemy.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < enemy.radius + proj.radius) {
+                        proj.markedForDeletion = true;
+                        const dead = enemy.takeDamage(proj.damage);
+                        this.triggerImpact(0.03, 0.1);
+                        if (dead) {
+                            enemy.markedForDeletion = true;
+                            this.score += enemy.points;
+                            this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
+                            if (this.audio) this.audio.explosion();
+                        }
+                    }
+                });
 
-                const dx = proj.x - enemy.x;
-                const dy = proj.y - enemy.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-
-                if (distance < enemy.radius + proj.radius) {
-                    proj.markedForDeletion = true; // Destroy projectile
-
-                    // Damage Enemy
-                    const dead = enemy.takeDamage(proj.damage);
-
-                    // Hit effect
-                    // this.particles.push(new Spark(this, proj.x, proj.y, proj.color)); // functionality not in particle.js yet, skip for now or use mini explosion
-
-                    if (dead) {
-                        enemy.markedForDeletion = true;
-                        this.score += enemy.points;
-                        this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
-                        if (this.audio) this.audio.explosion();
-                        this.screenShake.trigger(5, 0.05);
-                    } else {
-                        // Flash enemy? Currently handled by simple hit
+                if (this.boss && !proj.markedForDeletion) {
+                    const dx = proj.x - this.boss.x;
+                    const dy = proj.y - this.boss.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < this.boss.radius + proj.radius) {
+                        proj.markedForDeletion = true;
+                        const dead = this.boss.takeDamage(proj.damage);
+                        this.triggerImpact(0.05, 0.2);
+                        if (dead) this.handleBossDefeat();
                     }
                 }
-            });
+            } else {
+                // Enemy vs Player
+                if (this.player && !this.player.isInvulnerable()) {
+                    const dx = proj.x - this.player.x;
+                    const dy = proj.y - this.player.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < this.player.radius + proj.radius) {
+                        proj.markedForDeletion = true;
+                        const died = this.player.takeDamage(proj.damage);
+                        this.triggerImpact(0.1, 0.5);
+                        this.hudFlashDamage();
+                        if (died) this.handleGameOver();
+                    }
+                }
+            }
         });
+    }
+
+    hudFlashDamage() {
+        const fill = document.getElementById('health-fill');
+        if (fill) {
+            fill.classList.add('damage-flash');
+            setTimeout(() => { if (fill) fill.classList.remove('damage-flash'); }, 200);
+        }
+    }
+
+    handleBossDefeat() {
+        if (!this.boss) return;
+        this.score += this.boss.points;
+        const bossPos = { x: this.boss.x, y: this.boss.y };
+        this.boss = null;
+
+        const bossHud = document.getElementById('boss-hud');
+        if (bossHud) bossHud.classList.remove('active');
+
+        // Cinematic Finisher - Slow Mo
+        this.impactTimer = 2.0;
+        this.screenShake.trigger(50, 1.0);
+        this.particles.push(new Explosion(this, bossPos.x, bossPos.y, '#ff0000'));
     }
 
     checkPowerUpCollisions() {
@@ -566,6 +790,27 @@ export class Game {
             if (Math.random() < 0.01) {
                 console.log(`Health Update: ${this.player.currentHealth}/${this.player.maxHealth} (${pct}%)`);
             }
+        }
+
+        // Update Missile Reload Bar
+        const missileFill = document.getElementById('missile-fill');
+        if (missileFill && this.player) {
+            const cooldownPct = Math.max(0, (this.player.missileCooldown - this.player.missileTimer) / this.player.missileCooldown) * 100;
+            missileFill.style.width = (100 - cooldownPct) + '%';
+
+            // Change color when ready
+            if (this.player.missileTimer <= 0) {
+                missileFill.style.background = '#00ff00';
+            } else {
+                missileFill.style.background = 'linear-gradient(90deg, #ff6600, #ff0000)';
+            }
+        }
+
+        // Update Enemy Counter
+        const enemyCountEl = document.getElementById('enemy-count');
+        if (enemyCountEl) {
+            const totalEnemies = this.enemies.length + (this.boss ? 1 : 0);
+            enemyCountEl.innerText = totalEnemies;
         }
     }
 
