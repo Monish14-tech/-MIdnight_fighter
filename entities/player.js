@@ -676,11 +676,57 @@ export class Player {
                 ctx.fillRect(5, -2, 25, 4);
                 break;
 
-            default: // DIAGNOSTIC RED SQUARE
-                ctx.fillStyle = 'red';
-                ctx.fillRect(-20, -20, 40, 40);
-                ctx.fillStyle = 'white';
-                ctx.fillText("?", -5, 5);
+            default: // INTERCEPTOR (Standard)
+                // Sci-Fi Chrome/Cyan
+                const bodyGrad = ctx.createLinearGradient(-15, 0, 25, 0);
+                bodyGrad.addColorStop(0, '#002233');
+                bodyGrad.addColorStop(0.4, '#00f3ff');
+                bodyGrad.addColorStop(1, '#ffffff');
+
+                ctx.fillStyle = bodyGrad;
+                ctx.beginPath();
+                ctx.moveTo(28, 0);  // Longer Nose
+                ctx.lineTo(15, 5);
+                ctx.lineTo(-10, 5);
+                ctx.lineTo(-20, 0);
+                ctx.lineTo(-10, -5);
+                ctx.lineTo(15, -5);
+                ctx.closePath();
+                ctx.fill();
+
+                // Wings with gradient
+                const wingGrad = ctx.createLinearGradient(0, 0, 0, 20);
+                wingGrad.addColorStop(0, '#00f3ff');
+                wingGrad.addColorStop(1, '#005577');
+                ctx.fillStyle = wingGrad;
+
+                // Right Wing
+                ctx.beginPath();
+                ctx.moveTo(8, 4);
+                ctx.lineTo(15, 18);
+                ctx.lineTo(5, 22);
+                ctx.lineTo(-8, 6);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Left Wing
+                ctx.beginPath();
+                ctx.moveTo(8, -4);
+                ctx.lineTo(15, -18);
+                ctx.lineTo(5, -22);
+                ctx.lineTo(-8, -6);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Cockpit Glass
+                ctx.fillStyle = '#ccffff';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#00f3ff';
+                ctx.beginPath();
+                ctx.ellipse(5, 0, 8, 3, 0, 0, Math.PI * 2);
+                ctx.fill();
                 break;
         }
 

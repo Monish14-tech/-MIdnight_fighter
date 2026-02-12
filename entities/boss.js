@@ -11,9 +11,9 @@ export class Boss {
 
         // Stats scale with level
         const levelScale = Math.max(1, level / 5);
-        this.maxHealth = Math.floor(80 * levelScale);
+        this.maxHealth = Math.floor(500 * levelScale); // Increased from 80
         this.health = this.maxHealth;
-        this.points = 2000 * levelScale;
+        this.points = 5000 * levelScale; // increased from 2000
         this.coinReward = Math.floor(500 * levelScale);
 
         // Initial Position logic
