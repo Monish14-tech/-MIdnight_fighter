@@ -262,7 +262,7 @@ export class Game {
             this.currentLevel++;
 
             // New Level Setup
-            this.enemiesForLevel = 10 + (this.currentLevel * 5);
+            this.enemiesForLevel = 5 + (this.currentLevel * 3);
             this.enemiesSpawned = 0;
 
             // Trigger Boss Warp every 5 levels
@@ -367,7 +367,7 @@ export class Game {
         this.lastTime = 0; // Retained from original
 
         // Level System Init
-        this.enemiesForLevel = 10 + (this.currentLevel * 5);
+        this.enemiesForLevel = 5 + (this.currentLevel * 3);
         this.enemiesSpawned = 0;
 
         this.enemies = [];
