@@ -11,10 +11,10 @@ export class Boss {
 
         // Stats scale with level
         const levelScale = Math.max(1, level / 5);
-        this.maxHealth = Math.floor(500 * levelScale); // Increased from 80
+        this.maxHealth = Math.floor(150 * levelScale); // Reduced from 500
         this.health = this.maxHealth;
-        this.points = 5000 * levelScale; // increased from 2000
-        this.coinReward = Math.floor(500 * levelScale);
+        this.points = 1500 * levelScale; // Reduced from 5000
+        this.coinReward = Math.floor(200 * levelScale); // Reduced from 500
 
         // Initial Position logic
         this.targetPoint = { x: game.width / 2, y: 150 }; // Default fight pos
