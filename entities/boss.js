@@ -203,7 +203,7 @@ export class Boss {
                 p.speed = 100; // Greatly reduced starting speed (was 200)
                 p.maxSpeed = 250; // Greatly reduced max speed (was 500)
                 p.acceleration = 150; // Greatly reduced acceleration (was 300)
-                p.lifetime = 2.0; // Disappear after 2 seconds (was 3.0)
+                p.lifetime = 4.0; // Increased to 4 seconds per user request
                 p.age = 0; // Track age
                 this.game.projectiles.push(p);
             });

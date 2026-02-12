@@ -35,6 +35,8 @@ body {
     max-width: 100%;
     max-height: 100%;
     background: #000;
+    touch-action: none;
+    /* Prevent scrolling on mobile */
 }
 
 canvas {
@@ -698,6 +700,25 @@ h1 {
 @media (hover: none) and (pointer: coarse) {
     #mobile-controls {
         display: flex;
+    }
+
+    /* Scale HUD down for mobile */
+    #hud {
+        transform: scale(0.8);
+        transform-origin: top left;
+        width: 125%;
+        /* Compensate for scale */
+    }
+}
+
+/* Landscape requirement enforcement for mobile */
+@media screen and (orientation: portrait) and (hover: none) and (pointer: coarse) {
+    #rotate-message {
+        display: flex;
+    }
+
+    #game-container {
+        display: none;
     }
 }
 

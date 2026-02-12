@@ -212,8 +212,8 @@ export class Game {
             fsBtn.addEventListener('touchstart', toggleFs, { passive: false });
         }
 
-        // Handle resize events
-        window.addEventListener('resize', () => this.resize());
+        // Resize listener is already added in constructor/addEventListeners
+
     }
 
     toggleFullScreen() {
@@ -352,6 +352,10 @@ export class Game {
         this.gameOverScreen.classList.remove('active');
         if (this.hud) this.hud.style.display = 'flex';
 
+        // Fix: Ensure Boss HUD is hidden on restart
+        const bossHud = document.getElementById('boss-hud');
+        if (bossHud) bossHud.classList.remove('active');
+
         this.player = new Player(this, this.selectedShip);
 
         requestAnimationFrame(this.loop);
@@ -378,6 +382,10 @@ export class Game {
         document.getElementById('pause-menu').classList.remove('active');
         this.gameOverScreen.classList.remove('active');
         if (this.hud) this.hud.style.display = 'none';
+
+        // Fix: Ensure Boss HUD is hidden when going to main menu
+        const bossHud = document.getElementById('boss-hud');
+        if (bossHud) bossHud.classList.remove('active');
 
         this.startScreen.classList.add('active');
         this.init(); // Refresh start screen data

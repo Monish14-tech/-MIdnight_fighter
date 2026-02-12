@@ -138,7 +138,7 @@ export class InputHandler {
                 if (knob) {
                     knob.style.transform = `translate(-50%, -50%)`;
                 }
-                break;
+                // Do NOT break here, in case there are weird edge cases, but conceptually unique.
             }
         }
     }

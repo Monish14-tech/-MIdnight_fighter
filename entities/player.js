@@ -111,7 +111,7 @@ export class Player {
         const moveVec = input.getMovementVector();
 
         // 360-Degree Face Direction (Aim Assist)
-        const nearestEnemy = this.findNearestEnemy(600); // 600px range
+        const nearestEnemy = this.findNearestEnemy(400); // Reduced range from 600
         if (nearestEnemy) {
             const dx = nearestEnemy.x - this.x;
             const dy = nearestEnemy.y - this.y;
@@ -121,7 +121,7 @@ export class Player {
             let diff = targetAngle - this.angle;
             while (diff > Math.PI) diff -= Math.PI * 2;
             while (diff < -Math.PI) diff += Math.PI * 2;
-            this.angle += diff * deltaTime * 8; // 8 is the "lock strength"
+            this.angle += diff * deltaTime * 4; // Reduced lock strength from 8
         } else if (moveVec.x !== 0 || moveVec.y !== 0) {
             const destAngle = Math.atan2(moveVec.y, moveVec.x);
             let diff = destAngle - this.angle;
