@@ -305,7 +305,9 @@ export class Game {
         this.enemies = [];
 
         import('./entities/boss.js').then(m => {
-            this.boss = new m.Boss(this, this.currentLevel);
+            const sides = ['top', 'left', 'right'];
+            const side = sides[Math.floor(Math.random() * sides.length)];
+            this.boss = new m.Boss(this, this.currentLevel, side);
             const bossHud = document.getElementById('boss-hud');
             if (bossHud) bossHud.classList.add('active');
             const bossName = document.getElementById('boss-name');

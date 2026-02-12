@@ -1,213 +1,274 @@
 import { Projectile } from './projectile.js';
+import { Explosion } from './particle.js';
 
 export class Boss {
-    constructor(game, level) {
+    constructor(game, level, side = 'top') {
         this.game = game;
         this.level = level;
+        this.side = side;
         this.type = 'boss';
         this.markedForDeletion = false;
 
-        // Stats scale with level - Increased for better challenge
-        const levelScale = level / 5;
-        this.maxHealth = Math.floor(50 * levelScale); // approx 50 HP at level 5
+        // Stats scale with level
+        const levelScale = Math.max(1, level / 5);
+        this.maxHealth = Math.floor(80 * levelScale);
         this.health = this.maxHealth;
-        this.points = 1000 * levelScale;
+        this.points = 2000 * levelScale;
 
-        // Position: Start off-screen and enter
-        this.x = game.width / 2;
-        this.y = -200;
-        this.targetY = 150;
+        // Initial Position logic
+        this.targetPoint = { x: game.width / 2, y: 150 }; // Default fight pos
+
+        if (this.side === 'left') {
+            this.x = -200;
+            this.y = game.height / 2;
+            this.targetPoint = { x: 150, y: game.height / 2 };
+        } else if (this.side === 'right') {
+            this.x = game.width + 200;
+            this.y = game.height / 2;
+            this.targetPoint = { x: game.width - 150, y: game.height / 2 };
+        } else { // top
+            this.x = game.width / 2;
+            this.y = -200;
+            this.targetPoint = { x: game.width / 2, y: 150 };
+        }
 
         this.radius = 65;
         this.color = level % 10 === 0 ? '#ff00ff' : '#ff3300';
 
         this.angle = Math.PI / 2;
         this.velocity = { x: 0, y: 0 };
-        this.speed = 120 + (levelScale * 15); // Slightly slower for fair play
+        this.speed = 150 + (levelScale * 10);
+        this.rotationSpeed = 2.0;
 
-        this.shootTimer = 0;
-        this.missileTimer = 0;
-        this.specialTimer = 0;
-        this.fireRate = Math.max(0.5, 1.6 - (levelScale * 0.1));
-        this.missileRate = 8.0; // Greatly increased from 4.5 for slower missile firing
-        this.specialRate = 6.0;
-
+        // State Machine
         this.state = 'entering';
+        this.stateTimer = 0;
         this.phase = 1;
+        this.currentAttack = null;
 
-        // Skill set based on level
-        this.skills = this.getSkillsForLevel(level);
+        // Attack Patterns
+        this.patterns = ['spiral', 'spread', 'rapid'];
+        if (this.level >= 10) this.patterns.push('dash');
 
-        this.targetPoint = { x: game.width / 2, y: this.targetY };
-        this.moveTimer = 0;
-        this.moveChangeRate = 2.5;
-
-        // Visual properties
-        this.rotationZ = 0;
+        // Visuals
         this.tilt = 0;
     }
 
-    getSkillsForLevel(level) {
-        if (level <= 5) return ['rapid_burst'];
-        if (level <= 10) return ['rapid_burst', 'shield_pulse'];
-        return ['rapid_burst', 'shield_pulse', 'homing_swarm'];
-    }
-
     update(deltaTime) {
-        if (this.state === 'entering') {
-            this.y += (this.targetY - this.y) * deltaTime * 2;
-            if (Math.abs(this.y - this.targetY) < 1) {
-                this.state = 'active';
-            }
-            return;
-        }
-
         if (this.game.gameOver) return;
 
-        // Skill Logic
-        this.specialTimer += deltaTime;
-        if (this.specialTimer > this.specialRate) {
-            this.useSpecialSkill();
-            this.specialTimer = 0;
-        }
-
-        // Movement AI: More deliberate movement
-        this.moveTimer += deltaTime;
-        if (this.moveTimer > this.moveChangeRate) {
-            this.moveTimer = 0;
-            const chance = Math.random();
-            if (chance < 0.6 && this.game.player) {
-                this.targetPoint = {
-                    x: this.game.player.x + (Math.random() - 0.5) * 300,
-                    y: Math.min(this.game.height * 0.4, this.game.player.y + (Math.random() - 0.5) * 200)
-                };
-            } else {
-                this.targetPoint = {
-                    x: this.radius + Math.random() * (this.game.width - this.radius * 2),
-                    y: 100 + Math.random() * (this.game.height * 0.3)
-                };
-            }
-        }
-
-        const dx = this.targetPoint.x - this.x;
-        const dy = this.targetPoint.y - this.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist > 10) {
-            const moveSpeed = this.speed * (this.phase === 2 ? 1.3 : 1.0);
-            this.x += (dx / dist) * moveSpeed * deltaTime;
-            this.y += (dy / dist) * moveSpeed * deltaTime;
-            // Visual tilt
-            this.tilt = (dx / dist) * 0.3;
-        } else {
-            this.tilt *= 0.9;
-        }
-
-        // Face player - Smoother rotation for fair play
-        if (this.game.player) {
-            const pdx = this.game.player.x - this.x;
-            const pdy = this.game.player.y - this.y;
-            const targetAngle = Math.atan2(pdy, pdx);
-
-            let diff = targetAngle - this.angle;
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            this.angle += diff * deltaTime * (this.phase === 2 ? 3 : 2);
-        }
-
-        // Shooting
-        this.shootTimer += deltaTime;
-        if (this.shootTimer > this.fireRate) {
-            this.shoot('bullet');
-            this.shootTimer = 0;
-        }
-
-        this.missileTimer += deltaTime;
-        if (this.missileTimer > this.missileRate) {
-            this.shoot('missile');
-            this.missileTimer = 0;
-        }
-
-        // Shield Pulse Effect
-        if (this.isInvulnerable) {
-            this.invulnerableTime -= deltaTime;
-            if (this.invulnerableTime <= 0) this.isInvulnerable = false;
-        }
+        this.stateTimer += deltaTime;
 
         // Phase Transition
         if (this.phase === 1 && this.health < this.maxHealth * 0.5) {
             this.phase = 2;
-            this.fireRate *= 0.7;
             if (this.game.screenShake) this.game.screenShake.trigger(30, 0.5);
+            // Push away effect and visual change
+            this.game.particles.push(new Explosion(this.game, this.x, this.y, '#ffffff'));
+            this.color = '#ff0000'; // Enrage color
+        }
+
+        switch (this.state) {
+            case 'entering': this.handleEntering(deltaTime); break;
+            case 'idle': this.handleIdle(deltaTime); break;
+            case 'attacking': this.handleAttacking(deltaTime); break;
+            case 'repositioning': this.handleRepositioning(deltaTime); break;
+            case 'dashing': this.handleDashing(deltaTime); break;
+        }
+
+        // Always face player (unless dashing)
+        if (this.state !== 'dashing' && this.game.player) {
+            const dx = this.game.player.x - this.x;
+            const dy = this.game.player.y - this.y;
+            const targetAngle = Math.atan2(dy, dx);
+
+            let diff = targetAngle - this.angle;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+
+            // Limit rotation speed
+            const rotStep = this.rotationSpeed * deltaTime;
+            if (Math.abs(diff) < rotStep) this.angle = targetAngle;
+            else this.angle += Math.sign(diff) * rotStep;
         }
     }
 
-    useSpecialSkill() {
-        const skill = this.skills[Math.floor(Math.random() * this.skills.length)];
-        switch (skill) {
-            case 'shield_pulse':
-                this.isInvulnerable = true;
-                this.invulnerableTime = 2.0;
-                break;
-            case 'homing_swarm':
-                this.shootHomingSwarm();
-                break;
-            case 'rapid_burst':
-                this.shootRapidBurst();
-                break;
+    handleEntering(deltaTime) {
+        const dx = this.targetPoint.x - this.x;
+        const dy = this.targetPoint.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < 5) {
+            this.state = 'idle';
+            this.stateTimer = 0;
+            this.velocity = { x: 0, y: 0 };
+        } else {
+            this.x += (dx / dist) * this.speed * deltaTime;
+            this.y += (dy / dist) * this.speed * deltaTime;
         }
     }
 
-    shootHomingSwarm() {
-        for (let i = 0; i < 6; i++) {
-            const angle = (Math.PI * 2 / 6) * i;
-            const p = new Projectile(this.game, this.x, this.y, angle, 'bullet', 'enemy');
-            p.speed = 150;
-            p.isHoming = true;
-            this.game.projectiles.push(p);
+    handleIdle(deltaTime) {
+        // Hover movement
+        this.y += Math.sin(this.stateTimer * 3) * 0.5;
+
+        // Visual wobble
+        this.tilt = Math.sin(this.stateTimer * 2) * 0.1;
+
+        if (this.stateTimer > 1.5) { // Idle duration
+            this.state = 'attacking';
+            this.stateTimer = 0;
+            // Pick random attack
+            this.currentAttack = this.patterns[Math.floor(Math.random() * this.patterns.length)];
+            // Lower chance for dash
+            if (this.currentAttack === 'dash' && Math.random() > 0.4) this.currentAttack = 'spread';
         }
     }
 
-    shootRapidBurst() {
-        let count = 0;
-        const interval = setInterval(() => {
-            if (this.markedForDeletion || count > 10) {
-                clearInterval(interval);
-                return;
+    handleAttacking(deltaTime) {
+        switch (this.currentAttack) {
+            case 'spiral': this.spiralShoot(deltaTime); break;
+            case 'spread': this.spreadShoot(deltaTime); break;
+            case 'rapid': this.rapidShoot(deltaTime); break;
+            case 'dash':
+                this.state = 'dashing';
+                this.prepareDash();
+                return; // Switch state immediately
+        }
+
+        // End attack after duration
+        const attackDuration = this.currentAttack === 'spiral' ? 3.0 : 2.0;
+        if (this.stateTimer > attackDuration) {
+            this.state = 'repositioning';
+            this.stateTimer = 0;
+            this.pickNewPosition();
+        }
+    }
+
+    pickNewPosition() {
+        const margin = 100;
+        this.targetPoint = {
+            x: margin + Math.random() * (this.game.width - margin * 2),
+            y: margin + Math.random() * (this.game.height * 0.5) // Top half
+        };
+    }
+
+    handleRepositioning(deltaTime) {
+        const dx = this.targetPoint.x - this.x;
+        const dy = this.targetPoint.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // Bank into turn
+        this.tilt = (dx / dist) * 0.3;
+
+        if (dist < 10) {
+            this.state = 'idle';
+            this.stateTimer = 0;
+            this.tilt = 0;
+        } else {
+            const moveSpeed = this.speed * 1.5;
+            this.x += (dx / dist) * moveSpeed * deltaTime;
+            this.y += (dy / dist) * moveSpeed * deltaTime;
+        }
+    }
+
+    prepareDash() {
+        if (!this.game.player) return;
+        this.dashTarget = { x: this.game.player.x, y: this.game.player.y };
+        this.stateTimer = 0;
+        // Warning flash
+        this.game.particles.push(new Explosion(this.game, this.x, this.y, '#ff0000'));
+    }
+
+    handleDashing(deltaTime) {
+        // 0.0 - 0.6s: Charge up (Shake and align)
+        // 0.6s - 1.2s: Dash forward
+        // > 1.2s: Cooldown / Exit
+
+        if (this.stateTimer < 0.6) {
+            // Shake
+            this.x += (Math.random() - 0.5) * 8;
+            this.y += (Math.random() - 0.5) * 8;
+
+            // Lock angle
+            const dx = this.dashTarget.x - this.x;
+            const dy = this.dashTarget.y - this.y;
+            this.angle = Math.atan2(dy, dx);
+
+        } else if (this.stateTimer < 1.2) {
+            const dashSpeed = 900;
+            this.x += Math.cos(this.angle) * dashSpeed * deltaTime;
+            this.y += Math.sin(this.angle) * dashSpeed * deltaTime;
+
+            // Trail
+            if (Math.random() < 0.5) {
+                this.game.particles.push(new Explosion(this.game, this.x, this.y, this.color));
             }
-            this.shoot('bullet');
-            count++;
-        }, 100);
+        } else {
+            this.state = 'idle';
+            this.stateTimer = 0;
+        }
     }
 
-    shoot(type) {
-        if (!this.game.player || this.game.gameOver) return;
+    spiralShoot(deltaTime) {
+        // Rotational fire
+        const fireRate = 0.08;
+        const totalShots = Math.floor(this.stateTimer / fireRate);
+        const prevShots = Math.floor((this.stateTimer - deltaTime) / fireRate);
 
-        if (type === 'bullet') {
-            const angles = this.phase === 2 ? [-0.2, 0, 0.2] : [0];
-            angles.forEach(offset => {
-                const p = new Projectile(this.game, this.x, this.y, this.angle + offset, 'bullet', 'enemy');
-                p.speed = 300 + (this.level * 2);
-                this.game.projectiles.push(p);
-            });
-        } else if (type === 'missile') {
-            const offsets = [-50, 50];
-            offsets.forEach(off => {
-                const missileX = this.x + Math.cos(this.angle + Math.PI / 2) * off;
-                const missileY = this.y + Math.sin(this.angle + Math.PI / 2) * off;
-                // Add random spread for reduced accuracy (±15 degrees)
-                const spread = (Math.random() - 0.5) * 0.5;
-                const p = new Projectile(this.game, missileX, missileY, this.angle + spread, 'missile', 'enemy');
-                p.damage = 1; // Further reduced to 1 for fair play
-                // Make boss missiles much slower and easier to dodge
-                p.speed = 100; // Greatly reduced starting speed (was 200)
-                p.maxSpeed = 250; // Greatly reduced max speed (was 500)
-                p.acceleration = 150; // Greatly reduced acceleration (was 300)
-                p.lifetime = 4.0; // Increased to 4 seconds per user request
-                p.age = 0; // Track age
-                this.game.projectiles.push(p);
-            });
+        if (totalShots > prevShots) {
+            const spin = this.stateTimer * 5;
+            const arms = this.phase === 2 ? 4 : 2;
+            for (let i = 0; i < arms; i++) {
+                const angle = spin + (Math.PI * 2 / arms) * i;
+                this.fireProjectile(this.x, this.y, angle, 'bullet');
+            }
         }
+    }
+
+    spreadShoot(deltaTime) {
+        const burstRate = 0.6;
+        const totalBursts = Math.floor(this.stateTimer / burstRate);
+        const prevBursts = Math.floor((this.stateTimer - deltaTime) / burstRate);
+
+        if (totalBursts > prevBursts) {
+            const count = this.phase === 2 ? 7 : 5;
+            const spread = 0.8; // Radians
+            const baseAngle = this.angle;
+            for (let i = 0; i < count; i++) {
+                const angle = baseAngle - spread / 2 + (spread / (count - 1)) * i;
+                this.fireProjectile(this.x, this.y, angle, 'bullet');
+            }
+        }
+    }
+
+    rapidShoot(deltaTime) {
+        const fireRate = 0.1;
+        const total = Math.floor(this.stateTimer / fireRate);
+        const prev = Math.floor((this.stateTimer - deltaTime) / fireRate);
+
+        if (total > prev) {
+            const offset = (Math.random() - 0.5) * 0.2;
+            this.fireProjectile(this.x, this.y, this.angle + offset, 'bullet');
+
+            // Occasionally fire a missile
+            if (Math.random() < 0.2) {
+                this.fireProjectile(this.x, this.y, this.angle + (Math.random() - 0.5), 'missile');
+            }
+        }
+    }
+
+    fireProjectile(x, y, angle, type) {
+        const p = new Projectile(this.game, x, y, angle, type, 'enemy');
+        if (type === 'missile') {
+            p.speed = 150;
+            p.maxSpeed = 300;
+            p.acceleration = 150;
+            p.lifetime = 4.0;
+        } else {
+            p.speed = 350 + (this.level * 5);
+        }
+        this.game.projectiles.push(p);
     }
 
     takeDamage(amount) {
