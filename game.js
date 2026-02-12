@@ -7,15 +7,15 @@ import { ScreenShake, Nebula, CosmicDust, Planet, Asteroid } from './utils.js';
 import { PowerUp } from './entities/powerup.js';
 
 export const SHIP_DATA = {
-    'default': { name: 'INTERCEPTOR', price: 0, hp: 3, speed: 300, damage: 1, fireRate: 0.15, missileCount: 1, color: '#00f3ff', desc: 'Balanced standard issue.' },
-    'tank': { name: 'V.G. TITAN', price: 1000, hp: 5, speed: 250, damage: 1, fireRate: 0.2, missileCount: 1, color: '#00ff44', desc: 'Heavy armor, slower speed.' },
-    'scout': { name: 'RAZORBACK', price: 1500, hp: 2, speed: 400, damage: 1, fireRate: 0.12, missileCount: 1, color: '#ffff00', desc: 'High speed, fragile.' },
-    'fighter': { name: 'CRIMSON FURY', price: 3000, hp: 3, speed: 320, damage: 2, fireRate: 0.15, missileCount: 1, color: '#ff0055', desc: 'Double bullet damage.' },
-    'rapid': { name: 'STORM BRINGER', price: 5000, hp: 3, speed: 300, damage: 1, fireRate: 0.08, missileCount: 1, color: '#aa00ff', desc: 'Insane fire rate.' },
-    'bomber': { name: 'DOOMSDAY', price: 8000, hp: 4, speed: 280, damage: 1, fireRate: 0.18, missileCount: 2, color: '#ff6600', desc: 'Fires 2 missiles at once.' },
-    'phantom': { name: 'PHANTOM', price: 6000, hp: 2, speed: 380, damage: 2, fireRate: 0.13, missileCount: 1, color: '#9900ff', desc: 'Fast glass cannon.' },
-    'vanguard': { name: 'VANGUARD', price: 10000, hp: 4, speed: 320, damage: 2, fireRate: 0.12, missileCount: 2, color: '#00ffcc', desc: 'Elite all-rounder.' },
-    'juggernaut': { name: 'JUGGERNAUT', price: 15000, hp: 7, speed: 220, damage: 1, fireRate: 0.25, missileCount: 3, color: '#ff9900', desc: 'Ultimate tank, 3 missiles.' }
+    'default': { name: 'INTERCEPTOR', price: 0, hp: 3, speed: 300, damage: 1, fireRate: 0.15, missileCooldown: 3.0, missileCount: 1, color: '#00f3ff', desc: 'Balanced standard issue.' },
+    'tank': { name: 'V.G. TITAN', price: 1000, hp: 5, speed: 250, damage: 1, fireRate: 0.2, missileCooldown: 4.0, missileCount: 1, color: '#00ff44', desc: 'Heavy armor, slower speed.' },
+    'scout': { name: 'RAZORBACK', price: 1500, hp: 2, speed: 400, damage: 1, fireRate: 0.12, missileCooldown: 2.5, missileCount: 1, color: '#ffff00', desc: 'High speed, fragile.' },
+    'fighter': { name: 'CRIMSON FURY', price: 3000, hp: 3, speed: 320, damage: 2, fireRate: 0.15, missileCooldown: 3.0, missileCount: 1, color: '#ff0055', desc: 'Double bullet damage.' },
+    'rapid': { name: 'STORM BRINGER', price: 5000, hp: 3, speed: 300, damage: 1, fireRate: 0.08, missileCooldown: 2.0, missileCount: 1, color: '#aa00ff', desc: 'Insane fire rate.' },
+    'bomber': { name: 'DOOMSDAY', price: 8000, hp: 4, speed: 280, damage: 1, fireRate: 0.18, missileCooldown: 5.0, missileCount: 2, color: '#ff6600', desc: 'Fires 2 missiles at once.' },
+    'phantom': { name: 'PHANTOM', price: 6000, hp: 2, speed: 380, damage: 2, fireRate: 0.13, missileCooldown: 2.0, missileCount: 1, color: '#9900ff', desc: 'Fast glass cannon.' },
+    'vanguard': { name: 'VANGUARD', price: 10000, hp: 4, speed: 320, damage: 2, fireRate: 0.12, missileCooldown: 3.5, missileCount: 2, color: '#00ffcc', desc: 'Elite all-rounder.' },
+    'juggernaut': { name: 'JUGGERNAUT', price: 15000, hp: 7, speed: 220, damage: 1, fireRate: 0.25, missileCooldown: 6.0, missileCount: 3, color: '#ff9900', desc: 'Ultimate tank, 3 missiles.' }
 };
 
 export class Game {

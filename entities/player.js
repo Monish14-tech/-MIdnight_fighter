@@ -41,7 +41,7 @@ export class Player {
         // Weapon System
         this.fireRate = stats.fireRate;
         this.fireTimer = 0;
-        this.missileCooldown = 5.0;
+        this.missileCooldown = stats.missileCooldown || 5.0;
         this.missileTimer = 0;
         this.bulletDamage = stats.damage;
         this.missileCount = stats.missileCount;

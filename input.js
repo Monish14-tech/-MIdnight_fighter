@@ -71,7 +71,8 @@ export class InputHandler {
         if (code === 'Space' || key === ' ') {
             this.keys.fire = true;
         }
-        if (code === 'ShiftLeft' || code === 'ShiftRight' || key === 'shift') {
+        if (code === 'AltLeft' || code === 'AltRight' || key === 'alt') {
+            e.preventDefault(); // Prevent browser menu
             this.keys.missile = true;
         }
     }
@@ -85,7 +86,10 @@ export class InputHandler {
         if (code === 'ArrowLeft' || key === 'a' || key === 'arrowleft') this.keys.left = false;
         if (code === 'ArrowRight' || key === 'd' || key === 'arrowright') this.keys.right = false;
         if (code === 'Space' || key === ' ') this.keys.fire = false;
-        if (code === 'ShiftLeft' || code === 'ShiftRight' || key === 'shift') this.keys.missile = false;
+        if (code === 'AltLeft' || code === 'AltRight' || key === 'alt') {
+            e.preventDefault();
+            this.keys.missile = false;
+        }
     }
 
     // Touch Logic
