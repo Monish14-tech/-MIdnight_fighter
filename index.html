@@ -10,10 +10,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>COSMIC STRIKE - Neon Action</title>
     <script>
+        // Visible Game Error Handler
         window.onerror = function (message, source, lineno, colno, error) {
             console.error(error);
             const errorMsg = `GAME ERROR:\n${message}\nLine: ${lineno}`;
-            // Create a visible error overlay
             const div = document.createElement('div');
             div.style.position = 'fixed';
             div.style.top = '0';
@@ -26,6 +26,34 @@
             div.style.fontFamily = 'monospace';
             div.innerText = errorMsg;
             document.body.appendChild(div);
+        };
+
+        // Suppress External Extension Errors (MetaMask, Enable Copy, etc.)
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        const originalLog = console.log;
+
+        const isExtensionError = (msg) => {
+            if (!msg) return false;
+            const str = String(msg).toLowerCase();
+            return str.includes('metamask') ||
+                str.includes('enable_copy') ||
+                str.includes('intrinsics') ||
+                str.includes('extension') ||
+                str.includes('unchecked runtime.lasterror');
+        };
+
+        console.error = function () {
+            if (isExtensionError(arguments[0])) return;
+            originalError.apply(console, arguments);
+        };
+        console.warn = function () {
+            if (isExtensionError(arguments[0])) return;
+            originalWarn.apply(console, arguments);
+        };
+        console.log = function () {
+            if (isExtensionError(arguments[0])) return;
+            originalLog.apply(console, arguments);
         };
     </script>
     <link rel="stylesheet" href="style.css">
