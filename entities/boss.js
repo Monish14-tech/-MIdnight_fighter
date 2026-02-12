@@ -7,9 +7,9 @@ export class Boss {
         this.type = 'boss';
         this.markedForDeletion = false;
 
-        // Stats scale with level - Reduced for better balance
+        // Stats scale with level - Increased for better challenge
         const levelScale = level / 5;
-        this.maxHealth = Math.floor(15 * levelScale * (levelScale > 2 ? 0.8 : 1.0));
+        this.maxHealth = Math.floor(50 * levelScale); // approx 50 HP at level 5
         this.health = this.maxHealth;
         this.points = 1000 * levelScale;
 
