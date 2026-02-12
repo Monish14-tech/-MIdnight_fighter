@@ -45,6 +45,7 @@ export class Player {
         this.missileTimer = 0;
         this.bulletDamage = stats.damage;
         this.missileCount = stats.missileCount;
+        this.bulletType = stats.bulletType || 'normal';
 
         // Visuals
         this.color = stats.color;
@@ -181,18 +182,49 @@ export class Player {
             const noseX = this.x + Math.cos(this.angle) * 20;
             const noseY = this.y + Math.sin(this.angle) * 20;
 
-            // Reduce accuracy with random spread (~10 degrees total spread)
-            const spread = (Math.random() - 0.5) * 0.18;
-            const p = new Projectile(this.game, noseX, noseY, this.angle + spread, 'bullet', 'player');
-            p.damage = this.bulletDamage || 1;
-            this.game.projectiles.push(p);
+            if (this.bulletType === 'spread') {
+                // Fire 3-5 bullets in a fan
+                const count = 3;
+                for (let i = 0; i < count; i++) {
+                    const offset = (i - (count - 1) / 2) * 0.2;
+                    const p = new Projectile(this.game, noseX, noseY, this.angle + offset, 'bullet', 'player');
+                    p.damage = this.bulletDamage || 1;
+                    this.game.projectiles.push(p);
+                }
+            } else if (this.bulletType === 'railgun') {
+                // Single huge high-speed high-damage shot
+                const p = new Projectile(this.game, noseX, noseY, this.angle, 'bullet', 'player');
+                p.speed = 2500;
+                p.damage = this.bulletDamage || 5;
+                p.radius = 8;
+                p.piercing = true;
+                p.color = '#ffffff';
+                this.game.projectiles.push(p);
+            } else if (this.bulletType === 'explosive') {
+                const p = new Projectile(this.game, noseX, noseY, this.angle, 'bullet', 'player');
+                p.damage = this.bulletDamage || 2;
+                p.explosive = true;
+                p.color = '#ffcc00';
+                p.radius = 6;
+                this.game.projectiles.push(p);
+            } else if (this.bulletType === 'piercing') {
+                const p = new Projectile(this.game, noseX, noseY, this.angle, 'bullet', 'player');
+                p.damage = this.bulletDamage || 1;
+                p.piercing = true;
+                p.color = '#00ff44';
+                this.game.projectiles.push(p);
+            } else {
+                // Default Normal Shot
+                const spread = (Math.random() - 0.5) * 0.1;
+                const p = new Projectile(this.game, noseX, noseY, this.angle + spread, 'bullet', 'player');
+                p.damage = this.bulletDamage || 1;
+                this.game.projectiles.push(p);
+            }
 
             if (this.game.audio) this.game.audio.dash();
         } else if (type === 'missile') {
             const count = this.missileCount || 1;
-            // Spread missiles if multiple
             for (let i = 0; i < count; i++) {
-                // Offset angle slightly for multiple missiles
                 const offset = count > 1 ? (i - (count - 1) / 2) * 0.2 : 0;
                 const p = new Projectile(this.game, this.x, this.y, this.angle + offset, 'missile', 'player');
                 this.game.projectiles.push(p);
@@ -506,57 +538,149 @@ export class Player {
                 ctx.strokeRect(-8, -8, 16, 16);
                 break;
 
-            default: // INTERCEPTOR (Standard)
-                // Sci-Fi Chrome/Cyan
-                const bodyGrad = ctx.createLinearGradient(-15, 0, 25, 0);
-                bodyGrad.addColorStop(0, '#002233');
-                bodyGrad.addColorStop(0.4, '#00f3ff');
-                bodyGrad.addColorStop(1, '#ffffff');
+            case 'void': // VOID STALKER - Triple Needle Stealth
+                const voidGrad = ctx.createLinearGradient(-20, 0, 40, 0);
+                voidGrad.addColorStop(0, '#000033');
+                voidGrad.addColorStop(0.5, '#4400ff');
+                voidGrad.addColorStop(1, '#000033');
+                ctx.fillStyle = voidGrad;
 
-                ctx.fillStyle = bodyGrad;
+                // Main Central Needle
                 ctx.beginPath();
-                ctx.moveTo(28, 0);  // Longer Nose
-                ctx.lineTo(15, 5);
-                ctx.lineTo(-10, 5);
-                ctx.lineTo(-20, 0);
-                ctx.lineTo(-10, -5);
-                ctx.lineTo(15, -5);
+                ctx.moveTo(40, 0);
+                ctx.lineTo(10, 4);
+                ctx.lineTo(-30, 0);
+                ctx.lineTo(10, -4);
                 ctx.closePath();
                 ctx.fill();
 
-                // Wings with gradient
-                const wingGrad = ctx.createLinearGradient(0, 0, 0, 20);
-                wingGrad.addColorStop(0, '#00f3ff');
-                wingGrad.addColorStop(1, '#005577');
-                ctx.fillStyle = wingGrad;
-
-                // Right Wing
+                // Side Needles (Outriggers)
+                ctx.fillStyle = '#8800ff';
                 ctx.beginPath();
-                ctx.moveTo(8, 4);
-                ctx.lineTo(15, 18);
-                ctx.lineTo(5, 22);
-                ctx.lineTo(-8, 6);
+                ctx.moveTo(25, 12);
+                ctx.lineTo(5, 14);
+                ctx.lineTo(-20, 12);
+                ctx.lineTo(5, 10);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(25, -12);
+                ctx.lineTo(5, -14);
+                ctx.lineTo(-20, -12);
+                ctx.lineTo(5, -10);
+                ctx.closePath();
+                ctx.fill();
+
+                // Connecting Rails
+                ctx.strokeStyle = '#4400ff';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(10, 4); ctx.lineTo(10, 12);
+                ctx.moveTo(10, -4); ctx.lineTo(10, -12);
+                ctx.moveTo(-10, 2); ctx.lineTo(-10, 11);
+                ctx.moveTo(-10, -2); ctx.lineTo(-10, -11);
+                ctx.stroke();
+                break;
+
+            case 'pulse': // NEON PULSE - Wingless Twin Core
+                const pulseGrad = ctx.createLinearGradient(-25, 0, 25, 0);
+                pulseGrad.addColorStop(0, '#00ffff');
+                pulseGrad.addColorStop(0.5, '#004444');
+                pulseGrad.addColorStop(1, '#00ffff');
+                ctx.fillStyle = pulseGrad;
+
+                // Two parallel sleek hulls
+                ctx.fillRect(-20, 6, 40, 6);
+                ctx.fillRect(-20, -12, 40, 6);
+
+                // Connecting bridge
+                ctx.fillStyle = '#00ffff';
+                ctx.fillRect(-5, -8, 10, 16);
+
+                // Front emitters
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(22, 9, 3, 0, Math.PI * 2);
+                ctx.arc(22, -9, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Vertical Stabilizers (Small)
+                ctx.fillStyle = 'rgba(0, 255, 255, 0.5)';
+                ctx.fillRect(-15, 12, 10, 4);
+                ctx.fillRect(-15, -16, 10, 4);
+                break;
+
+            case 'guardian': // GALAXY GUARDIAN - Massive Hex Fortress
+                const guardGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, 30);
+                guardGrad.addColorStop(0, '#ffffff');
+                guardGrad.addColorStop(0.4, '#888888');
+                guardGrad.addColorStop(1, '#222222');
+                ctx.fillStyle = guardGrad;
+
+                // Large Central Hexagon
+                ctx.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i * Math.PI) / 3;
+                    const rx = Math.cos(angle) * 28;
+                    const ry = Math.sin(angle) * 28;
+                    if (i === 0) ctx.moveTo(rx, ry);
+                    else ctx.lineTo(rx, ry);
+                }
                 ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
 
-                // Left Wing
-                ctx.beginPath();
-                ctx.moveTo(8, -4);
-                ctx.lineTo(15, -18);
-                ctx.lineTo(5, -22);
-                ctx.lineTo(-8, -6);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
+                // Outer Shield Plates
+                ctx.fillStyle = '#444';
+                ctx.fillRect(-32, 15, 15, 10);
+                ctx.fillRect(-32, -25, 15, 10);
 
-                // Cockpit Glass
-                ctx.fillStyle = '#ccffff';
-                ctx.shadowBlur = 10;
+                // Central Focus Core
+                ctx.fillStyle = '#00f3ff';
+                ctx.shadowBlur = 15;
                 ctx.shadowColor = '#00f3ff';
                 ctx.beginPath();
-                ctx.ellipse(5, 0, 8, 3, 0, 0, Math.PI * 2);
+                ctx.arc(0, 0, 12, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.shadowBlur = 0;
+                break;
+
+            case 'solar': // SOLAR FLARE - Panel Radiator
+                const solarGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, 20);
+                solarGrad.addColorStop(0, '#ffff00');
+                solarGrad.addColorStop(1, '#ff6600');
+                ctx.fillStyle = solarGrad;
+
+                // Spherical Core
+                ctx.beginPath();
+                ctx.arc(0, 0, 15, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Large Solar Panels (4 Wings)
+                ctx.fillStyle = '#ffaa00';
+                for (let i = 0; i < 4; i++) {
+                    ctx.save();
+                    ctx.rotate(i * Math.PI / 2 + Math.PI / 4);
+                    // Rectangular panel
+                    ctx.fillRect(8, -18, 20, 36);
+                    // Grid lines on panels
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(8, -18, 20, 36);
+                    ctx.restore();
+                }
+
+                // Central Glowing Rod
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(5, -2, 25, 4);
+                break;
+
+            default: // DIAGNOSTIC RED SQUARE
+                ctx.fillStyle = 'red';
+                ctx.fillRect(-20, -20, 40, 40);
+                ctx.fillStyle = 'white';
+                ctx.fillText("?", -5, 5);
                 break;
         }
 

@@ -25,6 +25,8 @@ export class Projectile {
         }
 
         this.isHoming = false; // Can be overridden after creation
+        this.piercing = false;
+        this.explosive = false;
     }
 
     update(deltaTime) {
@@ -118,7 +120,14 @@ export class Projectile {
             ctx.shadowBlur = 10;
             ctx.shadowColor = this.color;
             ctx.beginPath();
-            ctx.rect(-6, -2, 12, 4);
+
+            if (this.speed > 2000) { // Railgun / High speed
+                ctx.rect(-15, -1, 30, 2);
+            } else if (this.explosive) {
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+            } else {
+                ctx.rect(-6, -2, 12, 4);
+            }
             ctx.fill();
         } else if (this.type === 'missile') {
             ctx.shadowBlur = 15;

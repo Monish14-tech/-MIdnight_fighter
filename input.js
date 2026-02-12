@@ -5,8 +5,6 @@ export class InputHandler {
             down: false,
             left: false,
             right: false,
-            left: false,
-            right: false,
             fire: false,
             missile: false
         };
@@ -37,26 +35,34 @@ export class InputHandler {
         }
 
         if (dashBtn) {
-            dashBtn.addEventListener('touchstart', (e) => {
+            const handleFireStart = (e) => {
                 e.preventDefault();
                 this.keys.fire = true;
-            }, { passive: false });
-            dashBtn.addEventListener('touchend', (e) => {
+            };
+            const handleFireEnd = (e) => {
                 e.preventDefault();
                 this.keys.fire = false;
-            }, { passive: false });
+            };
+            dashBtn.addEventListener('touchstart', handleFireStart, { passive: false });
+            dashBtn.addEventListener('touchend', handleFireEnd, { passive: false });
+            dashBtn.addEventListener('mousedown', () => this.keys.fire = true);
+            dashBtn.addEventListener('mouseup', () => this.keys.fire = false);
         }
 
         const missileBtn = document.getElementById('missile-btn');
         if (missileBtn) {
-            missileBtn.addEventListener('touchstart', (e) => {
+            const handleMissileStart = (e) => {
                 e.preventDefault();
                 this.keys.missile = true;
-            }, { passive: false });
-            missileBtn.addEventListener('touchend', (e) => {
+            };
+            const handleMissileEnd = (e) => {
                 e.preventDefault();
                 this.keys.missile = false;
-            }, { passive: false });
+            };
+            missileBtn.addEventListener('touchstart', handleMissileStart, { passive: false });
+            missileBtn.addEventListener('touchend', handleMissileEnd, { passive: false });
+            missileBtn.addEventListener('mousedown', () => this.keys.missile = true);
+            missileBtn.addEventListener('mouseup', () => this.keys.missile = false);
         }
     }
 

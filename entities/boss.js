@@ -14,6 +14,7 @@ export class Boss {
         this.maxHealth = Math.floor(80 * levelScale);
         this.health = this.maxHealth;
         this.points = 2000 * levelScale;
+        this.coinReward = Math.floor(500 * levelScale);
 
         // Initial Position logic
         this.targetPoint = { x: game.width / 2, y: 150 }; // Default fight pos
@@ -251,8 +252,8 @@ export class Boss {
             const offset = (Math.random() - 0.5) * 0.2;
             this.fireProjectile(this.x, this.y, this.angle + offset, 'bullet');
 
-            // Occasionally fire a missile
-            if (Math.random() < 0.2) {
+            // Occasionally fire a missile - drastically reduced chance
+            if (Math.random() < 0.05) { // Was 0.2
                 this.fireProjectile(this.x, this.y, this.angle + (Math.random() - 0.5), 'missile');
             }
         }
@@ -261,9 +262,11 @@ export class Boss {
     fireProjectile(x, y, angle, type) {
         const p = new Projectile(this.game, x, y, angle, type, 'enemy');
         if (type === 'missile') {
-            p.speed = 150;
-            p.maxSpeed = 300;
-            p.acceleration = 150;
+            // Drastically reduced missile stats for fairness
+            p.speed = 80;      // Was 150
+            p.maxSpeed = 160;  // Was 300
+            p.acceleration = 50; // Was 150
+            p.damage = 1;      // Minimized damage
             p.lifetime = 4.0;
         } else {
             p.speed = 350 + (this.level * 5);

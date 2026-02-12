@@ -76,7 +76,9 @@ export class Enemy {
             this.shootTimer += deltaTime;
             if (this.shootTimer > 2.0) {
                 this.shootTimer = 0;
-                this.game.projectiles.push(new Projectile(this.game, this.x, this.y, this.angle, 'bullet', 'enemy'));
+                // Add spread to reduce accuracy
+                const spread = (Math.random() - 0.5) * 0.5; // +/- 0.25 radians (~14 degrees)
+                this.game.projectiles.push(new Projectile(this.game, this.x, this.y, this.angle + spread, 'bullet', 'enemy'));
             }
         }
 

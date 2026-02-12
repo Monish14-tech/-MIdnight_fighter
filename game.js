@@ -7,15 +7,19 @@ import { ScreenShake, Nebula, CosmicDust, Planet, Asteroid } from './utils.js';
 import { PowerUp } from './entities/powerup.js';
 
 export const SHIP_DATA = {
-    'default': { name: 'INTERCEPTOR', price: 0, hp: 3, speed: 300, damage: 1, fireRate: 0.15, missileCooldown: 3.0, missileCount: 1, color: '#00f3ff', desc: 'Balanced standard issue.' },
-    'tank': { name: 'V.G. TITAN', price: 1000, hp: 5, speed: 250, damage: 1, fireRate: 0.2, missileCooldown: 4.0, missileCount: 1, color: '#00ff44', desc: 'Heavy armor, slower speed.' },
-    'scout': { name: 'RAZORBACK', price: 1500, hp: 2, speed: 400, damage: 1, fireRate: 0.12, missileCooldown: 2.5, missileCount: 1, color: '#ffff00', desc: 'High speed, fragile.' },
-    'fighter': { name: 'CRIMSON FURY', price: 3000, hp: 3, speed: 320, damage: 2, fireRate: 0.15, missileCooldown: 3.0, missileCount: 1, color: '#ff0055', desc: 'Double bullet damage.' },
-    'rapid': { name: 'STORM BRINGER', price: 5000, hp: 3, speed: 300, damage: 1, fireRate: 0.08, missileCooldown: 2.0, missileCount: 1, color: '#aa00ff', desc: 'Insane fire rate.' },
-    'bomber': { name: 'DOOMSDAY', price: 8000, hp: 4, speed: 280, damage: 1, fireRate: 0.18, missileCooldown: 5.0, missileCount: 2, color: '#ff6600', desc: 'Fires 2 missiles at once.' },
-    'phantom': { name: 'PHANTOM', price: 6000, hp: 2, speed: 380, damage: 2, fireRate: 0.13, missileCooldown: 2.0, missileCount: 1, color: '#9900ff', desc: 'Fast glass cannon.' },
-    'vanguard': { name: 'VANGUARD', price: 10000, hp: 4, speed: 320, damage: 2, fireRate: 0.12, missileCooldown: 3.5, missileCount: 2, color: '#00ffcc', desc: 'Elite all-rounder.' },
-    'juggernaut': { name: 'JUGGERNAUT', price: 15000, hp: 7, speed: 220, damage: 1, fireRate: 0.25, missileCooldown: 6.0, missileCount: 3, color: '#ff9900', desc: 'Ultimate tank, 3 missiles.' }
+    'default': { name: 'INTERCEPTOR', price: 0, hp: 3, speed: 320, damage: 1, fireRate: 0.15, missileCooldown: 3.0, missileCount: 1, color: '#00f3ff', bulletType: 'normal', desc: 'Standard issue.' },
+    'tank': { name: 'V.G. TITAN', price: 1000, hp: 5, speed: 280, damage: 2, fireRate: 0.25, missileCooldown: 4.0, missileCount: 1, color: '#00ff44', bulletType: 'piercing', desc: 'Heavy armor, piercing shots.' },
+    'scout': { name: 'RAZORBACK', price: 1500, hp: 2, speed: 420, damage: 1, fireRate: 0.12, missileCooldown: 2.5, missileCount: 1, color: '#ffff00', bulletType: 'spread', desc: 'Fast, spread fire.' },
+    'fighter': { name: 'CRIMSON FURY', price: 3000, hp: 3, speed: 340, damage: 2, fireRate: 0.15, missileCooldown: 3.0, missileCount: 1, color: '#ff0055', bulletType: 'normal', desc: 'High damage fighter.' },
+    'rapid': { name: 'STORM BRINGER', price: 5000, hp: 3, speed: 320, damage: 1, fireRate: 0.06, missileCooldown: 2.0, missileCount: 1, color: '#aa00ff', bulletType: 'normal', desc: 'Extreme fire rate.' },
+    'bomber': { name: 'DOOMSDAY', price: 8000, hp: 4, speed: 280, damage: 2, fireRate: 0.2, missileCooldown: 4.0, missileCount: 3, color: '#ff6600', bulletType: 'normal', desc: 'Triple missile barrage.' },
+    'phantom': { name: 'PHANTOM', price: 6000, hp: 2, speed: 400, damage: 1, fireRate: 0.1, missileCooldown: 2.0, missileCount: 1, color: '#9900ff', bulletType: 'spread', desc: 'Nimbly spread.' },
+    'vanguard': { name: 'VANGUARD', price: 10000, hp: 5, speed: 340, damage: 2, fireRate: 0.12, missileCooldown: 3.0, missileCount: 2, color: '#00ffcc', bulletType: 'piercing', desc: 'Elite piercing fighter.' },
+    'juggernaut': { name: 'JUGGERNAUT', price: 15000, hp: 8, speed: 240, damage: 3, fireRate: 0.3, missileCooldown: 5.0, missileCount: 4, color: '#ff9900', bulletType: 'piercing', desc: 'God of War, 4 missiles.' },
+    'void': { name: 'VOID STALKER', price: 20000, hp: 4, speed: 360, damage: 5, fireRate: 0.4, missileCooldown: 3.0, missileCount: 1, color: '#4400ff', bulletType: 'railgun', desc: 'Experimental Railgun.' },
+    'pulse': { name: 'NEON PULSE', price: 12000, hp: 3, speed: 380, damage: 1, fireRate: 0.04, missileCooldown: 2.5, missileCount: 1, color: '#00ffff', bulletType: 'normal', desc: 'Hyper-frequency pulse.' },
+    'guardian': { name: 'GALAXY GUARDIAN', price: 25000, hp: 12, speed: 260, damage: 2, fireRate: 0.2, missileCooldown: 4.0, missileCount: 2, color: '#ffffff', bulletType: 'normal', desc: 'Invincible protector.' },
+    'solar': { name: 'SOLAR FLARE', price: 18000, hp: 4, speed: 310, damage: 2, fireRate: 0.25, missileCooldown: 3.5, missileCount: 1, color: '#ffcc00', bulletType: 'explosive', desc: 'Explosive solar rounds.' }
 };
 
 export class Game {
@@ -247,20 +251,50 @@ export class Game {
     }
 
     checkLevelUp() {
-        if (this.currentLevel >= this.levelThresholds.length - 1) return;
+        // Wave Completion Logic
+        // 1. All enemies for the level must have spawned
+        // 2. All enemies must be defeated (enemies array empty)
+        // 3. Boss must not be active
+        if (this.enemiesSpawned >= this.enemiesForLevel &&
+            this.enemies.length === 0 &&
+            !this.boss) {
 
-        if (this.score >= this.levelThresholds[this.currentLevel]) {
             this.currentLevel++;
+
+            // New Level Setup
+            this.enemiesForLevel = 10 + (this.currentLevel * 5);
+            this.enemiesSpawned = 0;
 
             // Trigger Boss Warp every 5 levels
             if (this.currentLevel % 5 === 0) {
                 this.triggerWarp();
             } else {
-                this.levelScore = this.score;
+                this.levelScore = this.score; // Keep for records
                 this.difficultyMultiplier = Math.min(5.0, 1 + (this.currentLevel - 1) * 0.15);
                 this.enemyInterval = Math.max(0.3, 2.0 / this.difficultyMultiplier);
+
+                // Level Up Visuals
                 this.screenShake.trigger(30, 0.3);
                 if (this.audio) this.audio.dash();
+
+                // Show Level Up Text
+                const hud = document.getElementById('hud');
+                if (hud) {
+                    const levelText = document.createElement('div');
+                    levelText.innerText = `LEVEL ${this.currentLevel}`;
+                    levelText.style.position = 'absolute';
+                    levelText.style.top = '40%';
+                    levelText.style.left = '50%';
+                    levelText.style.transform = 'translate(-50%, -50%)';
+                    levelText.style.color = '#fff';
+                    levelText.style.fontSize = '4rem';
+                    levelText.style.fontWeight = 'bold';
+                    levelText.style.textShadow = '0 0 20px #00f3ff';
+                    levelText.style.zIndex = '20';
+                    levelText.style.animation = 'fadeOut 2s forwards';
+                    document.body.appendChild(levelText);
+                    setTimeout(() => levelText.remove(), 2000);
+                }
             }
         }
     }
@@ -331,6 +365,10 @@ export class Game {
         this.boss = null;
         this.difficultyMultiplier = 1.0; // Retained from original
         this.lastTime = 0; // Retained from original
+
+        // Level System Init
+        this.enemiesForLevel = 10 + (this.currentLevel * 5);
+        this.enemiesSpawned = 0;
 
         this.enemies = [];
         this.particles = [];
@@ -483,8 +521,13 @@ export class Game {
 
             // Spawn logic
             this.enemyTimer += dt;
-            if (this.enemyTimer > this.enemyInterval && this.enemies.length < 50 && !this.boss) {
+            // Spawn only if we haven't reached the level limit
+            if (this.enemyTimer > this.enemyInterval &&
+                this.enemies.length < 50 &&
+                !this.boss &&
+                this.enemiesSpawned < this.enemiesForLevel) {
                 this.spawnEnemy();
+                this.enemiesSpawned++; // Count the spawn
                 this.enemyTimer = 0;
             }
 
@@ -649,7 +692,6 @@ export class Game {
                     enemy.markedForDeletion = true;
                     this.score += enemy.points;
                     this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
-                    this.triggerImpact(0.05, 0.2);
                     if (this.audio) this.audio.explosion();
                 } else {
                     const playerDied = this.player.takeDamage(1);
@@ -694,14 +736,27 @@ export class Game {
                     const dy = proj.y - enemy.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist < enemy.radius + proj.radius) {
-                        proj.markedForDeletion = true;
-                        const dead = enemy.takeDamage(proj.damage);
-                        this.triggerImpact(0.03, 0.1);
-                        if (dead) {
-                            enemy.markedForDeletion = true;
-                            this.score += enemy.points;
-                            this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
-                            if (this.audio) this.audio.explosion();
+                        // Support for Piercing / Explosive
+                        if (proj.explosive) {
+                            this.triggerExplosion(proj.x, proj.y, 100, proj.damage * 2);
+                            proj.markedForDeletion = true;
+                        } else if (proj.piercing) {
+                            // Don't delete, just damage
+                            const dead = enemy.takeDamage(proj.damage);
+                            if (dead) {
+                                enemy.markedForDeletion = true;
+                                this.score += enemy.points;
+                                this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
+                            }
+                        } else {
+                            proj.markedForDeletion = true;
+                            const dead = enemy.takeDamage(proj.damage);
+                            if (dead) {
+                                enemy.markedForDeletion = true;
+                                this.score += enemy.points;
+                                this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
+                                if (this.audio) this.audio.explosion();
+                            }
                         }
                     }
                 });
@@ -711,13 +766,21 @@ export class Game {
                     const dy = proj.y - this.boss.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist < this.boss.radius + proj.radius) {
-                        proj.markedForDeletion = true;
-                        const dead = this.boss.takeDamage(proj.damage);
-                        this.triggerImpact(0.05, 0.2);
-                        if (dead) this.handleBossDefeat();
+                        if (proj.explosive) {
+                            this.triggerExplosion(proj.x, proj.y, 120, proj.damage * 3);
+                            proj.markedForDeletion = true;
+                        } else if (proj.piercing) {
+                            const dead = this.boss.takeDamage(proj.damage);
+                            if (dead) this.handleBossDefeat();
+                        } else {
+                            proj.markedForDeletion = true;
+                            const dead = this.boss.takeDamage(proj.damage);
+                            if (dead) this.handleBossDefeat();
+                        }
                     }
                 }
             } else {
+                // Enemy vs Player logic omitted here but remains in file
                 // Enemy vs Player
                 if (this.player && !this.player.isInvulnerable()) {
                     const dx = proj.x - this.player.x;
@@ -735,6 +798,38 @@ export class Game {
         });
     }
 
+    triggerExplosion(x, y, radius, damage) {
+        // Visual explosion
+        this.particles.push(new Explosion(this, x, y, '#ffaa00'));
+        this.screenShake.trigger(15, 0.3);
+
+        // Damage all enemies in range
+        this.enemies.forEach(enemy => {
+            const dx = enemy.x - x;
+            const dy = enemy.y - y;
+            const dist = Math.hypot(dx, dy);
+            if (dist < radius + enemy.radius) {
+                const dead = enemy.takeDamage(damage);
+                if (dead) {
+                    enemy.markedForDeletion = true;
+                    this.score += enemy.points;
+                    this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
+                }
+            }
+        });
+
+        // Damage boss if in range
+        if (this.boss) {
+            const dx = this.boss.x - x;
+            const dy = this.boss.y - y;
+            const dist = Math.hypot(dx, dy);
+            if (dist < radius + this.boss.radius) {
+                const dead = this.boss.takeDamage(damage);
+                if (dead) this.handleBossDefeat();
+            }
+        }
+    }
+
     hudFlashDamage() {
         const fill = document.getElementById('health-fill');
         if (fill) {
@@ -745,15 +840,36 @@ export class Game {
 
     handleBossDefeat() {
         if (!this.boss) return;
+
+        const loot = this.boss.coinReward || 500;
         this.score += this.boss.points;
+        this.coins += loot;
+
+        // Save coins
+        localStorage.setItem('midnight_coins', this.coins);
+
         const bossPos = { x: this.boss.x, y: this.boss.y };
         this.boss = null;
 
         const bossHud = document.getElementById('boss-hud');
         if (bossHud) bossHud.classList.remove('active');
 
-        // Cinematic Finisher - Slow Mo
-        this.impactTimer = 2.0;
+        // Cinematic Finisher - Show Reward
+        const rewardText = document.createElement('div');
+        rewardText.innerText = `+${loot} COINS`;
+        rewardText.style.position = 'absolute';
+        rewardText.style.top = '50%';
+        rewardText.style.left = '50%';
+        rewardText.style.transform = 'translate(-50%, -50%)';
+        rewardText.style.color = '#ffd700';
+        rewardText.style.fontSize = '3rem';
+        rewardText.style.fontWeight = 'bold';
+        rewardText.style.textShadow = '0 0 20px #ffd700';
+        rewardText.style.zIndex = '30';
+        rewardText.style.animation = 'fadeOut 3s forwards';
+        document.body.appendChild(rewardText);
+        setTimeout(() => rewardText.remove(), 3000);
+
         this.screenShake.trigger(50, 1.0);
         this.particles.push(new Explosion(this, bossPos.x, bossPos.y, '#ff0000'));
     }
@@ -793,9 +909,18 @@ export class Game {
         if (highScoreEl) highScoreEl.innerText = this.highScore;
 
         if (levelEl) levelEl.innerText = this.currentLevel;
+
+        // Update Enemy Count
+        const enemyCountEl = document.getElementById('enemy-count');
+        if (enemyCountEl) {
+            const remaining = (this.enemiesForLevel - this.enemiesSpawned) + this.enemies.length;
+            enemyCountEl.innerText = Math.max(0, remaining);
+        }
+
         if (healthFill && this.player) {
             const pct = (this.player.currentHealth / this.player.maxHealth) * 100;
             healthFill.style.width = pct + '%';
+
 
             if (Math.random() < 0.01) {
                 console.log(`Health Update: ${this.player.currentHealth}/${this.player.maxHealth} (${pct}%)`);
@@ -817,11 +942,7 @@ export class Game {
         }
 
         // Update Enemy Counter
-        const enemyCountEl = document.getElementById('enemy-count');
-        if (enemyCountEl) {
-            const totalEnemies = this.enemies.length + (this.boss ? 1 : 0);
-            enemyCountEl.innerText = totalEnemies;
-        }
+
     }
 
     handleGameOver() {
