@@ -6,6 +6,38 @@ import { AudioController } from './audio.js';
 import { ScreenShake, Nebula, CosmicDust, Planet, Asteroid } from './utils.js';
 import { PowerUp } from './entities/powerup.js';
 
+class AssetLoader {
+    constructor() {
+        this.assets = new Map();
+        this.loadingPromises = [];
+    }
+
+    load(name, src) {
+        const promise = new Promise((resolve, reject) => {
+            const img = new Image();
+            img.src = src;
+            img.onload = () => {
+                this.assets.set(name, img);
+                resolve(img);
+            };
+            img.onerror = () => {
+                console.error(`Failed to load asset: ${name} at ${src}`);
+                resolve(null); // Fallback to vector
+            };
+        });
+        this.loadingPromises.push(promise);
+        return promise;
+    }
+
+    async loadAll() {
+        return Promise.all(this.loadingPromises);
+    }
+
+    get(name) {
+        return this.assets.get(name);
+    }
+}
+
 export const SHIP_DATA = {
     'default': { name: 'INTERCEPTOR', price: 0, hp: 3, speed: 320, damage: 1, fireRate: 0.15, missileCooldown: 3.0, missileCount: 1, color: '#00f3ff', bulletType: 'normal', desc: 'Standard issue.' },
     'tank': { name: 'V.G. TITAN', price: 1000, hp: 5, speed: 280, damage: 2, fireRate: 0.25, missileCooldown: 4.0, missileCount: 1, color: '#00ff44', bulletType: 'piercing', desc: 'Heavy armor, piercing shots.' },
@@ -59,6 +91,7 @@ export class Game {
         this.input = new InputHandler();
         this.audio = new AudioController();
         this.screenShake = new ScreenShake();
+        this.assets = new AssetLoader();
 
         // Arrays
         this.enemies = [];
@@ -193,6 +226,13 @@ export class Game {
     init() {
         this.resize();
         this.drawBackground();
+
+        // Load Ships
+        this.assets.load('interceptor', 'assets/ships/interceptor.png');
+        this.assets.load('tank', 'assets/ships/tank.png');
+        this.assets.load('scout', 'assets/ships/scout.png');
+        this.assets.load('enemy_chaser', 'assets/ships/enemy_chaser.png');
+        this.assets.load('boss', 'assets/ships/boss.png');
 
         // Initialize cosmic atmosphere
         this.initializeCosmicAtmosphere();
@@ -1019,18 +1059,17 @@ export class Game {
             // Draw dummy ship for preview
             ctx.translate(50, 50);
             ctx.rotate(-Math.PI / 2); // Point up
-            ctx.scale(1.5, 1.5);
-
-            // Create a temporary dummy player to use its drawShape method? 
-            // Or just copy the draw code? Copying is safer to avoid instantiating Player without game.
-            // Actually, we can make drawShape static or reusable. 
-            // For now, let's just make a dummy instance if possible or copy drawShape.
-            // Copying drawShape logic from Player is messy. 
-            // Better: Create a static helper in Player or Utils. 
-            // OR: Just instantiate a dummy player with a mock game.
             const mockGame = { width: 100, height: 100 };
             const dummyPlayer = new Player(mockGame, key);
-            dummyPlayer.drawShape(ctx, ship.color);
+
+            // 3D Realistic Sprite Preview
+            const sprite = this.assets.get(key === 'default' ? 'interceptor' : key);
+            if (sprite) {
+                const size = 60;
+                ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
+            } else {
+                dummyPlayer.drawShape(ctx, ship.color);
+            }
 
             card.appendChild(canvas);
 

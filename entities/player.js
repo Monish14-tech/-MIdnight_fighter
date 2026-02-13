@@ -281,7 +281,16 @@ export class Player {
             ctx.shadowColor = this.color;
         }
 
-        this.drawShape(ctx, this.color);
+        // 3D Realistic Sprite Rendering
+        const sprite = this.game.assets.get(this.shipType);
+        if (sprite) {
+            // Draw Sprite
+            const size = this.radius * 4;
+            ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
+        } else {
+            // Fallback to Vector Shape
+            this.drawShape(ctx, this.color);
+        }
 
         ctx.restore();
     }

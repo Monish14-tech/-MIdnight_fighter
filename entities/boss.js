@@ -303,7 +303,14 @@ export class Boss {
             ctx.stroke();
         }
 
-        this.drawModel(ctx);
+        // 3D Realistic Sprite Rendering
+        const sprite = this.game.assets.get('boss');
+        if (sprite) {
+            const size = this.radius * 2.5;
+            ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
+        } else {
+            this.drawModel(ctx);
+        }
 
         ctx.restore();
     }
