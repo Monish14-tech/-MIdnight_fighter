@@ -1,7 +1,7 @@
 // Leaderboard API Manager
 export class LeaderboardManager {
     constructor() {
-        this.apiUrl = 'http://localhost:8000/api';
+        this.apiUrl = `${window.location.origin}/api`;
         this.playerName = localStorage.getItem('midnight_player_name') || null;
     }
 
