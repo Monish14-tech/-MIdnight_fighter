@@ -346,11 +346,11 @@ export class Game {
         this.drawBackground();
 
         // Load Ships
-        this.assets.load('interceptor', 'assets/ships/interceptor.png');
-        this.assets.load('tank', 'assets/ships/tank.png');
-        this.assets.load('scout', 'assets/ships/scout.png');
-        this.assets.load('enemy_chaser', 'assets/ships/enemy_chaser.png');
-        this.assets.load('boss', 'assets/ships/boss.png');
+        // this.assets.load('interceptor', 'assets/ships/interceptor.png');
+        // this.assets.load('tank', 'assets/ships/tank.png');
+        // this.assets.load('scout', 'assets/ships/scout.png');
+        // this.assets.load('enemy_chaser', 'assets/ships/enemy_chaser.png');
+        // this.assets.load('boss', 'assets/ships/boss.png');
 
         // Initialize cosmic atmosphere
         this.initializeCosmicAtmosphere();
