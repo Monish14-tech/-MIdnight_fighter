@@ -74,6 +74,131 @@ export class Enemy {
             this.splitOnDeath = true;
             this.splitCount = 2;
             this.splitType = 'swarm';
+        } else if (this.type === 'phantom') {
+            // LEVEL 6+ | Phasing specter - high speed, cannot shoot
+            this.speed = 180 * speedMultiplier;
+            this.color = '#9966ff'; // Violet/Purple
+            this.radius = 15;
+            this.points = 150;
+            this.health = 2 + hpBonus;
+            this.phaseTimer = 0;
+            this.phaseCooldown = 3.0;
+        } else if (this.type === 'titan') {
+            // LEVEL 11+ | Armored colossus - slow, very high health, cannot shoot
+            this.speed = 75 * speedMultiplier;
+            this.color = '#cc7722'; // Bronze
+            this.radius = 28;
+            this.points = 400;
+            this.health = 10 + hpBonus * 3;
+            this.armor = 2;
+        } else if (this.type === 'wraith') {
+            // LEVEL 16+ | Reality bender - fast ethereal, cannot shoot
+            this.speed = 200 * speedMultiplier;
+            this.color = '#bb66dd'; // Magenta-Purple
+            this.radius = 16;
+            this.points = 350;
+            this.health = 3 + hpBonus;
+            this.teleportCooldown = 2.5;
+            this.teleportTimer = 1.5;
+        } else if (this.type === 'vortex') {
+            // LEVEL 21+ | Spinning void - very slow, high health, cannot shoot
+            this.speed = 50 * speedMultiplier;
+            this.color = '#6600cc'; // Deep Purple
+            this.radius = 20;
+            this.points = 500;
+            this.health = 12 + hpBonus * 4;
+            this.spinRate = 360; // degrees per second
+        } else if (this.type === 'bomber') {
+            // LEVEL 3+ | Heavy explosive unit - slow, high health, explodes on death
+            this.speed = 60 * speedMultiplier;
+            this.color = '#ff6600'; // Bright Orange
+            this.radius = 28;
+            this.points = 350;
+            this.health = 8 + hpBonus * 2;
+            this.explosionRadius = 80;
+            this.explosionDamage = 2;
+        } else if (this.type === 'interceptor') {
+            // LEVEL 4+ | Swift hunter - very fast, aggressive pursuit
+            this.speed = 280 * speedMultiplier;
+            this.color = '#00ff88'; // Bright Green
+            this.radius = 10;
+            this.points = 110;
+            this.health = 1 + hpBonus;
+            this.dashCooldown = 3.0;
+            this.dashTimer = 2.0;
+        } else if (this.type === 'decoy') {
+            // LEVEL 5+ | Holographic decoy - spawns multiple copies, low health
+            this.speed = 160 * speedMultiplier;
+            this.color = '#ffff00'; // Bright Yellow
+            this.radius = 11;
+            this.points = 90;
+            this.health = 1;
+            this.isDecoy = true;
+            this.decoyCount = 2;
+        } else if (this.type === 'launcher') {
+            // LEVEL 7+ | Missile platform - shoots missiles instead of bullets
+            this.speed = 90 * speedMultiplier;
+            this.color = '#ff0099'; // Hot Pink
+            this.radius = 20;
+            this.points = 280;
+            this.health = 4 + hpBonus;
+            this.shootTimer = 0;
+            this.missileMode = true;
+        } else if (this.type === 'shielder') {
+            // LEVEL 8+ | Shielded defender - has protective shield
+            this.speed = 110 * speedMultiplier;
+            this.color = '#00ddff'; // Cyan
+            this.radius = 19;
+            this.points = 240;
+            this.health = 4 + hpBonus;
+            this.shieldHealth = 3 + hpBonus;
+            this.hasShield = true;
+        } else if (this.type === 'pulsar') {
+            // LEVEL 9+ | Energy pulsar - creates damaging waves
+            this.speed = 100 * speedMultiplier;
+            this.color = '#ff00ff'; // Magenta
+            this.radius = 16;
+            this.points = 200;
+            this.health = 3 + hpBonus;
+            this.pulseTimer = 0;
+            this.pulseCooldown = 2.5;
+            this.pulseRadius = 60;
+        } else if (this.type === 'blade') {
+            // LEVEL 10+ | High-speed interceptor - fast melee strikes
+            this.speed = 260 * speedMultiplier;
+            this.color = '#ff1111'; // Bright Red
+            this.radius = 13;
+            this.points = 180;
+            this.health = 2 + hpBonus;
+            this.slashCooldown = 1.5;
+            this.slashTimer = 0;
+            this.attackRange = 35;
+        } else if (this.type === 'tractor') {
+            // LEVEL 12+ | Gravitational puller - slow but pulls player
+            this.speed = 70 * speedMultiplier;
+            this.color = '#9900ff'; // Deep Purple
+            this.radius = 24;
+            this.points = 310;
+            this.health = 6 + hpBonus;
+            this.tractorRange = 300;
+            this.tractorPull = 50; // Force magnitude
+        } else if (this.type === 'mirror') {
+            // LEVEL 13+ | Reflects player fire - bounces projectiles
+            this.speed = 130 * speedMultiplier;
+            this.color = '#ccccff'; // Silver/Blue
+            this.radius = 17;
+            this.points = 200;
+            this.health = 3 + hpBonus;
+            this.reflectChance = 0.6; // 60% chance to reflect
+            this.rotation = 0;
+        } else if (this.type === 'swarmer') {
+            // LEVEL 14+ | Medium swarm unit - faster than chaser, medium durability
+            this.speed = 200 * speedMultiplier;
+            this.color = '#ffaa00'; // Gold/Orange
+            this.radius = 10;
+            this.points = 95;
+            this.health = 1 + hpBonus;
+            this.swarming = true;
         }
     }
 
@@ -103,14 +228,63 @@ export class Enemy {
             }
             this.x += Math.cos(moveAngle) * effectiveSpeed * deltaTime;
             this.y += Math.sin(moveAngle) * effectiveSpeed * deltaTime;
+        } else if (this.type === 'interceptor') {
+            // Fast aggressive pursuit with occasional dashes
+            this.dashTimer -= deltaTime;
+            if (this.dashTimer <= 0 && Math.random() < 0.3) {
+                this.dashTimer = this.dashCooldown;
+                effectiveSpeed *= 2.5; // Boost speed for dash
+            }
+            this.x += Math.cos(this.angle) * effectiveSpeed * deltaTime;
+            this.y += Math.sin(this.angle) * effectiveSpeed * deltaTime;
+        } else if (this.type === 'tractor') {
+            // Move toward player and apply pull force
+            this.x += Math.cos(this.angle) * effectiveSpeed * deltaTime;
+            this.y += Math.sin(this.angle) * effectiveSpeed * deltaTime;
+            
+            // Apply pull force to player if in range
+            const dist = Math.hypot(dx, dy);
+            if (dist < this.tractorRange) {
+                const pullAngle = Math.atan2(dy, dx);
+                this.game.player.x += Math.cos(pullAngle) * this.tractorPull * deltaTime;
+                this.game.player.y += Math.sin(pullAngle) * this.tractorPull * deltaTime;
+            }
+        } else if (this.type === 'blade') {
+            // Aggressive fast movement with slashing
+            this.x += Math.cos(this.angle) * effectiveSpeed * deltaTime;
+            this.y += Math.sin(this.angle) * effectiveSpeed * deltaTime;
+            
+            // Update slash timer
+            this.slashTimer -= deltaTime;
+        } else if (this.type === 'mirror') {
+            // Rotate and move
+            this.rotation = (this.rotation + 180 * deltaTime) % 360;
+            this.x += Math.cos(this.angle) * effectiveSpeed * deltaTime;
+            this.y += Math.sin(this.angle) * effectiveSpeed * deltaTime;
+        } else if (this.type === 'pulsar') {
+            // Move toward player and pulse
+            this.x += Math.cos(this.angle) * effectiveSpeed * deltaTime;
+            this.y += Math.sin(this.angle) * effectiveSpeed * deltaTime;
+            
+            // Update pulse timer
+            this.pulseTimer -= deltaTime;
+        } else if (this.type === 'launcher') {
+            // Medium speed, stands ground to shoot
+            if (Math.hypot(dx, dy) > 250) {
+                this.x += Math.cos(this.angle) * effectiveSpeed * deltaTime;
+                this.y += Math.sin(this.angle) * effectiveSpeed * deltaTime;
+            }
         } else {
             // Simple movement towards player
             this.x += Math.cos(this.angle) * effectiveSpeed * deltaTime;
             this.y += Math.sin(this.angle) * effectiveSpeed * deltaTime;
         }
 
-        // Shooter Logic
-        if (this.type === 'shooter') {
+        // Shooter Logic (only shooter, sniper, launcher, and pulsar can attack)
+        // No enemies can shoot until first boss appears
+        if (!this.game.firstBossAppeared) {
+            // No shooting allowed before first boss
+        } else if (this.type === 'shooter') {
             this.shootTimer += deltaTime;
             if (this.shootTimer > 2.0) {
                 this.shootTimer = 0;
@@ -128,6 +302,25 @@ export class Enemy {
                 shot.damage = 2;
                 shot.color = '#6bd6ff';
                 this.game.projectiles.push(shot);
+            }
+        } else if (this.type === 'launcher') {
+            // Launches missiles instead of bullets
+            this.shootTimer += deltaTime;
+            if (this.shootTimer > 3.0) {
+                this.shootTimer = 0;
+                const spread = (Math.random() - 0.5) * 0.3;
+                const missile = new Projectile(this.game, this.x, this.y, this.angle + spread, 'missile', 'enemy');
+                missile.speed = 350;
+                missile.damage = 2;
+                missile.color = '#ff0099';
+                this.game.projectiles.push(missile);
+            }
+        } else if (this.type === 'pulsar') {
+            // Create damaging pulse waves
+            if (this.pulseTimer <= 0) {
+                this.pulseTimer = this.pulseCooldown;
+                // Create expanding pulse effect
+                this.game.particles.push(new Explosion(this.game, this.x, this.y, '#ff00ff'));
             }
         }
 
@@ -331,6 +524,373 @@ export class Enemy {
                 ctx.fillStyle = 'rgba(255,255,255,0.5)';
                 ctx.beginPath();
                 ctx.arc(2, 0, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+            } else if (this.type === 'phantom') {
+                // Phasing specter - translucent with shimmer
+                ctx.globalAlpha = 0.6;
+                const phantomGrad = ctx.createLinearGradient(-15, -10, 20, 10);
+                phantomGrad.addColorStop(0, 'rgba(150,50,200,0.8)');
+                phantomGrad.addColorStop(0.5, this.color);
+                phantomGrad.addColorStop(1, 'rgba(100,0,150,0.6)');
+                ctx.fillStyle = phantomGrad;
+
+                ctx.beginPath();
+                ctx.moveTo(24, 0);
+                ctx.lineTo(8, 8);
+                ctx.lineTo(-10, 6);
+                ctx.lineTo(-18, 0);
+                ctx.lineTo(-10, -6);
+                ctx.lineTo(8, -8);
+                ctx.closePath();
+                ctx.fill();
+
+                // Phase shimmer lines
+                ctx.strokeStyle = 'rgba(200,150,255,0.8)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(0, -12);
+                ctx.lineTo(0, 12);
+                ctx.stroke();
+
+            } else if (this.type === 'titan') {
+                // Armored colossus - heavy angular design
+                const titanGrad = ctx.createRadialGradient(0, 0, 8, 0, 0, 28);
+                titanGrad.addColorStop(0, this.color);
+                titanGrad.addColorStop(1, '#4a2100');
+                ctx.fillStyle = titanGrad;
+
+                // Main body - large hexagon
+                ctx.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i * Math.PI) / 3 + Math.PI / 6;
+                    const rx = Math.cos(angle) * 26;
+                    const ry = Math.sin(angle) * 26;
+                    if (i === 0) ctx.moveTo(rx, ry);
+                    else ctx.lineTo(rx, ry);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#ffaa00';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+
+                // Heavy armor plating
+                ctx.fillStyle = '#662200';
+                ctx.fillRect(-26, -8, 10, 16);
+                ctx.fillRect(16, -8, 10, 16);
+                // Central reactor glow
+                ctx.fillStyle = 'rgba(255,100,0,0.7)';
+                ctx.beginPath();
+                ctx.arc(0, 0, 6, 0, Math.PI * 2);
+                ctx.fill();
+
+            } else if (this.type === 'wraith') {
+                // Reality-bending specter - ethereal outline
+                ctx.globalAlpha = 0.7;
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 2;
+                ctx.fillStyle = 'rgba(100,50,150,0.3)';
+
+                // Spiky ethereal form
+                ctx.beginPath();
+                ctx.moveTo(26, 0);
+                ctx.lineTo(12, 8);
+                ctx.lineTo(6, 14);
+                ctx.lineTo(-8, 10);
+                ctx.lineTo(-18, 0);
+                ctx.lineTo(-8, -10);
+                ctx.lineTo(6, -14);
+                ctx.lineTo(12, -8);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Ghost wisps
+                ctx.strokeStyle = 'rgba(150,100,200,0.5)';
+                ctx.lineWidth = 1;
+                for (let i = -1; i <= 1; i++) {
+                    ctx.beginPath();
+                    ctx.arc(-10 + i * 6, 0, 4, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
+            } else if (this.type === 'vortex') {
+                // Spinning void - concentric circles
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(0, 0, 20, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.beginPath();
+                ctx.arc(0, 0, 14, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Spinning rings
+                ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+                ctx.lineWidth = 1;
+                const spinAngle = (Date.now() * 0.005) % (Math.PI * 2);
+                ctx.beginPath();
+                ctx.arc(0, 0, 10, spinAngle, spinAngle + Math.PI / 2);
+                ctx.stroke();
+
+                // Inner void
+                ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                ctx.beginPath();
+                ctx.arc(0, 0, 5, 0, Math.PI * 2);
+                ctx.fill();
+
+            } else if (this.type === 'bomber') {
+                // Heavy explosive platform - bulky angular design
+                const bomberGrad = ctx.createLinearGradient(-20, -15, 20, 15);
+                bomberGrad.addColorStop(0, 'rgba(255,200,0,0.9)');
+                bomberGrad.addColorStop(0.5, this.color);
+                bomberGrad.addColorStop(1, '#663300');
+                ctx.fillStyle = bomberGrad;
+
+                ctx.beginPath();
+                ctx.moveTo(18, 0);
+                ctx.lineTo(10, 10);
+                ctx.lineTo(-8, 12);
+                ctx.lineTo(-16, 6);
+                ctx.lineTo(-16, -6);
+                ctx.lineTo(-8, -12);
+                ctx.lineTo(10, -10);
+                ctx.closePath();
+                ctx.fill();
+
+                // Payload bays
+                ctx.fillStyle = '#333';
+                ctx.fillRect(-10, -4, 6, 8);
+                ctx.fillRect(-2, -4, 6, 8);
+                ctx.fillRect(6, -4, 6, 8);
+
+            } else if (this.type === 'interceptor') {
+                // Swift kinetic hunter - sleek and pointed
+                const interceptGrad = ctx.createLinearGradient(-15, 0, 25, 0);
+                interceptGrad.addColorStop(0, '#003300');
+                interceptGrad.addColorStop(0.5, this.color);
+                interceptGrad.addColorStop(1, '#ffffff');
+                ctx.fillStyle = interceptGrad;
+
+                ctx.beginPath();
+                ctx.moveTo(24, 0);
+                ctx.lineTo(10, 6);
+                ctx.lineTo(-8, 4);
+                ctx.lineTo(-14, 0);
+                ctx.lineTo(-8, -4);
+                ctx.lineTo(10, -6);
+                ctx.closePath();
+                ctx.fill();
+
+                // Speed lines
+                ctx.strokeStyle = 'rgba(0,255,0,0.6)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(14, 0);
+                ctx.lineTo(20, 0);
+                ctx.stroke();
+
+            } else if (this.type === 'decoy') {
+                // Holographic clone - translucent shimmering
+                ctx.globalAlpha = 0.5;
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 2;
+                ctx.fillStyle = 'rgba(200,200,255,0.3)';
+
+                ctx.beginPath();
+                ctx.moveTo(20, 0);
+                ctx.lineTo(8, 7);
+                ctx.lineTo(-10, 5);
+                ctx.lineTo(-16, 0);
+                ctx.lineTo(-10, -5);
+                ctx.lineTo(8, -7);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Hologram flicker
+                ctx.globalAlpha = 0.8;
+                ctx.strokeStyle = 'rgba(150,150,255,1)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, -10);
+                ctx.lineTo(0, 10);
+                ctx.stroke();
+
+            } else if (this.type === 'launcher') {
+                // Missile platform - boxy with visible weapon pods
+                const launcherGrad = ctx.createLinearGradient(-18, -12, 18, 12);
+                launcherGrad.addColorStop(0, '#220033');
+                launcherGrad.addColorStop(0.5, this.color);
+                launcherGrad.addColorStop(1, '#ff99ff');
+                ctx.fillStyle = launcherGrad;
+
+                ctx.beginPath();
+                ctx.moveTo(16, 0);
+                ctx.lineTo(8, 10);
+                ctx.lineTo(-12, 8);
+                ctx.lineTo(-18, 0);
+                ctx.lineTo(-12, -8);
+                ctx.lineTo(8, -10);
+                ctx.closePath();
+                ctx.fill();
+
+                // Missile pods
+                ctx.fillStyle = '#ff00ff';
+                ctx.fillRect(-6, 10, 4, 6);
+                ctx.fillRect(2, 10, 4, 6);
+                ctx.fillRect(-6, -16, 4, 6);
+                ctx.fillRect(2, -16, 4, 6);
+
+            } else if (this.type === 'shielder') {
+                // Protected barrier - hexagon with shield glow
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i * Math.PI) / 3;
+                    const rx = Math.cos(angle) * 20;
+                    const ry = Math.sin(angle) * 20;
+                    if (i === 0) ctx.moveTo(rx, ry);
+                    else ctx.lineTo(rx, ry);
+                }
+                ctx.closePath();
+                ctx.fill();
+
+                // Shield barrier visualization
+                ctx.strokeStyle = 'rgba(0,255,255,0.8)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, 22, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Center core
+                ctx.fillStyle = '#00ffff';
+                ctx.beginPath();
+                ctx.arc(0, 0, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+            } else if (this.type === 'pulsar') {
+                // Energy wave generator - pulsing sphere with rings
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(0, 0, 18, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Pulsing rings
+                const pulsePhase = (Date.now() * 0.002) % (Math.PI * 2);
+                ctx.strokeStyle = 'rgba(255,0,255,' + (0.5 + Math.sin(pulsePhase) * 0.3) + ')';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, 12 + Math.sin(pulsePhase) * 3, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Central charge core
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(0, 0, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+            } else if (this.type === 'blade') {
+                // Melee slashing fighter - thin blade shape
+                const bladeGrad = ctx.createLinearGradient(-18, -8, 20, 8);
+                bladeGrad.addColorStop(0, '#330000');
+                bladeGrad.addColorStop(0.5, this.color);
+                bladeGrad.addColorStop(1, '#ffcccc');
+                ctx.fillStyle = bladeGrad;
+
+                ctx.beginPath();
+                ctx.moveTo(26, 0);
+                ctx.lineTo(8, 5);
+                ctx.lineTo(-14, 2);
+                ctx.lineTo(-20, 0);
+                ctx.lineTo(-14, -2);
+                ctx.lineTo(8, -5);
+                ctx.closePath();
+                ctx.fill();
+
+                // Cutting edge highlight
+                ctx.strokeStyle = 'rgba(255,200,200,0.8)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(20, -1);
+                ctx.lineTo(-14, -1);
+                ctx.stroke();
+
+            } else if (this.type === 'tractor') {
+                // Gravity puller - heavy rounded form
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(0, 0, 22, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Tractor field visualization
+                ctx.strokeStyle = 'rgba(200,0,255,0.6)';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 14 + i * 4, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
+                // Central gravity well
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(0, 0, 5, 0, Math.PI * 2);
+                ctx.fill();
+
+            } else if (this.type === 'mirror') {
+                // Reflective angular design - geometric pattern
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.moveTo(20, 0);
+                ctx.lineTo(8, 8);
+                ctx.lineTo(-10, 10);
+                ctx.lineTo(-16, 0);
+                ctx.lineTo(-10, -10);
+                ctx.lineTo(8, -8);
+                ctx.closePath();
+                ctx.fill();
+
+                // Reflective panels
+                ctx.strokeStyle = 'rgba(0,255,255,0.8)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(10, -8);
+                ctx.lineTo(-10, 8);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(10, 8);
+                ctx.lineTo(-10, -8);
+                ctx.stroke();
+
+                // Central mirror panel
+                ctx.fillStyle = 'rgba(100,255,255,0.5)';
+                ctx.fillRect(-4, -4, 8, 8);
+
+            } else if (this.type === 'swarmer') {
+                // Medium swarm fighter - compact and agile
+                const swarmerGrad = ctx.createLinearGradient(-12, -8, 18, 8);
+                swarmerGrad.addColorStop(0, '#664400');
+                swarmerGrad.addColorStop(0.5, this.color);
+                swarmerGrad.addColorStop(1, '#ffdd99');
+                ctx.fillStyle = swarmerGrad;
+
+                ctx.beginPath();
+                ctx.moveTo(18, 0);
+                ctx.lineTo(8, 6);
+                ctx.lineTo(-8, 4);
+                ctx.lineTo(-14, 0);
+                ctx.lineTo(-8, -4);
+                ctx.lineTo(8, -6);
+                ctx.closePath();
+                ctx.fill();
+
+                // Coordinated marker
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.arc(8, 0, 2, 0, Math.PI * 2);
                 ctx.fill();
             }
         }

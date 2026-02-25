@@ -125,8 +125,15 @@ export class Game {
         this.warpTimer = 0;
         this.boss = null;
         this.bossTimer = 0;
+        this.bossJustDefeated = false;
+        this.bossDefeatTimer = 0;
+        this.firstBossAppeared = false;
+        this.lastBossLevel = 0;
         this.timeScale = 1.0;
         this.slowMoTimer = 0;
+
+        // Enemy Tracking for Unique Spawning
+        this.spawnedEnemyTypes = new Set();
 
         // Timers
         this.enemyTimer = 0;
@@ -440,6 +447,12 @@ export class Game {
     }
 
     spawnBoss() {
+        // Mark first boss appearance
+        if (!this.firstBossAppeared) {
+            this.firstBossAppeared = true;
+        }
+        this.lastBossLevel = this.currentLevel;
+        
         // Clear all enemies when boss appears
         this.enemies.forEach(enemy => {
             enemy.markedForDeletion = true;
@@ -472,6 +485,11 @@ export class Game {
         this.score = 0;
         this.currentLevel = 1; // Reset to level 1 on new game
         this.boss = null;
+        this.bossJustDefeated = false;
+        this.bossDefeatTimer = 0;
+        this.firstBossAppeared = false;
+        this.lastBossLevel = 0;
+        this.spawnedEnemyTypes.clear(); // Reset enemy type tracking
         this.difficultyMultiplier = 1.0; // Retained from original
         this.lastTime = 0; // Retained from original
 
@@ -638,6 +656,15 @@ export class Game {
             }
         }
 
+        // Handle boss defeat timer - allows unique enemies to spawn for ~10 seconds
+        if (this.bossJustDefeated) {
+            this.bossDefeatTimer += dt;
+            if (this.bossDefeatTimer > 15.0) { // 15 seconds of unique enemy spawning
+                this.bossJustDefeated = false;
+                this.bossDefeatTimer = 0;
+            }
+        }
+
         if (!this.gameOver) {
             if (this.player) {
                 this.player.update(dt, this.input);
@@ -645,7 +672,7 @@ export class Game {
 
             // Spawn logic
             this.enemyTimer += dt;
-            // Spawn only if we haven't reached the level limit
+            // No enemies spawn during boss fights - only boss appears
             if (this.enemyTimer > this.enemyInterval &&
                 this.enemies.length < 50 &&
                 !this.boss &&
@@ -706,6 +733,9 @@ export class Game {
         // Cleanup Boss
         if (this.boss && this.boss.markedForDeletion) {
             this.boss = null;
+            this.bossJustDefeated = true;
+            this.spawnedEnemyTypes.clear(); // Clear spawned types for new unique enemies
+            this.removeLowestHPEnemy(); // Remove the weakest enemy after boss defeat
             const bossHud = document.getElementById('boss-hud');
             if (bossHud) bossHud.classList.remove('active');
         }
@@ -824,13 +854,248 @@ export class Game {
 
     spawnEnemy() {
         const typeRand = Math.random();
+        const level = this.currentLevel || 1;
         let type = 'chaser';
-        if (this.currentLevel >= 4 && typeRand > 0.92) type = 'splitter';
-        else if (this.currentLevel >= 3 && typeRand > 0.82) type = 'sniper';
-        else if (this.currentLevel >= 2 && typeRand > 0.65) type = 'swarm';
-        else if (this.score > 1500 && typeRand > 0.75) type = 'shooter';
-        else if (this.score > 500 && typeRand > 0.6) type = 'heavy';
+        
+        // Get available enemy types based on level
+        const availableTypes = this.getAvailableEnemyTypes(level);
+        
+        // If boss just defeated, only spawn types not yet seen
+        if (this.bossJustDefeated) {
+            const uniqueTypes = availableTypes.filter(t => !this.spawnedEnemyTypes.has(t));
+            if (uniqueTypes.length > 0) {
+                type = uniqueTypes[Math.floor(Math.random() * uniqueTypes.length)];
+            } else {
+                // Fallback to normal spawn if all types have been seen
+                this.bossJustDefeated = false;
+                type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+            }
+        } else {
+            // Normal spawn logic with probability
+            type = this.selectEnemyTypeByProbability(typeRand, level, availableTypes);
+        }
+        
+        // Track that this enemy type has been spawned
+        this.spawnedEnemyTypes.add(type);
+        
         this.enemies.push(new Enemy(this, type));
+    }
+
+    getAvailableEnemyTypes(level) {
+        // Return array of enemy types available at this level
+        if (level >= 21) {
+            return ['chaser', 'heavy', 'shooter', 'swarm', 'sniper', 'splitter', 'phantom', 'titan', 'wraith', 'vortex', 
+                    'bomber', 'interceptor', 'decoy', 'launcher', 'shielder', 'pulsar', 'blade', 'tractor', 'mirror', 'swarmer'];
+        } else if (level >= 16) {
+            return ['chaser', 'heavy', 'shooter', 'swarm', 'sniper', 'splitter', 'wraith', 
+                    'bomber', 'interceptor', 'decoy', 'launcher', 'shielder', 'pulsar', 'blade', 'tractor', 'mirror', 'swarmer'];
+        } else if (level >= 14) {
+            return ['chaser', 'heavy', 'shooter', 'swarm', 'sniper', 'titan', 
+                    'bomber', 'interceptor', 'decoy', 'launcher', 'shielder', 'pulsar', 'blade', 'swarmer'];
+        } else if (level >= 12) {
+            return ['chaser', 'heavy', 'shooter', 'swarm', 'sniper', 'titan', 
+                    'bomber', 'interceptor', 'decoy', 'launcher', 'shielder', 'pulsar', 'blade', 'tractor'];
+        } else if (level >= 10) {
+            return ['chaser', 'heavy', 'shooter', 'swarm', 'sniper', 'phantom', 
+                    'bomber', 'interceptor', 'decoy', 'launcher', 'shielder', 'blade'];
+        } else if (level >= 8) {
+            return ['chaser', 'heavy', 'shooter', 'swarm', 'sniper', 'phantom', 
+                    'bomber', 'interceptor', 'decoy', 'launcher', 'shielder'];
+        } else if (level >= 6) {
+            return ['chaser', 'heavy', 'shooter', 'swarm', 'sniper', 'phantom', 
+                    'bomber', 'interceptor', 'decoy', 'launcher'];
+        } else if (level >= 4) {
+            return ['chaser', 'heavy', 'shooter', 'swarm', 
+                    'bomber', 'interceptor', 'decoy'];
+        } else if (level >= 3) {
+            return ['chaser', 'heavy', 'shooter', 'bomber'];
+        } else {
+            return ['chaser', 'heavy', 'shooter'];
+        }
+    }
+
+    selectEnemyTypeByProbability(typeRand, level, availableTypes) {
+        // Progressive enemy unlock system with all 16 enemy types integrated
+        if (level >= 21) {
+            // LEVEL 21+ | All enemy types available with maximum variety
+            if (typeRand > 0.96) return 'vortex';
+            else if (typeRand > 0.92) return 'titan';
+            else if (typeRand > 0.88) return 'wraith';
+            else if (typeRand > 0.84) return 'mirror';
+            else if (typeRand > 0.80) return 'tractor';
+            else if (typeRand > 0.76) return 'blade';
+            else if (typeRand > 0.72) return 'pulsar';
+            else if (typeRand > 0.68) return 'shielder';
+            else if (typeRand > 0.62) return 'swarmer';
+            else if (typeRand > 0.56) return 'launcher';
+            else if (typeRand > 0.50) return 'phantom';
+            else if (typeRand > 0.44) return 'splitter';
+            else if (typeRand > 0.38) return 'sniper';
+            else if (typeRand > 0.30) return 'swarm';
+            else if (typeRand > 0.20) return 'shooter';
+            else if (typeRand > 0.10) return 'heavy';
+            else return 'chaser';
+        } else if (level >= 16) {
+            // LEVEL 16-20 | Wraith and advanced new enemies
+            if (typeRand > 0.92) return 'wraith';
+            else if (typeRand > 0.88) return 'mirror';
+            else if (typeRand > 0.84) return 'tractor';
+            else if (typeRand > 0.80) return 'blade';
+            else if (typeRand > 0.76) return 'swarmer';
+            else if (typeRand > 0.72) return 'launcher';
+            else if (typeRand > 0.68) return 'pulsar';
+            else if (typeRand > 0.62) return 'splitter';
+            else if (typeRand > 0.56) return 'sniper';
+            else if (typeRand > 0.42) return 'swarm';
+            else if (typeRand > 0.28) return 'shooter';
+            else if (typeRand > 0.14) return 'heavy';
+            else return 'chaser';
+        } else if (level >= 14) {
+            // LEVEL 14-15 | Swarmer emerges - coordinated squadron threat
+            if (typeRand > 0.88) return 'swarmer';
+            else if (typeRand > 0.84) return 'mirror';
+            else if (typeRand > 0.80) return 'tractor';
+            else if (typeRand > 0.76) return 'blade';
+            else if (typeRand > 0.72) return 'launcher';
+            else if (typeRand > 0.68) return 'phantom';
+            else if (typeRand > 0.62) return 'titan';
+            else if (typeRand > 0.56) return 'sniper';
+            else if (typeRand > 0.42) return 'swarm';
+            else if (typeRand > 0.28) return 'shooter';
+            else if (typeRand > 0.14) return 'heavy';
+            else return 'chaser';
+        } else if (level >= 13) {
+            // LEVEL 13 | Mirror appears - reflective threat
+            if (typeRand > 0.86) return 'mirror';
+            else if (typeRand > 0.82) return 'tractor';
+            else if (typeRand > 0.78) return 'blade';
+            else if (typeRand > 0.74) return 'launcher';
+            else if (typeRand > 0.70) return 'pulsar';
+            else if (typeRand > 0.66) return 'phantom';
+            else if (typeRand > 0.60) return 'titan';
+            else if (typeRand > 0.54) return 'sniper';
+            else if (typeRand > 0.40) return 'swarm';
+            else if (typeRand > 0.26) return 'shooter';
+            else if (typeRand > 0.13) return 'heavy';
+            else return 'chaser';
+        } else if (level >= 12) {
+            // LEVEL 12 | Tractor emerges - gravitational threat
+            if (typeRand > 0.84) return 'tractor';
+            else if (typeRand > 0.80) return 'blade';
+            else if (typeRand > 0.76) return 'launcher';
+            else if (typeRand > 0.72) return 'pulsar';
+            else if (typeRand > 0.68) return 'phantom';
+            else if (typeRand > 0.62) return 'titan';
+            else if (typeRand > 0.54) return 'sniper';
+            else if (typeRand > 0.40) return 'swarm';
+            else if (typeRand > 0.26) return 'shooter';
+            else if (typeRand > 0.13) return 'heavy';
+            else return 'chaser';
+        } else if (level >= 11) {
+            // LEVEL 11 | Titan awakens - armored colossus threat
+            if (typeRand > 0.84) return 'titan';
+            else if (typeRand > 0.80) return 'blade';
+            else if (typeRand > 0.76) return 'launcher';
+            else if (typeRand > 0.72) return 'pulsar';
+            else if (typeRand > 0.68) return 'phantom';
+            else if (typeRand > 0.54) return 'sniper';
+            else if (typeRand > 0.40) return 'swarm';
+            else if (typeRand > 0.26) return 'shooter';
+            else if (typeRand > 0.13) return 'heavy';
+            else return 'chaser';
+        } else if (level >= 10) {
+            // LEVEL 10 | Blade emerges - melee slashing threat
+            if (typeRand > 0.82) return 'blade';
+            else if (typeRand > 0.78) return 'launcher';
+            else if (typeRand > 0.74) return 'pulsar';
+            else if (typeRand > 0.70) return 'phantom';
+            else if (typeRand > 0.64) return 'shielder';
+            else if (typeRand > 0.52) return 'sniper';
+            else if (typeRand > 0.38) return 'swarm';
+            else if (typeRand > 0.24) return 'shooter';
+            else if (typeRand > 0.12) return 'heavy';
+            else return 'chaser';
+        } else if (level >= 9) {
+            // LEVEL 9 | Pulsar emerges - energy wave threat
+            if (typeRand > 0.80) return 'pulsar';
+            else if (typeRand > 0.76) return 'launcher';
+            else if (typeRand > 0.72) return 'phantom';
+            else if (typeRand > 0.68) return 'shielder';
+            else if (typeRand > 0.60) return 'sniper';
+            else if (typeRand > 0.46) return 'swarm';
+            else if (typeRand > 0.32) return 'shooter';
+            else if (typeRand > 0.16) return 'heavy';
+            else return 'chaser';
+        } else if (level >= 8) {
+            // LEVEL 8 | Shielder emerges - protected barrier threat
+            if (typeRand > 0.78) return 'shielder';
+            else if (typeRand > 0.74) return 'launcher';
+            else if (typeRand > 0.70) return 'phantom';
+            else if (typeRand > 0.62) return 'sniper';
+            else if (typeRand > 0.48) return 'swarm';
+            else if (typeRand > 0.34) return 'shooter';
+            else if (typeRand > 0.17) return 'heavy';
+            else return 'chaser';
+        } else if (level >= 6) {
+            // LEVEL 6-7 | Launcher appears - missile platform threat
+            if (typeRand > 0.76) return 'launcher';
+            else if (typeRand > 0.72) return 'phantom';
+            else if (typeRand > 0.64) return 'sniper';
+            else if (typeRand > 0.50) return 'swarm';
+            else if (typeRand > 0.36) return 'shooter';
+            else if (typeRand > 0.18) return 'heavy';
+            else return 'chaser';
+        } else if (level >= 5) {
+            // LEVEL 5 | Decoy emerges - holographic clone threat
+            if (typeRand > 0.74) return 'decoy';
+            else if (typeRand > 0.70) return 'phantom';
+            else if (typeRand > 0.62) return 'sniper';
+            else if (typeRand > 0.50) return 'swarm';
+            else if (typeRand > 0.36) return 'shooter';
+            else if (typeRand > 0.18) return 'heavy';
+            else return 'chaser';
+        } else if (level >= 4) {
+            // LEVEL 4 | Interceptor appears - speed threat
+            if (typeRand > 0.72) return 'interceptor';
+            else if (typeRand > 0.68) return 'phantom';
+            else if (typeRand > 0.60) return 'sniper';
+            else if (typeRand > 0.48) return 'swarm';
+            else if (typeRand > 0.34) return 'shooter';
+            else if (typeRand > 0.17) return 'heavy';
+            else return 'chaser';
+        } else if (level >= 3) {
+            // LEVEL 3 | Bomber emerges - explosive threat
+            if (typeRand > 0.70) return 'bomber';
+            else if (typeRand > 0.66) return 'phantom';
+            else if (typeRand > 0.58) return 'sniper';
+            else if (typeRand > 0.46) return 'swarm';
+            else if (typeRand > 0.32) return 'shooter';
+            else if (typeRand > 0.16) return 'heavy';
+            else return 'chaser';
+        } else {
+            // LEVEL 1-2 | Early game - basic enemies only
+            if (typeRand > 0.70) return 'shooter';
+            else if (typeRand > 0.40) return 'heavy';
+            else return 'chaser';
+        }
+    }
+
+    removeLowestHPEnemy() {
+        if (this.enemies.length === 0) return;
+        
+        // Sort enemies by health (ascending) and remove the lowest HP enemy
+        let lowestHPEnemy = this.enemies[0];
+        let lowestIndex = 0;
+        
+        for (let i = 1; i < this.enemies.length; i++) {
+            if (this.enemies[i].health < lowestHPEnemy.health) {
+                lowestHPEnemy = this.enemies[i];
+                lowestIndex = i;
+            }
+        }
+        
+        // Mark the lowest HP enemy for deletion
+        lowestHPEnemy.markedForDeletion = true;
     }
 
     spawnPowerUp() {

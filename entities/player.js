@@ -982,6 +982,9 @@ export class Player {
     }
 
     findNearestEnemy(range) {
+        // Disable auto-targeting when boss is present
+        if (this.game.boss) return null;
+        
         let nearest = null;
         let minDist = range;
 
