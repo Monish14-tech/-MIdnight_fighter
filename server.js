@@ -24,7 +24,7 @@ let leaderboardCollection;
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Connect to MongoDB
 async function connectDB() {
