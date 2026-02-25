@@ -54,7 +54,7 @@ The server will start on: http://localhost:8000
 
 Your MongoDB Atlas connection string is already configured in `server.js`:
 ```
-mongodb+srv://admin:Prasath@20012006@cluster0.lum0no3.mongodb.net/
+mongodb+srv://admin:<db_password>@cluster0.lum0no3.mongodb.net/
 ```
 
 Database Name: `midnight_fighter`
