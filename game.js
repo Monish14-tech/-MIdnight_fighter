@@ -5,6 +5,7 @@ import { Explosion } from './entities/particle.js';
 import { AudioController } from './audio.js';
 import { ScreenShake, Nebula, CosmicDust, Planet, Asteroid } from './utils.js';
 import { PowerUp } from './entities/powerup.js';
+import { LeaderboardManager } from './leaderboard.js';
 
 class AssetLoader {
     constructor() {
@@ -154,12 +155,16 @@ export class Game {
         // Settings
         this.autoTargetEnabled = localStorage.getItem('midnight_autotarget_enabled') !== 'false';
 
+        // Leaderboard
+        this.leaderboard = new LeaderboardManager();
+
         // Bindings
         this.loop = this.loop.bind(this);
         this.resize = this.resize.bind(this);
 
         this.initAtmosphere();
         this.addEventListeners();
+        this.updatePlayerNameDisplay();
     }
 
     initAtmosphere() {
@@ -288,6 +293,44 @@ export class Game {
             };
             goToMainBtn.addEventListener('click', handleMain);
             goToMainBtn.addEventListener('touchstart', handleMain, { passive: false });
+        }
+
+        // Leaderboard Buttons
+        const leaderboardBtn = document.getElementById('leaderboard-btn');
+        if (leaderboardBtn) {
+            leaderboardBtn.addEventListener('click', () => this.openLeaderboard());
+            leaderboardBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.openLeaderboard(); }, { passive: false });
+        }
+
+        const backFromLeaderboardBtn = document.getElementById('back-from-leaderboard-btn');
+        if (backFromLeaderboardBtn) {
+            backFromLeaderboardBtn.addEventListener('click', () => this.closeLeaderboard());
+            backFromLeaderboardBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.closeLeaderboard(); }, { passive: false });
+        }
+
+        const goToLeaderboardBtn = document.getElementById('go-to-leaderboard-btn');
+        if (goToLeaderboardBtn) {
+            goToLeaderboardBtn.addEventListener('click', () => this.openLeaderboardFromGameOver());
+            goToLeaderboardBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.openLeaderboardFromGameOver(); }, { passive: false });
+        }
+
+        const refreshLeaderboardBtn = document.getElementById('refresh-leaderboard-btn');
+        if (refreshLeaderboardBtn) {
+            refreshLeaderboardBtn.addEventListener('click', () => this.leaderboard.displayLeaderboard());
+            refreshLeaderboardBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.leaderboard.displayLeaderboard(); }, { passive: false });
+        }
+
+        const setNameBtn = document.getElementById('set-name-btn');
+        if (setNameBtn) {
+            setNameBtn.addEventListener('click', () => this.setPlayerName());
+            setNameBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.setPlayerName(); }, { passive: false });
+        }
+
+        const playerNameInput = document.getElementById('player-name-input');
+        if (playerNameInput) {
+            playerNameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.setPlayerName();
+            });
         }
 
         // Keyboard Pause
@@ -576,6 +619,57 @@ export class Game {
     goToStoreFromGameOver() {
         this.goToMainMenu();
         this.openStore();
+    }
+
+    // Leaderboard Methods
+    openLeaderboard() {
+        this.startScreen.classList.remove('active');
+        document.getElementById('leaderboard-screen').classList.add('active');
+        this.leaderboard.displayLeaderboard();
+        
+        // Set player name input value if exists
+        const input = document.getElementById('player-name-input');
+        if (input && this.leaderboard.getPlayerName()) {
+            input.value = this.leaderboard.getPlayerName();
+        }
+    }
+
+    openLeaderboardFromGameOver() {
+        this.gameOverScreen.classList.remove('active');
+        document.getElementById('leaderboard-screen').classList.add('active');
+        this.leaderboard.displayLeaderboard();
+        
+        // Set player name input value if exists
+        const input = document.getElementById('player-name-input');
+        if (input && this.leaderboard.getPlayerName()) {
+            input.value = this.leaderboard.getPlayerName();
+        }
+    }
+
+    closeLeaderboard() {
+        document.getElementById('leaderboard-screen').classList.remove('active');
+        this.startScreen.classList.add('active');
+    }
+
+    setPlayerName() {
+        const input = document.getElementById('player-name-input');
+        if (!input || !input.value.trim()) {
+            alert('Please enter a valid pilot name!');
+            return;
+        }
+        
+        const name = input.value.trim();
+        this.leaderboard.setPlayerName(name);
+        this.updatePlayerNameDisplay();
+        alert(`Pilot name set to: ${name}`);
+    }
+
+    updatePlayerNameDisplay() {
+        const displayEl = document.getElementById('current-player-name');
+        if (displayEl) {
+            const playerName = this.leaderboard.getPlayerName();
+            displayEl.innerText = playerName || 'UNKNOWN';
+        }
     }
 
     initializeCosmicAtmosphere() {
@@ -1402,7 +1496,7 @@ export class Game {
         this.triggerGameOver(earnedCoins);
     }
 
-    triggerGameOver(earnedCoins) {
+    async triggerGameOver(earnedCoins) {
         const finalScoreEl = document.getElementById('final-score');
         if (finalScoreEl) finalScoreEl.innerText = this.score;
         const finalHighScoreEl = document.getElementById('final-high-score');
@@ -1411,6 +1505,9 @@ export class Game {
         // Show coins earned
         const coinsEarnedEl = document.getElementById('coins-earned-display');
         if (coinsEarnedEl) coinsEarnedEl.innerText = `+${earnedCoins} COINS`;
+
+        // Submit score to leaderboard
+        await this.leaderboard.submitScore(this.score, this.level, this.currentShipType);
 
         // Hide boss HUD on termination screen
         const bossHud = document.getElementById('boss-hud');
