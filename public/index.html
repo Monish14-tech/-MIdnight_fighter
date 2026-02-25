@@ -67,6 +67,17 @@
     <div id="scanlines"></div>
     <div id="vignette"></div>
 
+    <!-- Name Prompt Modal (shown on first load) -->
+    <div id="name-prompt-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="glitch" data-text="IDENTIFY YOURSELF">IDENTIFY YOURSELF</h2>
+            <p class="modal-subtitle">Enter your pilot name for the global leaderboard</p>
+            <input type="text" id="name-prompt-input" placeholder="PILOT NAME" maxlength="20" class="name-input">
+            <button id="name-prompt-submit" class="neon-btn modal-btn">CONFIRM</button>
+            <p class="modal-note">This will be displayed on the global leaderboard</p>
+        </div>
+    </div>
+
     <div id="game-container">
         <canvas id="gameCanvas" width="1280" height="720"></canvas>
         <div id="ui-layer">
@@ -110,17 +121,6 @@
 
             <div id="warp-overlay"></div>
             <div id="impact-overlay"></div>
-
-            <!-- Name Prompt Modal (shown on first load) -->
-            <div id="name-prompt-modal" class="modal">
-                <div class="modal-content">
-                    <h2 class="glitch" data-text="IDENTIFY YOURSELF">IDENTIFY YOURSELF</h2>
-                    <p class="modal-subtitle">Enter your pilot name for the global leaderboard</p>
-                    <input type="text" id="name-prompt-input" placeholder="PILOT NAME" maxlength="20" class="name-input">
-                    <button id="name-prompt-submit" class="neon-btn modal-btn">CONFIRM</button>
-                    <p class="modal-note">This will be displayed on the global leaderboard</p>
-                </div>
-            </div>
 
             <div id="start-screen" class="screen active">
                 <h1 class="title glitch" data-text="COSMIC STRIKE">COSMIC STRIKE</h1>
