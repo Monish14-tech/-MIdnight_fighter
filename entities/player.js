@@ -37,6 +37,7 @@ export class Player {
 
         this.shipType = shipType;
         this.speed = stats.speed;
+        this.isInvincible = Boolean(stats.invincible);
 
         // Weapon System
         this.fireRate = stats.fireRate;
@@ -44,8 +45,10 @@ export class Player {
         this.missileCooldown = stats.missileCooldown || 5.0;
         this.missileTimer = 0;
         this.bulletDamage = stats.damage;
+        this.baseBulletDamage = this.bulletDamage;
         this.missileCount = stats.missileCount;
         this.bulletType = stats.bulletType || 'normal';
+        this.baseFireRate = this.fireRate;
 
         // Visuals
         this.color = stats.color;
@@ -64,6 +67,19 @@ export class Player {
         this.speedBoostTimer = 0;
         this.slowMotionTimer = 0;
         this.invulnerabilityTimer = 0;
+
+        // Dash System
+        this.isDashing = false;
+        this.dashTimer = 0;
+        this.dashDuration = 0.18;
+        this.dashCooldown = 1.2;
+        this.dashCooldownTimer = 0;
+        this.dashSpeed = this.speed * 3.2;
+        this.dashDirection = { x: 0, y: 0 };
+
+        // Extra power-up timers
+        this.doubleDamageTimer = 0;
+        this.rapidFireTimer = 0;
     }
 
     update(deltaTime, input) {
@@ -82,14 +98,23 @@ export class Player {
         // New power-up timers
         if (this.doubleDamageTimer > 0) {
             this.doubleDamageTimer -= deltaTime;
-            if (this.doubleDamageTimer <= 0 && this.baseDamage) {
-                this.damage = this.baseDamage; // Reset to normal damage
+            if (this.doubleDamageTimer <= 0 && this.baseBulletDamage) {
+                this.bulletDamage = this.baseBulletDamage;
             }
         }
         if (this.rapidFireTimer > 0) {
             this.rapidFireTimer -= deltaTime;
             if (this.rapidFireTimer <= 0 && this.baseFireRate) {
                 this.fireRate = this.baseFireRate; // Reset to normal fire rate
+            }
+        }
+
+        // Dash cooldowns
+        if (this.dashCooldownTimer > 0) this.dashCooldownTimer -= deltaTime;
+        if (this.dashTimer > 0) {
+            this.dashTimer -= deltaTime;
+            if (this.dashTimer <= 0) {
+                this.isDashing = false;
             }
         }
 
@@ -111,24 +136,41 @@ export class Player {
         // Movement Logic
         const moveVec = input.getMovementVector();
 
-        // 360-Degree Face Direction (Aim Assist)
-        const nearestEnemy = this.findNearestEnemy(400); // Reduced range from 600
-        if (nearestEnemy) {
-            const dx = nearestEnemy.x - this.x;
-            const dy = nearestEnemy.y - this.y;
-            const targetAngle = Math.atan2(dy, dx);
+        // Start dash if available
+        if (input.keys.dash && this.dashCooldownTimer <= 0 && (moveVec.x !== 0 || moveVec.y !== 0)) {
+            this.isDashing = true;
+            this.dashTimer = this.dashDuration;
+            this.dashCooldownTimer = this.dashCooldown;
+            this.dashDirection = { x: moveVec.x, y: moveVec.y };
+            this.angle = Math.atan2(this.dashDirection.y, this.dashDirection.x);
+            input.keys.dash = false;
+            if (this.game.audio) this.game.audio.dash();
+        }
 
-            // Smoother Aim Assist for fair play
-            let diff = targetAngle - this.angle;
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            this.angle += diff * deltaTime * 4; // Reduced lock strength from 8
-        } else if (moveVec.x !== 0 || moveVec.y !== 0) {
-            const destAngle = Math.atan2(moveVec.y, moveVec.x);
-            let diff = destAngle - this.angle;
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            this.angle += diff * deltaTime * 10;
+        // 360-Degree Face Direction (Aim Assist) - Only if auto-target is enabled
+        if (!this.isDashing) {
+            let targetAngleForMovement = null;
+            if (this.game.autoTargetEnabled) {
+                const nearestEnemy = this.findNearestEnemy(700); // Increased range for auto-detection
+                if (nearestEnemy) {
+                    const dx = nearestEnemy.x - this.x;
+                    const dy = nearestEnemy.y - this.y;
+                    targetAngleForMovement = Math.atan2(dy, dx);
+                }
+            }
+
+            // Apply target angle or movement direction
+            if (targetAngleForMovement !== null) {
+                const diff = targetAngleForMovement - this.angle;
+                const normalizedDiff = diff > Math.PI ? diff - Math.PI * 2 : diff < -Math.PI ? diff + Math.PI * 2 : diff;
+                this.angle += normalizedDiff * deltaTime * 4; // Reduced lock strength from 8
+            } else if (moveVec.x !== 0 || moveVec.y !== 0) {
+                const destAngle = Math.atan2(moveVec.y, moveVec.x);
+                let diff = destAngle - this.angle;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                this.angle += diff * deltaTime * 10;
+            }
         }
 
         let currentSpeed = this.speed;
@@ -138,8 +180,13 @@ export class Player {
             currentSpeed *= 2;
         }
 
-        this.x += moveVec.x * currentSpeed * deltaTime;
-        this.y += moveVec.y * currentSpeed * deltaTime;
+        if (this.isDashing) {
+            this.x += this.dashDirection.x * this.dashSpeed * deltaTime;
+            this.y += this.dashDirection.y * this.dashSpeed * deltaTime;
+        } else {
+            this.x += moveVec.x * currentSpeed * deltaTime;
+            this.y += moveVec.y * currentSpeed * deltaTime;
+        }
 
         // Boundaries
         if (this.x < this.radius) this.x = this.radius;
@@ -685,6 +732,110 @@ export class Player {
                 ctx.fillRect(5, -2, 25, 4);
                 break;
 
+            case 'eclipse': // COSMIC SERAPH - Halo Spear
+                const eclipseGrad = ctx.createLinearGradient(-20, 0, 30, 0);
+                eclipseGrad.addColorStop(0, '#1a2a3a');
+                eclipseGrad.addColorStop(0.5, '#66ccff');
+                eclipseGrad.addColorStop(1, '#e6f7ff');
+                ctx.fillStyle = eclipseGrad;
+
+                // Spear body
+                ctx.beginPath();
+                ctx.moveTo(34, 0);
+                ctx.lineTo(10, 6);
+                ctx.lineTo(-18, 4);
+                ctx.lineTo(-26, 0);
+                ctx.lineTo(-18, -4);
+                ctx.lineTo(10, -6);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Halo ring
+                ctx.strokeStyle = '#aaddff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.ellipse(6, 0, 10, 6, 0, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Wing fins
+                ctx.fillStyle = '#66ccff';
+                ctx.beginPath();
+                ctx.moveTo(4, 8);
+                ctx.lineTo(-8, 18);
+                ctx.lineTo(-2, 6);
+                ctx.closePath();
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(4, -8);
+                ctx.lineTo(-8, -18);
+                ctx.lineTo(-2, -6);
+                ctx.closePath();
+                ctx.fill();
+                break;
+
+            case 'obliterator': // MIDNIGHT OBLIVION - Siege Wedge
+                const obliteratorGrad = ctx.createLinearGradient(-25, 0, 25, 0);
+                obliteratorGrad.addColorStop(0, '#330015');
+                obliteratorGrad.addColorStop(0.5, '#ff3366');
+                obliteratorGrad.addColorStop(1, '#ffb3cc');
+                ctx.fillStyle = obliteratorGrad;
+
+                // Armored wedge hull
+                ctx.beginPath();
+                ctx.moveTo(28, 0);
+                ctx.lineTo(12, 10);
+                ctx.lineTo(-18, 18);
+                ctx.lineTo(-26, 8);
+                ctx.lineTo(-20, 0);
+                ctx.lineTo(-26, -8);
+                ctx.lineTo(-18, -18);
+                ctx.lineTo(12, -10);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Core vents
+                ctx.fillStyle = '#111';
+                ctx.fillRect(-12, -3, 10, 6);
+                ctx.fillStyle = '#ff88aa';
+                ctx.fillRect(-8, -2, 4, 4);
+                break;
+
+            case 'starborn': // STARFALL TITAN - Trident Ark
+                const starbornGrad = ctx.createLinearGradient(-20, -10, 30, 10);
+                starbornGrad.addColorStop(0, '#0b2a1f');
+                starbornGrad.addColorStop(0.5, '#99ffcc');
+                starbornGrad.addColorStop(1, '#e6fff5');
+                ctx.fillStyle = starbornGrad;
+
+                // Tri-prong prow
+                ctx.beginPath();
+                ctx.moveTo(34, 0);
+                ctx.lineTo(16, 6);
+                ctx.lineTo(8, 16);
+                ctx.lineTo(4, 6);
+                ctx.lineTo(-18, 10);
+                ctx.lineTo(-26, 0);
+                ctx.lineTo(-18, -10);
+                ctx.lineTo(4, -6);
+                ctx.lineTo(8, -16);
+                ctx.lineTo(16, -6);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Central crystal
+                ctx.fillStyle = '#ccfff0';
+                ctx.beginPath();
+                ctx.moveTo(6, 0);
+                ctx.lineTo(0, 6);
+                ctx.lineTo(-6, 0);
+                ctx.lineTo(0, -6);
+                ctx.closePath();
+                ctx.fill();
+                break;
+
             default: // INTERCEPTOR (Standard)
                 // Sci-Fi Chrome/Cyan
                 const bodyGrad = ctx.createLinearGradient(-15, 0, 25, 0);
@@ -763,7 +914,7 @@ export class Player {
 
     takeDamage(amount) {
         // Check if player is invulnerable
-        if (this.invulnerableTimer > 0 || this.invulnerabilityTimer > 0) {
+        if (this.isInvincible || this.invulnerableTimer > 0 || this.invulnerabilityTimer > 0 || this.isDashing) {
             return false; // No damage taken
         }
 
@@ -810,8 +961,8 @@ export class Player {
                 break;
             case 'double_damage':
                 this.doubleDamageTimer = 10.0; // 10 seconds of double damage
-                if (!this.baseDamage) this.baseDamage = this.damage;
-                this.damage = this.baseDamage * 2;
+                if (!this.baseBulletDamage) this.baseBulletDamage = this.bulletDamage;
+                this.bulletDamage = this.baseBulletDamage * 2;
                 break;
             case 'rapid_fire':
                 this.rapidFireTimer = 8.0; // 8 seconds of rapid fire
@@ -827,7 +978,7 @@ export class Player {
     }
 
     isInvulnerable() {
-        return this.invulnerableTimer > 0 || this.invulnerabilityTimer > 0;
+        return this.invulnerableTimer > 0 || this.invulnerabilityTimer > 0 || this.isDashing;
     }
 
     findNearestEnemy(range) {

@@ -51,7 +51,10 @@ export const SHIP_DATA = {
     'void': { name: 'VOID STALKER', price: 20000, hp: 4, speed: 360, damage: 5, fireRate: 0.4, missileCooldown: 3.0, missileCount: 1, color: '#4400ff', bulletType: 'railgun', desc: 'Experimental Railgun.' },
     'pulse': { name: 'NEON PULSE', price: 12000, hp: 3, speed: 380, damage: 1, fireRate: 0.04, missileCooldown: 2.5, missileCount: 1, color: '#00ffff', bulletType: 'normal', desc: 'Hyper-frequency pulse.' },
     'guardian': { name: 'GALAXY GUARDIAN', price: 25000, hp: 12, speed: 260, damage: 2, fireRate: 0.2, missileCooldown: 4.0, missileCount: 2, color: '#ffffff', bulletType: 'normal', desc: 'Invincible protector.' },
-    'solar': { name: 'SOLAR FLARE', price: 18000, hp: 4, speed: 310, damage: 2, fireRate: 0.25, missileCooldown: 3.5, missileCount: 1, color: '#ffcc00', bulletType: 'explosive', desc: 'Explosive solar rounds.' }
+    'solar': { name: 'SOLAR FLARE', price: 18000, hp: 4, speed: 310, damage: 2, fireRate: 0.25, missileCooldown: 3.5, missileCount: 1, color: '#ffcc00', bulletType: 'explosive', desc: 'Explosive solar rounds.' },
+    'eclipse': { name: 'ECLIPSE SERAPH', price: 45000, hp: 16, speed: 360, damage: 5, fireRate: 0.08, missileCooldown: 2.2, missileCount: 3, color: '#66ccff', bulletType: 'piercing', invincible: true, desc: 'Angel core. Invincible hull.' },
+    'obliterator': { name: 'OBLITERATOR PRIME', price: 75000, hp: 20, speed: 300, damage: 7, fireRate: 0.12, missileCooldown: 2.8, missileCount: 4, color: '#ff3366', bulletType: 'explosive', invincible: true, desc: 'Siege frame. Invincible core.' },
+    'starborn': { name: 'STARBORN TITAN', price: 120000, hp: 28, speed: 340, damage: 8, fireRate: 0.1, missileCooldown: 2.0, missileCount: 5, color: '#99ffcc', bulletType: 'railgun', invincible: true, desc: 'Mythic relic. Invincible.' }
 };
 
 export class Game {
@@ -69,6 +72,12 @@ export class Game {
         this.coins = parseInt(localStorage.getItem('midnight_coins')) || 0;
         this.ownedShips = JSON.parse(localStorage.getItem('midnight_owned_ships')) || ['default'];
         this.selectedShip = localStorage.getItem('midnight_selected_ship') || 'default';
+        
+        // Ensure guardian is not equipped by default
+        if (this.selectedShip === 'guardian') {
+            this.selectedShip = 'default';
+            localStorage.setItem('midnight_selected_ship', this.selectedShip);
+        }
 
         this.gameOver = false;
         this.isRunning = false;
@@ -92,6 +101,12 @@ export class Game {
         this.audio = new AudioController();
         this.screenShake = new ScreenShake();
         this.assets = new AssetLoader();
+
+        // Initialize audio settings
+        const musicEnabled = localStorage.getItem('midnight_music_enabled') !== 'false';
+        if (!musicEnabled) {
+            this.audio.masterGain.gain.value = 0;
+        }
 
         // Arrays
         this.enemies = [];
@@ -118,6 +133,18 @@ export class Game {
         this.enemyInterval = 2.0;
         this.powerupTimer = 0;
         this.powerupInterval = 12.0;
+        this.comboMultiplier = 1;
+        this.comboTimer = 0;
+
+        // Gameplay Extras
+        this.comboMultiplier = 1;
+        this.comboTimer = 0;
+        this.comboWindow = 3.0;
+        this.comboMax = 5.0;
+        this.enemyDropChance = 0.08;
+
+        // Settings
+        this.autoTargetEnabled = localStorage.getItem('midnight_autotarget_enabled') !== 'false';
 
         // Bindings
         this.loop = this.loop.bind(this);
@@ -150,6 +177,8 @@ export class Game {
         const handleStart = (e) => {
             if (e.type === 'touchstart') e.preventDefault();
             console.log(`${e.target.id} triggered via ${e.type}`);
+            // Auto-fullscreen on game start
+            this.enterFullscreen();
             this.startGame();
         };
 
@@ -183,6 +212,38 @@ export class Game {
         if (resumeBtn) {
             resumeBtn.addEventListener('click', () => this.togglePause());
             resumeBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.togglePause(); }, { passive: false });
+        }
+
+        // Settings Button
+        const settingsBtn = document.getElementById('settings-btn');
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', () => this.toggleSettingsMenu());
+            settingsBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.toggleSettingsMenu(); }, { passive: false });
+        }
+
+        const closeSettingsBtn = document.getElementById('close-settings-btn');
+        if (closeSettingsBtn) {
+            closeSettingsBtn.addEventListener('click', () => this.toggleSettingsMenu());
+            closeSettingsBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.toggleSettingsMenu(); }, { passive: false });
+        }
+
+        // Settings Checkboxes
+        const musicToggle = document.getElementById('music-toggle');
+        if (musicToggle) {
+            musicToggle.checked = localStorage.getItem('midnight_music_enabled') !== 'false';
+            musicToggle.addEventListener('change', (e) => {
+                localStorage.setItem('midnight_music_enabled', e.target.checked);
+                this.audio.masterGain.gain.value = e.target.checked ? 0.3 : 0;
+            });
+        }
+
+        const autoTargetToggle = document.getElementById('autotarget-toggle');
+        if (autoTargetToggle) {
+            autoTargetToggle.checked = localStorage.getItem('midnight_autotarget_enabled') !== 'false';
+            autoTargetToggle.addEventListener('change', (e) => {
+                localStorage.setItem('midnight_autotarget_enabled', e.target.checked);
+                this.autoTargetEnabled = e.target.checked;
+            });
         }
 
         const mainMenuBtn = document.getElementById('main-menu-btn');
@@ -269,6 +330,14 @@ export class Game {
             if (document.exitFullscreen) {
                 document.exitFullscreen();
             }
+        }
+    }
+
+    enterFullscreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+                console.log(`Auto-fullscreen failed: ${err.message}`);
+            });
         }
     }
 
@@ -421,13 +490,6 @@ export class Game {
         this.powerupTimer = 0;
         this.powerupInterval = 12.0;
 
-        // Attempt Fullscreen
-        if (document.documentElement.requestFullscreen) {
-            document.documentElement.requestFullscreen().catch(err => {
-                console.log(`Error attempting to enable fullscreen: ${err.message}`);
-            });
-        }
-
         this.startScreen.classList.remove('active');
         this.gameOverScreen.classList.remove('active');
         if (this.hud) this.hud.style.display = 'flex';
@@ -454,12 +516,27 @@ export class Game {
         }
     }
 
+    toggleSettingsMenu() {
+        if (!this.isRunning || this.gameOver) return;
+
+        const settingsMenu = document.getElementById('settings-menu');
+        settingsMenu.classList.toggle('active');
+
+        if (settingsMenu.classList.contains('active')) {
+            this.isPaused = true;
+        } else {
+            this.isPaused = false;
+            this.lastTime = 0; // Reset delta time to prevent jump
+        }
+    }
+
     goToMainMenu() {
         this.isRunning = false;
         this.isPaused = false;
         this.gameOver = false;
 
         document.getElementById('pause-menu').classList.remove('active');
+        document.getElementById('settings-menu').classList.remove('active');
         this.gameOverScreen.classList.remove('active');
         if (this.hud) this.hud.style.display = 'none';
 
@@ -553,6 +630,13 @@ export class Game {
         const dt = Math.min(deltaTime, 0.1);
 
         this.screenShake.update(dt);
+
+        if (this.comboTimer > 0) {
+            this.comboTimer -= dt;
+            if (this.comboTimer <= 0) {
+                this.comboMultiplier = 1;
+            }
+        }
 
         if (!this.gameOver) {
             if (this.player) {
@@ -703,11 +787,49 @@ export class Game {
         }
     }
 
+    addScore(points, useCombo = true) {
+        if (useCombo) {
+            if (this.comboTimer > 0) {
+                this.comboMultiplier = Math.min(this.comboMax, this.comboMultiplier + 0.25);
+            } else {
+                this.comboMultiplier = 1;
+            }
+            this.comboTimer = this.comboWindow;
+            this.score += Math.round(points * this.comboMultiplier);
+        } else {
+            this.score += points;
+        }
+    }
+
+    handleEnemyDefeat(enemy, useCombo = true) {
+        if (!enemy || enemy.markedForDeletion) return;
+        enemy.markedForDeletion = true;
+        this.addScore(enemy.points, useCombo);
+        this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
+        if (this.audio) this.audio.explosion();
+
+        if (enemy.splitOnDeath) {
+            for (let i = 0; i < enemy.splitCount; i++) {
+                const child = new Enemy(this, enemy.splitType || 'swarm');
+                child.x = enemy.x + (Math.random() - 0.5) * 20;
+                child.y = enemy.y + (Math.random() - 0.5) * 20;
+                this.enemies.push(child);
+            }
+        }
+
+        if (this.powerups.length < 3 && Math.random() < this.enemyDropChance) {
+            this.spawnPowerUpAt(enemy.x, enemy.y);
+        }
+    }
+
     spawnEnemy() {
         const typeRand = Math.random();
         let type = 'chaser';
-        if (this.score > 1500 && typeRand > 0.8) type = 'shooter';
-        else if (this.score > 500 && typeRand > 0.7) type = 'heavy';
+        if (this.currentLevel >= 4 && typeRand > 0.92) type = 'splitter';
+        else if (this.currentLevel >= 3 && typeRand > 0.82) type = 'sniper';
+        else if (this.currentLevel >= 2 && typeRand > 0.65) type = 'swarm';
+        else if (this.score > 1500 && typeRand > 0.75) type = 'shooter';
+        else if (this.score > 500 && typeRand > 0.6) type = 'heavy';
         this.enemies.push(new Enemy(this, type));
     }
 
@@ -715,6 +837,12 @@ export class Game {
         const types = ['speed', 'slowmo', 'invulnerability', 'health_recover', 'health_boost', 'shield', 'double_damage', 'rapid_fire'];
         const type = types[Math.floor(Math.random() * types.length)];
         this.powerups.push(new PowerUp(this, type));
+    }
+
+    spawnPowerUpAt(x, y) {
+        const types = ['speed', 'slowmo', 'invulnerability', 'health_recover', 'shield', 'double_damage', 'rapid_fire'];
+        const type = types[Math.floor(Math.random() * types.length)];
+        this.powerups.push(new PowerUp(this, type, x, y));
     }
 
     checkCollisions() {
@@ -729,10 +857,7 @@ export class Game {
 
             if (distance < enemy.radius + this.player.radius) {
                 if (this.player.isInvulnerable()) {
-                    enemy.markedForDeletion = true;
-                    this.score += enemy.points;
-                    this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
-                    if (this.audio) this.audio.explosion();
+                    this.handleEnemyDefeat(enemy, true);
                 } else {
                     const playerDied = this.player.takeDamage(1);
                     this.triggerImpact(0.1, 0.5);
@@ -740,8 +865,7 @@ export class Game {
                     if (playerDied) {
                         this.handleGameOver();
                     } else {
-                        enemy.markedForDeletion = true;
-                        this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
+                        this.handleEnemyDefeat(enemy, false);
                         this.screenShake.trigger(20, 0.2);
                     }
                 }
@@ -784,18 +908,13 @@ export class Game {
                             // Don't delete, just damage
                             const dead = enemy.takeDamage(proj.damage);
                             if (dead) {
-                                enemy.markedForDeletion = true;
-                                this.score += enemy.points;
-                                this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
+                                this.handleEnemyDefeat(enemy, true);
                             }
                         } else {
                             proj.markedForDeletion = true;
                             const dead = enemy.takeDamage(proj.damage);
                             if (dead) {
-                                enemy.markedForDeletion = true;
-                                this.score += enemy.points;
-                                this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
-                                if (this.audio) this.audio.explosion();
+                                this.handleEnemyDefeat(enemy, true);
                             }
                         }
                     }
@@ -851,9 +970,7 @@ export class Game {
             if (dist < radius + enemy.radius) {
                 const dead = enemy.takeDamage(damage);
                 if (dead) {
-                    enemy.markedForDeletion = true;
-                    this.score += enemy.points;
-                    this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
+                    this.handleEnemyDefeat(enemy, true);
                 }
             }
         });
@@ -1022,6 +1139,10 @@ export class Game {
         // Show coins earned
         const coinsEarnedEl = document.getElementById('coins-earned-display');
         if (coinsEarnedEl) coinsEarnedEl.innerText = `+${earnedCoins} COINS`;
+
+        // Hide boss HUD on termination screen
+        const bossHud = document.getElementById('boss-hud');
+        if (bossHud) bossHud.classList.remove('active');
 
         if (this.gameOverScreen) this.gameOverScreen.classList.add('active');
         if (this.hud) this.hud.style.display = 'none';

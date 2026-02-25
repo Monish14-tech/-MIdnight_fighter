@@ -251,11 +251,6 @@ export class Boss {
         if (total > prev) {
             const offset = (Math.random() - 0.5) * 0.2;
             this.fireProjectile(this.x, this.y, this.angle + offset, 'bullet');
-
-            // Occasionally fire a missile - drastically reduced chance
-            if (Math.random() < 0.05) { // Was 0.2
-                this.fireProjectile(this.x, this.y, this.angle + (Math.random() - 0.5), 'missile');
-            }
         }
     }
 
@@ -380,30 +375,49 @@ export class Boss {
     }
 
     drawModelHeavy(ctx) {
-        const grad = ctx.createRadialGradient(0, 0, 20, 0, 0, 100);
-        grad.addColorStop(0, this.color);
-        grad.addColorStop(1, '#000');
+        const grad = ctx.createLinearGradient(-120, 0, 120, 0);
+        grad.addColorStop(0, '#110000');
+        grad.addColorStop(0.5, this.color);
+        grad.addColorStop(1, '#ffffff');
         ctx.fillStyle = grad;
 
-        // Massive Delta Wing / Tank Jet
+        // Crowned siege prow
         ctx.beginPath();
-        ctx.moveTo(100, 0);    // Pointy Nose
-        ctx.lineTo(20, 60);    // Front wing
-        ctx.lineTo(-30, 120);  // Wing tip
-        ctx.lineTo(-50, 40);   // Main body
-        ctx.lineTo(-120, 40);  // Rocket pods
-        ctx.lineTo(-120, -40);
-        ctx.lineTo(-50, -40);
-        ctx.lineTo(-30, -120);
-        ctx.lineTo(20, -60);
+        ctx.moveTo(110, 0);
+        ctx.lineTo(50, 30);
+        ctx.lineTo(20, 80);
+        ctx.lineTo(-10, 50);
+        ctx.lineTo(-70, 60);
+        ctx.lineTo(-130, 20);
+        ctx.lineTo(-100, 0);
+        ctx.lineTo(-130, -20);
+        ctx.lineTo(-70, -60);
+        ctx.lineTo(-10, -50);
+        ctx.lineTo(20, -80);
+        ctx.lineTo(50, -30);
         ctx.closePath();
         ctx.fill();
 
-        // Armor Plating Detail
-        ctx.fillStyle = 'rgba(255,255,255,0.1)';
-        ctx.fillRect(-20, -30, 40, 60);
-        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        // Spine armor
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        ctx.fillRect(-30, -35, 60, 70);
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)';
         ctx.lineWidth = 3;
-        ctx.strokeRect(-20, -30, 40, 60);
+        ctx.strokeRect(-30, -35, 60, 70);
+
+        // Side fins
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.beginPath();
+        ctx.moveTo(-20, 40);
+        ctx.lineTo(-60, 90);
+        ctx.lineTo(-10, 70);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-20, -40);
+        ctx.lineTo(-60, -90);
+        ctx.lineTo(-10, -70);
+        ctx.closePath();
+        ctx.fill();
     }
 }

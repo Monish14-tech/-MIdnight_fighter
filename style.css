@@ -11,9 +11,9 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    user-select: none;
     -webkit-user-select: none;
     -moz-user-select: none;
+    user-select: none;
 }
 
 body {
@@ -26,6 +26,8 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+    /* Mobile safe area support for notched devices */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 #game-container {
@@ -157,6 +159,13 @@ h1 {
     margin-bottom: 0.5rem;
 }
 
+/* Mobile title optimization */
+@media screen and (max-width: 900px) {
+    h1 {
+        font-size: 2.5rem;
+    }
+}
+
 .glitch {
     position: relative;
 }
@@ -246,6 +255,19 @@ h1 {
     text-shadow: 0 0 10px var(--neon-pink);
 }
 
+/* Mobile subtitle optimization */
+@media screen and (max-width: 900px) {
+    .subtitle {
+        font-size: 1rem;
+        letter-spacing: 3px;
+        margin-bottom: 1rem;
+    }
+    
+    h2 {
+        font-size: 1.8rem;
+    }
+}
+
 .neon-btn {
     background: transparent;
     border: 2px solid var(--neon-blue);
@@ -258,12 +280,37 @@ h1 {
     box-shadow: 0 0 10px var(--neon-blue), inset 0 0 10px var(--neon-blue);
     transition: all 0.2s;
     margin-top: 2rem;
+    min-width: 200px;
+    min-height: 50px;
+}
+
+/* Mobile button optimization - Better touch targets */
+@media screen and (max-width: 900px) {
+    .neon-btn {
+        padding: 12px 30px;
+        font-size: 1.1rem;
+        margin-top: 1rem;
+        min-width: 180px;
+        min-height: 44px; /* iOS minimum touch target */
+    }
 }
 
 .menu-buttons {
     display: flex;
     gap: 20px;
     justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* Mobile menu buttons - Stack vertically for easier touch */
+@media screen and (max-width: 900px) {
+    .menu-buttons {
+        flex-direction: column;
+        gap: 15px;
+        width: 100%;
+        align-items: center;
+        padding: 0 20px;
+    }
 }
 
 #store-screen {
@@ -359,6 +406,15 @@ h1 {
     font-weight: bold;
 }
 
+/* Mobile coins display optimization */
+@media screen and (max-width: 900px) {
+    #total-coins-display,
+    #coins-display-store {
+        font-size: 1rem;
+        margin-top: 5px;
+    }
+}
+
 .highlight-text {
     color: #ffd700;
     font-weight: bold;
@@ -370,7 +426,6 @@ h1 {
 #pause-btn {
     position: absolute;
     top: 10px;
-    /* Moved up slightly or adjust to avoid health bar */
     right: 10px;
     width: 40px;
     height: 40px;
@@ -382,11 +437,21 @@ h1 {
     font-size: 1.2rem;
     cursor: pointer;
     z-index: 2000;
-    /* Ensure it's above everything */
     display: flex;
     justify-content: center;
     align-items: center;
     pointer-events: auto;
+}
+
+/* Mobile pause button - Better touch target */
+@media screen and (max-width: 900px) {
+    #pause-btn {
+        width: 44px;
+        height: 44px;
+        top: 5px;
+        right: 5px;
+        font-size: 1rem;
+    }
 }
 
 /* Ensure HUD doesn't overlap/block clicks */
@@ -405,9 +470,46 @@ h1 {
     /* Explicitly enable for button */
 }
 
+#settings-btn {
+    position: absolute;
+    top: 10px;
+    right: 60px;
+    width: 40px;
+    height: 40px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--neon-blue);
+    color: var(--neon-blue);
+    font-family: 'Orbitron', sans-serif;
+    font-weight: bold;
+    font-size: 1.2rem;
+    cursor: pointer;
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: auto;
+}
+
+#settings-btn:hover {
+    background: rgba(0, 243, 255, 0.2);
+    box-shadow: 0 0 10px var(--neon-blue);
+}
+
+/* Mobile settings button */
+@media screen and (max-width: 900px) {
+    #settings-btn {
+        width: 44px;
+        height: 44px;
+        top: 5px;
+        right: 55px;
+        font-size: 1rem;
+    }
+}
+
 #pause-menu {
     background: rgba(0, 0, 0, 0.85);
     /* Semi-transparent */
+    -webkit-backdrop-filter: blur(5px);
     backdrop-filter: blur(5px);
     z-index: 2000;
 }
@@ -426,6 +528,46 @@ h1 {
     color: #000;
 }
 
+/* Settings Menu */
+#settings-menu {
+    background: rgba(0, 0, 0, 0.85);
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+    z-index: 2000;
+}
+
+.settings-container {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    margin: 30px 0;
+    align-items: center;
+    padding: 20px;
+}
+
+.setting-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: var(--neon-blue);
+    user-select: none;
+}
+
+.setting-item input[type="checkbox"] {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    accent-color: var(--neon-blue);
+}
+
+.setting-label {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
 .neon-btn:hover {
     background: var(--neon-blue);
     color: var(--bg-color);
@@ -439,12 +581,19 @@ h1 {
     font-size: 0.9rem;
 }
 
-/* HUD */
+/* Hide fullscreen button on mobile */
+@media screen and (max-width: 900px) {
+    #fullscreen-btn {
+        display: none;
+    }
+}
+
+/* HUD - Three Column Layout */
 #hud {
     position: absolute;
-    top: 20px;
-    left: 20px;
-    right: 20px;
+    top: 10px;
+    left: 10px;
+    right: 10px;
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
@@ -452,18 +601,79 @@ h1 {
     font-family: 'Orbitron', monospace;
 }
 
+#hud-left {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+/* Mobile HUD optimization */
+@media screen and (max-width: 900px) {
+    #hud {
+        top: 5px;
+        left: 5px;
+        right: 5px;
+        flex-wrap: nowrap;
+        align-items: flex-start;
+    }
+    
+    #hud-left {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        column-gap: 6px;
+        row-gap: 4px;
+        width: 100%;
+        padding-right: 110px;
+    }
+
+    #hud-left .score-container,
+    #hud-left .health-container,
+    #hud-left .missile-container {
+        width: 100%;
+        font-size: 0.55rem;
+        padding: 2px 4px;
+        border-width: 1px;
+        background: rgba(0, 0, 0, 0.3);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
+    #health-bar,
+    #missile-bar {
+        width: 100%;
+        height: 6px;
+        border-width: 1px;
+    }
+}
+
 .score-container {
-    font-size: 1.2rem;
+    font-size: 1rem;
     color: #00f3ff;
     text-shadow: 0 0 10px #00f3ff, 0 0 20px #00f3ff;
-    background: rgba(0, 0, 0, 0.7);
-    padding: 10px 20px;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 6px 12px;
     border: 2px solid #00f3ff;
     border-radius: 5px;
     box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
-    letter-spacing: 2px;
+    letter-spacing: 1px;
     font-weight: bold;
-    margin-bottom: 10px;
+    white-space: nowrap;
+}
+
+/* Mobile score containers - More compact */
+@media screen and (max-width: 900px) {
+    .score-container {
+        font-size: 0.7rem;
+        padding: 4px 8px;
+        border-width: 1px;
+        letter-spacing: 0.5px;
+        font-size: 0.8rem;
+        padding: 5px 10px;
+        letter-spacing: 1px;
+        margin-bottom: 3px;
+        border-width: 1px;
+    }
 }
 
 .score-container span {
@@ -472,28 +682,51 @@ h1 {
 }
 
 .health-container {
-    font-size: 1.2rem;
+    font-size: 1rem;
     color: #ff3333;
     text-shadow: 0 0 10px #ff3333;
-    background: rgba(0, 0, 0, 0.7);
-    padding: 10px 20px;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 6px 12px;
     border: 2px solid #ff3333;
     border-radius: 5px;
     box-shadow: 0 0 15px rgba(255, 51, 51, 0.5);
-    letter-spacing: 2px;
+    letter-spacing: 1px;
     font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+/* Mobile health container optimization */
+@media screen and (max-width: 900px) {
+    .health-container {
+        font-size: 0.7rem;
+        padding: 4px 8px;
+        letter-spacing: 0.5px;
+        border-width: 1px;
+        gap: 4px;
+    }
 }
 
 #health-bar {
-    width: 200px;
-    height: 25px;
+    width: 150px;
+    height: 20px;
     border: 2px solid #ff3333;
     background: rgba(0, 0, 0, 0.8);
-    margin-top: 8px;
     position: relative;
     box-shadow: 0 0 15px rgba(255, 51, 51, 0.5), inset 0 0 10px rgba(0, 0, 0, 0.5);
     border-radius: 3px;
     overflow: hidden;
+}
+
+/* Mobile health bar - Smaller but still visible */
+@media screen and (max-width: 900px) {
+    #health-bar {
+        width: 80px;
+        height: 6px;
+        border-width: 1px;
+    }
 }
 
 #health-fill {
@@ -556,29 +789,51 @@ h1 {
 
 /* Missile Reload Bar */
 .missile-container {
-    font-size: 1.2rem;
+    font-size: 1rem;
     color: #ff6600;
     text-shadow: 0 0 10px #ff6600;
-    background: rgba(0, 0, 0, 0.7);
-    padding: 10px 20px;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 6px 12px;
     border: 2px solid #ff6600;
     border-radius: 5px;
     box-shadow: 0 0 15px rgba(255, 102, 0, 0.5);
-    letter-spacing: 2px;
+    letter-spacing: 1px;
     font-weight: bold;
-    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}}
+
+/* Mobile missile container optimization */
+@media screen and (max-width: 900px) {
+    .missile-container {
+        font-size: 0.7rem;
+        padding: 4px 8px;
+        letter-spacing: 0.5px;
+        border-width: 1px;
+        gap: 4px;
+    }
 }
 
 #missile-bar {
-    width: 200px;
-    height: 20px;
+    width: 150px;
+    height: 16px;
     border: 2px solid #ff6600;
     background: rgba(0, 0, 0, 0.8);
-    margin-top: 8px;
     position: relative;
     box-shadow: 0 0 15px rgba(255, 102, 0, 0.5), inset 0 0 10px rgba(0, 0, 0, 0.5);
     border-radius: 3px;
     overflow: hidden;
+}
+
+/* Mobile missile bar optimization */
+@media screen and (max-width: 900px) {
+    #missile-bar {
+        width: 80px;
+        height: 6px;
+        border-width: 1px;
+    }
 }
 
 #missile-fill {
@@ -606,8 +861,19 @@ h1 {
     flex-direction: column;
     align-items: center;
     z-index: 1000;
+    -webkit-backdrop-filter: blur(5px);
     backdrop-filter: blur(5px);
     box-shadow: 0 0 20px rgba(255, 51, 51, 0.3);
+}
+
+/* Mobile boss HUD - More compact */
+@media screen and (max-width: 900px) {
+    #boss-hud {
+        top: 10px;
+        width: 80%;
+        padding: 5px;
+        border-width: 1px;
+    }
 }
 
 #boss-hud.active {
@@ -621,6 +887,15 @@ h1 {
     letter-spacing: 4px;
     margin-bottom: 5px;
     text-shadow: 0 0 10px var(--neon-red);
+}
+
+/* Mobile boss name - Smaller text */
+@media screen and (max-width: 900px) {
+    .boss-name {
+        font-size: 0.8rem;
+        letter-spacing: 2px;
+        margin-bottom: 3px;
+    }
 }
 
 #boss-health-bar {
@@ -684,6 +959,40 @@ h1 {
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, transparent 50%, rgba(0, 0, 0, 0.3) 100%);
 }
 
+/* Game Instructions (Desktop Only - Start Screen) */
+#game-instructions {
+    margin-top: 40px;
+    display: flex;
+    gap: 20px;
+    padding: 12px 24px;
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid var(--neon-blue);
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0, 243, 255, 0.3);
+}
+
+.instruction-item {
+    font-size: 0.85rem;
+    color: var(--neon-blue);
+    text-shadow: 0 0 8px var(--neon-blue);
+    letter-spacing: 1px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Hide instructions on mobile */
+@media screen and (max-width: 900px) {
+    #game-instructions {
+        display: none;
+    }
+}
+
+@media (hover: none) and (pointer: coarse) {
+    #game-instructions {
+        display: none;
+    }
+}
+
 /* Mobile Controls */
 #mobile-controls {
     display: none;
@@ -704,13 +1013,18 @@ screen and (max-width: 1024px) {
     #mobile-controls {
         display: flex;
     }
+}
 
-    /* Scale HUD down for mobile */
-    #hud {
-        transform: scale(0.8);
-        transform-origin: top left;
-        width: 125%;
-        /* Compensate for scale */
+/* Additional mobile optimizations */
+@media screen and (max-width: 900px) {
+    .controls-hint {
+        font-size: 0.75rem;
+        margin: 0.5rem 0;
+        line-height: 1.3;
+    }
+    
+    .controls-hint p {
+        margin: 5px 0;
     }
 }
 
@@ -736,6 +1050,14 @@ screen and (max-width: 1024px) {
     touch-action: none;
 }
 
+/* Mobile joystick - Bigger for easier control */
+@media screen and (max-width: 900px) and (orientation: landscape) {
+    #joystick-zone {
+        width: 100px;
+        height: 100px;
+    }
+}
+
 #joystick-knob {
     width: 50px;
     height: 50px;
@@ -751,6 +1073,14 @@ screen and (max-width: 1024px) {
     opacity: 0.8;
 }
 
+/* Mobile joystick knob optimization */
+@media screen and (max-width: 900px) and (orientation: landscape) {
+    #joystick-knob {
+        width: 40px;
+        height: 40px;
+    }
+}
+
 .mobile-btn {
     width: 100px;
     height: 100px;
@@ -762,8 +1092,19 @@ screen and (max-width: 1024px) {
     font-weight: bold;
     pointer-events: auto;
     touch-action: manipulation;
+    -webkit-backdrop-filter: blur(2px);
     backdrop-filter: blur(2px);
+    font-size: 0.9rem;
     /* Slight blur to distinguish from game */
+}
+
+/* Mobile action buttons optimization */
+@media screen and (max-width: 900px) and (orientation: landscape) {
+    .mobile-btn {
+        width: 70px;
+        height: 70px;
+        font-size: 0.7rem;
+    }
 }
 
 .mobile-btn:active {
@@ -775,6 +1116,13 @@ screen and (max-width: 1024px) {
 #mobile-actions {
     display: flex;
     gap: 20px;
+}
+
+/* Mobile actions spacing optimization */
+@media screen and (max-width: 900px) and (orientation: landscape) {
+    #mobile-actions {
+        gap: 10px;
+    }
 }
 
 #missile-btn {
@@ -811,6 +1159,17 @@ screen and (max-width: 1024px) {
     animation: blink 1s infinite;
 }
 
+/* Mobile rotate message optimization */
+@media screen and (max-width: 900px) {
+    #rotate-message h2 {
+        font-size: 1.5rem;
+    }
+    
+    #rotate-message p {
+        font-size: 0.9rem;
+    }
+}
+
 @keyframes blink {
 
     0%,
@@ -834,24 +1193,37 @@ screen and (max-width: 1024px) {
     }
 }
 
+/* Optimize layout for small landscape screens */
 @media screen and (max-width: 900px) and (orientation: landscape) {
     #mobile-controls {
         display: flex;
-        bottom: 10px;
-        left: 10px;
-        right: 10px;
+        bottom: 5px;
+        left: 5px;
+        right: 5px;
     }
-
-    .mobile-btn {
-        width: 80px;
-        /* Smaller buttons to fit screen */
-        height: 80px;
-        font-size: 0.8rem;
+    
+    /* Adjust store screen for mobile */
+    #store-screen {
+        padding: 10px;
     }
-
-    #joystick-zone {
-        width: 120px;
-        height: 120px;
+    
+    #ship-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+        width: 95%;
+        padding-bottom: 30px;
+    }
+    
+    .ship-card {
+        padding: 10px;
+    }
+    
+    .ship-card h3 {
+        font-size: 1rem;
+    }
+    
+    .ship-stats {
+        font-size: 0.7rem;
     }
 }
 
@@ -863,6 +1235,7 @@ screen and (max-width: 1024px) {
     width: 100vw;
     height: 100vh;
     background: rgba(255, 0, 0, 0.2);
+    -webkit-backdrop-filter: blur(5px);
     backdrop-filter: blur(5px);
     z-index: 9999;
     display: flex;
@@ -888,6 +1261,14 @@ screen and (max-width: 1024px) {
     animation: glitchAlert 0.2s infinite;
 }
 
+/* Mobile boss alert optimization */
+@media screen and (max-width: 900px) {
+    .boss-alert-content h1 {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+    }
+}
+
 .boss-alert-text {
     font-size: 3rem;
     color: #ffffff;
@@ -896,11 +1277,28 @@ screen and (max-width: 1024px) {
     margin-bottom: 10px;
 }
 
+/* Mobile boss alert text optimization */
+@media screen and (max-width: 900px) {
+    .boss-alert-text {
+        font-size: 1.5rem;
+        letter-spacing: 5px;
+        margin-bottom: 5px;
+    }
+}
+
 .boss-alert-subtext {
     font-size: 1.5rem;
     color: #ffaa00;
     text-shadow: 0 0 10px #ffaa00;
     letter-spacing: 5px;
+}
+
+/* Mobile boss alert subtext optimization */
+@media screen and (max-width: 900px) {
+    .boss-alert-subtext {
+        font-size: 0.9rem;
+        letter-spacing: 3px;
+    }
 }
 
 @keyframes alertPulse {
@@ -939,4 +1337,54 @@ screen and (max-width: 1024px) {
     50% {
         opacity: 0.8;
     }
+}
+/* Mobile Performance Optimizations */
+@media screen and (max-width: 900px) {
+    /* Reduce visual effects for better performance on mobile */
+    #scanlines {
+        background-size: 100% 6px;
+        opacity: 0.5;
+    }
+    
+    #vignette {
+        opacity: 0.7;
+    }
+}
+
+/* Very small mobile devices */
+@media screen and (max-width: 600px) {
+    h1 {
+        font-size: 2rem;
+    }
+    
+    .subtitle {
+        font-size: 0.9rem;
+    }
+    
+    .neon-btn {
+        font-size: 1rem;
+        padding: 10px 25px;
+    }
+}
+
+/* Landscape phones and tablets */
+@media screen and (min-width: 600px) and (max-width: 900px) and (orientation: landscape) {
+    #boss-hud {
+        width: 70%;
+    }
+}
+
+/* Prevent text selection and improve touch response */
+button,
+.mobile-btn,
+.neon-btn,
+#joystick-zone {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+}
+
+/* Disable rubber band scroll on iOS */
+html,
+body {
+    overscroll-behavior: none;
 }

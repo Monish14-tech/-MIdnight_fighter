@@ -6,7 +6,8 @@ export class InputHandler {
             left: false,
             right: false,
             fire: false,
-            missile: false
+            missile: false,
+            dash: false
         };
 
         this.touch = {
@@ -16,7 +17,8 @@ export class InputHandler {
             currX: 0,
             currY: 0,
             dx: 0,
-            dy: 0 // Normalized direction
+            dy: 0, // Normalized direction
+            lastTapTime: 0
         };
 
 
@@ -81,6 +83,9 @@ export class InputHandler {
             e.preventDefault(); // Prevent browser menu
             this.keys.missile = true;
         }
+        if (code === 'ShiftLeft' || code === 'ShiftRight' || key === 'shift') {
+            this.keys.dash = true;
+        }
     }
 
     onKeyUp(e) {
@@ -96,11 +101,20 @@ export class InputHandler {
             e.preventDefault();
             this.keys.missile = false;
         }
+        if (code === 'ShiftLeft' || code === 'ShiftRight' || key === 'shift') {
+            this.keys.dash = false;
+        }
     }
 
     // Touch Logic
     onTouchStart(e) {
         e.preventDefault();
+        const now = Date.now();
+        if (now - this.touch.lastTapTime < 250) {
+            this.keys.dash = true;
+            setTimeout(() => { this.keys.dash = false; }, 150);
+        }
+        this.touch.lastTapTime = now;
         // Use changedTouches to handle multiple touches
         for (let i = 0; i < e.changedTouches.length; i++) {
             const touch = e.changedTouches[i];
@@ -181,6 +195,8 @@ export class InputHandler {
             knob.style.transform = `translate(calc(-50% + ${normalX}px), calc(-50% + ${normalY}px))`;
         }
     }
+
+
 
     getMovementVector() {
         // Return x, y between -1 and 1

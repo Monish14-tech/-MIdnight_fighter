@@ -1,13 +1,13 @@
 export class PowerUp {
-    constructor(game, type) {
+    constructor(game, type, x = null, y = null) {
         this.game = game;
         this.type = type; // 'speed', 'slowmo', 'invulnerability'
         this.markedForDeletion = false;
 
         // Random position on screen (not too close to edges)
         const margin = 100;
-        this.x = margin + Math.random() * (game.width - margin * 2);
-        this.y = margin + Math.random() * (game.height - margin * 2);
+        this.x = x !== null ? x : margin + Math.random() * (game.width - margin * 2);
+        this.y = y !== null ? y : margin + Math.random() * (game.height - margin * 2);
 
         this.radius = 20;
         this.lifetime = 15; // Despawn after 15 seconds
