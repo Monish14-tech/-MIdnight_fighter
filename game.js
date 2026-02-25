@@ -81,6 +81,7 @@ export class Game {
 
         this.gameOver = false;
         this.isRunning = false;
+        this.fromPauseMenu = false; // Track if armory opened from pause
 
         // Level System
         this.currentLevel = 1;
@@ -219,6 +220,12 @@ export class Game {
         if (resumeBtn) {
             resumeBtn.addEventListener('click', () => this.togglePause());
             resumeBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.togglePause(); }, { passive: false });
+        }
+
+        const pauseArmoryBtn = document.getElementById('pause-armory-btn');
+        if (pauseArmoryBtn) {
+            pauseArmoryBtn.addEventListener('click', () => this.openStoreFromPause());
+            pauseArmoryBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.openStoreFromPause(); }, { passive: false });
         }
 
         // Settings Button
@@ -1415,14 +1422,29 @@ export class Game {
 
     // Store System
     openStore() {
+        this.fromPauseMenu = false;
         this.startScreen.classList.remove('active');
+        document.getElementById('store-screen').classList.add('active');
+        this.renderStore();
+    }
+
+    openStoreFromPause() {
+        this.fromPauseMenu = true;
+        document.getElementById('pause-menu').classList.remove('active');
         document.getElementById('store-screen').classList.add('active');
         this.renderStore();
     }
 
     closeStore() {
         document.getElementById('store-screen').classList.remove('active');
-        this.startScreen.classList.add('active');
+        if (this.fromPauseMenu) {
+            // Return to pause menu
+            document.getElementById('pause-menu').classList.add('active');
+            this.fromPauseMenu = false;
+        } else {
+            // Return to start screen
+            this.startScreen.classList.add('active');
+        }
     }
 
     renderStore() {
@@ -1518,6 +1540,34 @@ export class Game {
             this.selectedShip = type;
             localStorage.setItem('midnight_selected_ship', this.selectedShip);
             if (this.audio) this.audio.dash(); // Select sound
+            
+            // If changing ship mid-game, recreate player with new ship
+            if (this.isRunning && this.player && !this.gameOver) {
+                const oldX = this.player.x;
+                const oldY = this.player.y;
+                const oldHealth = this.player.currentHealth;
+                const oldPowerups = {
+                    speedBoostTimer: this.player.speedBoostTimer,
+                    doubleDamageTimer: this.player.doubleDamageTimer,
+                    rapidFireTimer: this.player.rapidFireTimer,
+                    invulnerabilityTimer: this.player.invulnerabilityTimer
+                };
+                
+                // Create new player with selected ship
+                this.player = new Player(this, this.selectedShip);
+                
+                // Restore position and health (capped at new max)
+                this.player.x = oldX;
+                this.player.y = oldY;
+                this.player.currentHealth = Math.min(oldHealth, this.player.maxHealth);
+                
+                // Restore power-ups
+                this.player.speedBoostTimer = oldPowerups.speedBoostTimer;
+                this.player.doubleDamageTimer = oldPowerups.doubleDamageTimer;
+                this.player.rapidFireTimer = oldPowerups.rapidFireTimer;
+                this.player.invulnerabilityTimer = oldPowerups.invulnerabilityTimer;
+            }
+            
             this.renderStore();
         }
     }
