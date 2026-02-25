@@ -3,6 +3,9 @@ import { MongoClient } from 'mongodb';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+dotenv.config();
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,7 +14,7 @@ const app = express();
 const PORT = 8000;
 
 // MongoDB Connection String
-const MONGO_URI = 'mongodb+srv://admin:Prasath20012006@cluster0.lum0no3.mongodb.net/?appName=Cluster0';
+const MONGO_URI = process.env.MONGO_URI;
 const DB_NAME = 'midnight_fighter';
 const COLLECTION_NAME = 'leaderboard';
 
