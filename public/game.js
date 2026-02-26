@@ -1537,6 +1537,36 @@ export class Game {
         if (this.fromPauseMenu) {
             // Return to pause menu
             document.getElementById('pause-menu').classList.add('active');
+            
+            // Ensure player is updated with selected ship if changed while paused
+            if (this.isRunning && this.player && !this.gameOver) {
+                if (this.player.shipType !== this.selectedShip) {
+                    const oldX = this.player.x;
+                    const oldY = this.player.y;
+                    const oldHealth = this.player.currentHealth;
+                    const oldPowerups = {
+                        speedBoostTimer: this.player.speedBoostTimer,
+                        doubleDamageTimer: this.player.doubleDamageTimer,
+                        rapidFireTimer: this.player.rapidFireTimer,
+                        invulnerabilityTimer: this.player.invulnerabilityTimer
+                    };
+                    
+                    // Create new player with selected ship
+                    this.player = new Player(this, this.selectedShip);
+                    
+                    // Restore position and health (capped at new max)
+                    this.player.x = oldX;
+                    this.player.y = oldY;
+                    this.player.currentHealth = Math.min(oldHealth, this.player.maxHealth);
+                    
+                    // Restore power-ups
+                    this.player.speedBoostTimer = oldPowerups.speedBoostTimer;
+                    this.player.doubleDamageTimer = oldPowerups.doubleDamageTimer;
+                    this.player.rapidFireTimer = oldPowerups.rapidFireTimer;
+                    this.player.invulnerabilityTimer = oldPowerups.invulnerabilityTimer;
+                }
+            }
+            
             this.fromPauseMenu = false;
         } else {
             // Return to start screen
@@ -1638,31 +1668,35 @@ export class Game {
             localStorage.setItem('midnight_selected_ship', this.selectedShip);
             if (this.audio) this.audio.dash(); // Select sound
             
-            // If changing ship mid-game, recreate player with new ship
+            // Always update player if game is running, even if paused
             if (this.isRunning && this.player && !this.gameOver) {
-                const oldX = this.player.x;
-                const oldY = this.player.y;
-                const oldHealth = this.player.currentHealth;
-                const oldPowerups = {
-                    speedBoostTimer: this.player.speedBoostTimer,
-                    doubleDamageTimer: this.player.doubleDamageTimer,
-                    rapidFireTimer: this.player.rapidFireTimer,
-                    invulnerabilityTimer: this.player.invulnerabilityTimer
-                };
-                
-                // Create new player with selected ship
-                this.player = new Player(this, this.selectedShip);
-                
-                // Restore position and health (capped at new max)
-                this.player.x = oldX;
-                this.player.y = oldY;
-                this.player.currentHealth = Math.min(oldHealth, this.player.maxHealth);
-                
-                // Restore power-ups
-                this.player.speedBoostTimer = oldPowerups.speedBoostTimer;
-                this.player.doubleDamageTimer = oldPowerups.doubleDamageTimer;
-                this.player.rapidFireTimer = oldPowerups.rapidFireTimer;
-                this.player.invulnerabilityTimer = oldPowerups.invulnerabilityTimer;
+                // Check if ship actually changed
+                const oldShipType = this.player.shipType;
+                if (oldShipType !== type) {
+                    const oldX = this.player.x;
+                    const oldY = this.player.y;
+                    const oldHealth = this.player.currentHealth;
+                    const oldPowerups = {
+                        speedBoostTimer: this.player.speedBoostTimer,
+                        doubleDamageTimer: this.player.doubleDamageTimer,
+                        rapidFireTimer: this.player.rapidFireTimer,
+                        invulnerabilityTimer: this.player.invulnerabilityTimer
+                    };
+                    
+                    // Create new player with selected ship
+                    this.player = new Player(this, this.selectedShip);
+                    
+                    // Restore position and health (capped at new max)
+                    this.player.x = oldX;
+                    this.player.y = oldY;
+                    this.player.currentHealth = Math.min(oldHealth, this.player.maxHealth);
+                    
+                    // Restore power-ups
+                    this.player.speedBoostTimer = oldPowerups.speedBoostTimer;
+                    this.player.doubleDamageTimer = oldPowerups.doubleDamageTimer;
+                    this.player.rapidFireTimer = oldPowerups.rapidFireTimer;
+                    this.player.invulnerabilityTimer = oldPowerups.invulnerabilityTimer;
+                }
             }
             
             this.renderStore();
