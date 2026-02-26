@@ -304,16 +304,16 @@ export class Enemy {
                 this.game.projectiles.push(shot);
             }
         } else if (this.type === 'launcher') {
-            // Launches missiles instead of bullets
+            // Launches bullets instead of missiles
             this.shootTimer += deltaTime;
             if (this.shootTimer > 3.0) {
                 this.shootTimer = 0;
                 const spread = (Math.random() - 0.5) * 0.3;
-                const missile = new Projectile(this.game, this.x, this.y, this.angle + spread, 'missile', 'enemy');
-                missile.speed = 350;
-                missile.damage = 2;
-                missile.color = '#ff0099';
-                this.game.projectiles.push(missile);
+                const bullet = new Projectile(this.game, this.x, this.y, this.angle + spread, 'bullet', 'enemy');
+                bullet.speed = 350;
+                bullet.damage = 2;
+                bullet.color = '#ff0099';
+                this.game.projectiles.push(bullet);
             }
         } else if (this.type === 'pulsar') {
             // Create damaging pulse waves
