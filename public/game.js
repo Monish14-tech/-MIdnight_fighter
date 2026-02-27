@@ -1484,6 +1484,19 @@ export class Game {
             }
         }
 
+        // Update Dash Cooldown Bar
+        const dashFill = document.getElementById('dash-fill');
+        if (dashFill && this.player) {
+            const cooldownPct = Math.max(0, (this.player.dashCooldown - this.player.dashCooldownTimer) / this.player.dashCooldown) * 100;
+            dashFill.style.width = (100 - cooldownPct) + '%';
+
+            if (this.player.dashCooldownTimer <= 0) {
+                dashFill.style.background = '#00ff00';
+            } else {
+                dashFill.style.background = 'linear-gradient(90deg, #33ccff, #0066ff)';
+            }
+        }
+
         // Update Enemy Counter
 
     }
@@ -1634,10 +1647,12 @@ export class Game {
 
             const stats = document.createElement('div');
             stats.className = 'ship-stats';
+            const dashStatus = ship.dash === false ? 'NO' : 'YES';
             stats.innerHTML = `
                 HP: ${ship.hp}<br>
                 SPD: ${ship.speed}<br>
                 DMG: ${ship.damage}<br>
+                DASH: ${dashStatus}<br>
                 RATE: ${(1 / ship.fireRate).toFixed(1)}/s<br>
                 <span style="color:#aaa; font-style:italic; font-size:0.75rem">${ship.desc}</span>
             `;

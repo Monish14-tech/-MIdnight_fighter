@@ -72,7 +72,7 @@ export class Player {
         this.isDashing = false;
         this.dashTimer = 0;
         this.dashDuration = 0.18;
-        this.dashCooldown = 1.2;
+        this.dashCooldown = Math.max(this.missileCooldown + 1.0, 6.0);
         this.dashCooldownTimer = 0;
         this.dashSpeed = this.speed * 3.2;
         this.dashDirection = { x: 0, y: 0 };
@@ -137,14 +137,30 @@ export class Player {
         const moveVec = input.getMovementVector();
 
         // Start dash if available
-        if (input.keys.dash && this.dashCooldownTimer <= 0 && (moveVec.x !== 0 || moveVec.y !== 0)) {
-            this.isDashing = true;
-            this.dashTimer = this.dashDuration;
-            this.dashCooldownTimer = this.dashCooldown;
-            this.dashDirection = { x: moveVec.x, y: moveVec.y };
-            this.angle = Math.atan2(this.dashDirection.y, this.dashDirection.x);
+        if (input.keys.dash && this.dashCooldownTimer <= 0) {
+            let dashVector = { x: moveVec.x, y: moveVec.y };
+            if (dashVector.x === 0 && dashVector.y === 0) {
+                const nearestEnemy = this.findNearestEnemy(700);
+                if (nearestEnemy) {
+                    const dx = nearestEnemy.x - this.x;
+                    const dy = nearestEnemy.y - this.y;
+                    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+                    dashVector = { x: dx / len, y: dy / len };
+                } else {
+                    dashVector = { x: Math.cos(this.angle), y: Math.sin(this.angle) };
+                }
+            }
+
+            if (dashVector.x !== 0 || dashVector.y !== 0) {
+                this.isDashing = true;
+                this.dashTimer = this.dashDuration;
+                this.dashCooldownTimer = this.dashCooldown;
+                this.dashDirection = dashVector;
+                this.angle = Math.atan2(this.dashDirection.y, this.dashDirection.x);
+                if (this.game.audio) this.game.audio.dash();
+            }
+
             input.keys.dash = false;
-            if (this.game.audio) this.game.audio.dash();
         }
 
         // 360-Degree Face Direction (Aim Assist) - Only if auto-target is enabled
