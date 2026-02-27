@@ -6,7 +6,7 @@ import { AudioController } from './audio.js';
 import { ScreenShake, Nebula, CosmicDust, Planet, Asteroid } from './utils.js';
 import { PowerUp } from './entities/powerup.js';
 import { LeaderboardManager } from './leaderboard.js';
-import { NetplayClient } from './netplay.js';
+import { PollingNetplay } from './polling-netplay.js';
 
 class AssetLoader {
     constructor() {
@@ -195,7 +195,7 @@ export class Game {
         };
         this.remoteShipType = this.selectedShip;
         this.localShipType = this.selectedShip;
-        this.netplay = new NetplayClient();
+        this.netplay = new PollingNetplay();
         this.netSyncTimer = 0;
 
         // Fullscreen management

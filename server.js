@@ -359,6 +359,140 @@ app.post('/api/rooms/leave', async (req, res) => {
     }
 });
 
+// POLLING ENDPOINTS (for serverless/Vercel compatibility - no WebSocket)
+
+// POST: Join room (polling-based)
+app.post('/api/rooms/:roomId/join', async (req, res) => {
+    try {
+        const { roomId } = req.params;
+        const { playerName, shipType } = req.body;
+
+        if (!roomId || !playerName) {
+            return res.status(400).json({ success: false, error: 'Room ID and player name required' });
+        }
+
+        const room = await roomsCollection.findOne({ roomId });
+        if (!room) {
+            return res.status(404).json({ success: false, error: 'Room not found' });
+        }
+
+        if (room.status !== 'full' && room.status !== 'waiting') {
+            return res.status(409).json({ success: false, error: 'Room unavailable' });
+        }
+
+        let role = null;
+        if (room.hostName === playerName) role = 'host';
+        else if (room.guestName === playerName) role = 'guest';
+
+        if (!role) {
+            return res.status(409).json({ success: false, error: 'Player not in room' });
+        }
+
+        // Initialize polling state if needed
+        if (!liveRooms.has(roomId)) {
+            liveRooms.set(roomId, {
+                clients: new Map(),
+                state: { players: {} },
+                lastSync: Date.now()
+            });
+        }
+
+        const liveRoom = liveRooms.get(roomId);
+        liveRoom.clients.set(role, {
+            playerName,
+            shipType: shipType || 'default',
+            lastSeen: Date.now(),
+            isPolling: true
+        });
+
+        return res.json({
+            success: true,
+            role,
+            roomId,
+            hostName: room.hostName,
+            guestName: room.guestName,
+            players: liveRoom.state.players
+        });
+    } catch (error) {
+        console.error('Polling join error:', error);
+        return res.status(500).json({ success: false, error: 'Failed to join room' });
+    }
+});
+
+// GET: Fetch peer state (polling)
+app.get('/api/rooms/:roomId/state', async (req, res) => {
+    try {
+        const { roomId } = req.params;
+        const playerName = req.query.playerName;
+
+        const liveRoom = liveRooms.get(roomId);
+        if (!liveRoom) {
+            return res.json({ success: false, peerState: null });
+        }
+
+        // Find peer's state
+        let peerState = null;
+        for (const [role, client] of liveRoom.clients.entries()) {
+            if (client.playerName !== playerName && liveRoom.state.players[role]) {
+                peerState = liveRoom.state.players[role];
+                break;
+            }
+        }
+
+        return res.json({ success: true, peerState });
+    } catch (error) {
+        return res.status(500).json({ success: false, peerState: null });
+    }
+});
+
+// POST: Sync player messages/state (polling)
+app.post('/api/rooms/:roomId/sync', async (req, res) => {
+    try {
+        const { roomId } = req.params;
+        const { playerName, messages } = req.body;
+
+        if (!roomId || !playerName || !Array.isArray(messages)) {
+            return res.status(400).json({ success: false });
+        }
+
+        const liveRoom = liveRooms.get(roomId);
+        if (!liveRoom) {
+            return res.status(404).json({ success: false });
+        }
+
+        // Determine player role
+        let role = null;
+        for (const [r, client] of liveRoom.clients.entries()) {
+            if (client.playerName === playerName) {
+                role = r;
+                client.lastSeen = Date.now();
+                break;
+            }
+        }
+
+        if (!role) {
+            return res.status(409).json({ success: false });
+        }
+
+        // Process messages
+        for (const msg of messages) {
+            if (msg.type === 'state_update' && msg.state) {
+                liveRoom.state.players[role] = {
+                    ...msg.state,
+                    playerName,
+                    updatedAt: Date.now()
+                };
+            }
+        }
+
+        liveRoom.lastSync = Date.now();
+        return res.json({ success: true });
+    } catch (error) {
+        console.error('Polling sync error:', error);
+        return res.status(500).json({ success: false });
+    }
+});
+
 function generateRoomId(length) {
     const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789';
     let result = '';
