@@ -18,16 +18,16 @@ export default async function handler(req, res) {
     }
 
     try {
-        const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
-        const roomId = typeof body.roomId === 'string' ? body.roomId.trim() : '';
-        const playerName = typeof body.playerName === 'string' ? body.playerName.trim() : '';
+        const { roomId, playerName } = req.query;
+        const cleanRoomId = typeof roomId === 'string' ? roomId.trim() : '';
+        const cleanPlayer = typeof playerName === 'string' ? playerName.trim() : '';
 
-        if (!roomId || !playerName) {
+        if (!cleanRoomId || !cleanPlayer) {
             return res.status(400).json({ success: false, error: 'Room ID and player name are required' });
         }
 
         const collection = await getRoomsCollection();
-        const room = await collection.findOne({ roomId });
+        const room = await collection.findOne({ roomId: cleanRoomId });
 
         if (!room) {
             return res.status(404).json({ success: false, error: 'Room not found' });
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
 
         if (room.expiresAt && new Date(room.expiresAt).getTime() < Date.now()) {
             await collection.updateOne(
-                { roomId },
+                { roomId: cleanRoomId },
                 { $set: { status: 'expired', updatedAt: new Date() } }
             );
             return res.status(410).json({ success: false, error: 'Room expired' });
@@ -45,15 +45,15 @@ export default async function handler(req, res) {
             return res.status(409).json({ success: false, error: 'Room is already full' });
         }
 
-        if (room.hostName === playerName) {
+        if (room.hostName === cleanPlayer) {
             return res.status(409).json({ success: false, error: 'Host cannot join as guest' });
         }
 
         await collection.updateOne(
-            { roomId, status: 'waiting' },
+            { roomId: cleanRoomId, status: 'waiting' },
             {
                 $set: {
-                    guestName: playerName,
+                    guestName: cleanPlayer,
                     status: 'full',
                     updatedAt: new Date(),
                     expiresAt: new Date(Date.now() + 15 * 60 * 1000),
@@ -62,8 +62,22 @@ export default async function handler(req, res) {
             }
         );
 
-        const updated = await collection.findOne({ roomId });
-        return res.status(200).json({ success: true, room: updated });
+        const updated = await collection.findOne({ roomId: cleanRoomId });
+        
+        // Determine player role
+        let role = null;
+        if (updated.hostName === cleanPlayer) role = 'host';
+        else if (updated.guestName === cleanPlayer) role = 'guest';
+        
+        return res.status(200).json({ 
+            success: true, 
+            room: updated,
+            role,
+            roomId: cleanRoomId,
+            hostName: updated.hostName,
+            guestName: updated.guestName,
+            players: {}
+        });
     } catch (error) {
         return res.status(500).json({ success: false, error: 'Failed to join room' });
     }
