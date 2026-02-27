@@ -858,7 +858,8 @@ export class Game {
             if (waiting) waiting.classList.remove('hidden');
             if (leaveBtn) leaveBtn.classList.remove('hidden');
 
-            this.startCollabPolling(data.roomId, hostName);
+            // Start polling for guest to join
+            this.pollForGuestJoin(data.roomId, hostName);
         } catch (error) {
             if (status) status.innerText = 'Failed to create room.';
         }
@@ -905,24 +906,28 @@ export class Game {
         }
     }
 
-    startCollabPolling(roomId, hostName) {
-        this.stopCollabPolling();
+    pollForGuestJoin(roomId, hostName) {
+        if (this.collabPollTimer) clearInterval(this.collabPollTimer);
+        
         this.collabPollTimer = setInterval(async () => {
             try {
                 const response = await fetch(`${window.location.origin}/api/rooms/${roomId}`);
+                if (!response.ok) return;
+                
                 const data = await response.json();
-                if (!data.success) return;
+                if (!data.success || !data.room) return;
 
                 const room = data.room;
                 if (room.status === 'full' && room.guestName) {
+                    if (this.collabPollTimer) clearInterval(this.collabPollTimer);
                     await this.activateCoop(room.roomId, hostName, room.guestName, 'host');
                     this.closeCollaborate();
                     this.startGame();
                 }
             } catch (error) {
-                // Ignore polling errors
+                console.warn('[Game] Polling error:', error.message);
             }
-        }, 2000);
+        }, 1000);
     }
 
     stopCollabPolling() {

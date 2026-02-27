@@ -83,7 +83,8 @@ export class PollingNetplay {
         if (!this.isConnected) return;
 
         try {
-            const response = await fetch(`${window.location.origin}/api/rooms/${this.roomId}/state`, {
+            const url = `${window.location.origin}/api/rooms/${this.roomId}/state?playerName=${encodeURIComponent(this.playerName)}`;
+            const response = await fetch(url, {
                 method: 'GET'
             });
 
