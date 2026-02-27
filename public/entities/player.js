@@ -2,11 +2,12 @@ import { AfterburnerTrail } from './particle.js';
 import { Projectile } from './projectile.js';
 
 export class Player {
-    constructor(game, shipType = 'default') {
+    constructor(game, shipType = 'default', options = {}) {
         this.game = game;
         this.x = game.width / 2;
         this.y = game.height / 2;
         this.radius = 15;
+        this.playerId = options.playerId || 'player';
 
         // Get Stats from Game or define them here if circular dependency is an issue
         // Accessing via game instance properly
@@ -250,13 +251,13 @@ export class Player {
                 const count = 3;
                 for (let i = 0; i < count; i++) {
                     const offset = (i - (count - 1) / 2) * 0.2;
-                    const p = new Projectile(this.game, noseX, noseY, this.angle + offset, 'bullet', 'player');
+                    const p = new Projectile(this.game, noseX, noseY, this.angle + offset, 'bullet', this.playerId);
                     p.damage = this.bulletDamage || 1;
                     this.game.projectiles.push(p);
                 }
             } else if (this.bulletType === 'railgun') {
                 // Single huge high-speed high-damage shot
-                const p = new Projectile(this.game, noseX, noseY, this.angle, 'bullet', 'player');
+                const p = new Projectile(this.game, noseX, noseY, this.angle, 'bullet', this.playerId);
                 p.speed = 2500;
                 p.damage = this.bulletDamage || 5;
                 p.radius = 8;
@@ -264,14 +265,14 @@ export class Player {
                 p.color = '#ffffff';
                 this.game.projectiles.push(p);
             } else if (this.bulletType === 'explosive') {
-                const p = new Projectile(this.game, noseX, noseY, this.angle, 'bullet', 'player');
+                const p = new Projectile(this.game, noseX, noseY, this.angle, 'bullet', this.playerId);
                 p.damage = this.bulletDamage || 2;
                 p.explosive = true;
                 p.color = '#ffcc00';
                 p.radius = 6;
                 this.game.projectiles.push(p);
             } else if (this.bulletType === 'piercing') {
-                const p = new Projectile(this.game, noseX, noseY, this.angle, 'bullet', 'player');
+                const p = new Projectile(this.game, noseX, noseY, this.angle, 'bullet', this.playerId);
                 p.damage = this.bulletDamage || 1;
                 p.piercing = true;
                 p.color = '#00ff44';
@@ -279,7 +280,7 @@ export class Player {
             } else {
                 // Default Normal Shot
                 const spread = (Math.random() - 0.5) * 0.1;
-                const p = new Projectile(this.game, noseX, noseY, this.angle + spread, 'bullet', 'player');
+                const p = new Projectile(this.game, noseX, noseY, this.angle + spread, 'bullet', this.playerId);
                 p.damage = this.bulletDamage || 1;
                 this.game.projectiles.push(p);
             }
@@ -289,7 +290,7 @@ export class Player {
             const count = this.missileCount || 1;
             for (let i = 0; i < count; i++) {
                 const offset = count > 1 ? (i - (count - 1) / 2) * 0.2 : 0;
-                const p = new Projectile(this.game, this.x, this.y, this.angle + offset, 'missile', 'player');
+                const p = new Projectile(this.game, this.x, this.y, this.angle + offset, 'missile', this.playerId);
                 this.game.projectiles.push(p);
             }
             if (this.game.screenShake) this.game.screenShake.trigger(5, 0.2);

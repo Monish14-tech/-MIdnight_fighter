@@ -1,5 +1,9 @@
 export class InputHandler {
-    constructor() {
+    constructor(options = {}) {
+        this.enabled = options.enabled !== false;
+        this.bindings = options.bindings || InputHandler.bindings.singlePlayer;
+        this.enableTouch = options.enableTouch !== false;
+
         this.keys = {
             up: false,
             down: false,
@@ -20,110 +24,135 @@ export class InputHandler {
             dy: 0, // Normalized direction
             lastTapTime: 0
         };
-
-
-
         window.addEventListener('keydown', (e) => this.onKeyDown(e));
         window.addEventListener('keyup', (e) => this.onKeyUp(e));
 
         // Touch listeners
-        const joystickZone = document.getElementById('joystick-zone');
-        const fireBtn = document.getElementById('fire-btn');
-        const dashBtn = document.getElementById('dash-btn');
+        if (this.enableTouch) {
+            const joystickZone = document.getElementById('joystick-zone');
+            const fireBtn = document.getElementById('fire-btn');
+            const dashBtn = document.getElementById('dash-btn');
 
-        if (joystickZone) {
-            joystickZone.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
-            joystickZone.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });
-            joystickZone.addEventListener('touchend', (e) => this.onTouchEnd(e), { passive: false });
-        }
+            if (joystickZone) {
+                joystickZone.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
+                joystickZone.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });
+                joystickZone.addEventListener('touchend', (e) => this.onTouchEnd(e), { passive: false });
+            }
 
-        if (fireBtn) {
-            const handleFireStart = (e) => {
-                e.preventDefault();
-                this.keys.fire = true;
-            };
-            const handleFireEnd = (e) => {
-                e.preventDefault();
-                this.keys.fire = false;
-            };
-            fireBtn.addEventListener('touchstart', handleFireStart, { passive: false });
-            fireBtn.addEventListener('touchend', handleFireEnd, { passive: false });
-            fireBtn.addEventListener('mousedown', () => this.keys.fire = true);
-            fireBtn.addEventListener('mouseup', () => this.keys.fire = false);
-        }
+            if (fireBtn) {
+                const handleFireStart = (e) => {
+                    e.preventDefault();
+                    this.keys.fire = true;
+                };
+                const handleFireEnd = (e) => {
+                    e.preventDefault();
+                    this.keys.fire = false;
+                };
+                fireBtn.addEventListener('touchstart', handleFireStart, { passive: false });
+                fireBtn.addEventListener('touchend', handleFireEnd, { passive: false });
+                fireBtn.addEventListener('mousedown', () => this.keys.fire = true);
+                fireBtn.addEventListener('mouseup', () => this.keys.fire = false);
+            }
 
-        if (dashBtn) {
-            const handleDashStart = (e) => {
-                e.preventDefault();
-                this.keys.dash = true;
-            };
-            const handleDashEnd = (e) => {
-                e.preventDefault();
-                this.keys.dash = false;
-            };
-            dashBtn.addEventListener('touchstart', handleDashStart, { passive: false });
-            dashBtn.addEventListener('touchend', handleDashEnd, { passive: false });
-            dashBtn.addEventListener('mousedown', () => this.keys.dash = true);
-            dashBtn.addEventListener('mouseup', () => this.keys.dash = false);
-        }
+            if (dashBtn) {
+                const handleDashStart = (e) => {
+                    e.preventDefault();
+                    this.keys.dash = true;
+                };
+                const handleDashEnd = (e) => {
+                    e.preventDefault();
+                    this.keys.dash = false;
+                };
+                dashBtn.addEventListener('touchstart', handleDashStart, { passive: false });
+                dashBtn.addEventListener('touchend', handleDashEnd, { passive: false });
+                dashBtn.addEventListener('mousedown', () => this.keys.dash = true);
+                dashBtn.addEventListener('mouseup', () => this.keys.dash = false);
+            }
 
-        const missileBtn = document.getElementById('missile-btn');
-        if (missileBtn) {
-            const handleMissileStart = (e) => {
-                e.preventDefault();
-                this.keys.missile = true;
-            };
-            const handleMissileEnd = (e) => {
-                e.preventDefault();
-                this.keys.missile = false;
-            };
-            missileBtn.addEventListener('touchstart', handleMissileStart, { passive: false });
-            missileBtn.addEventListener('touchend', handleMissileEnd, { passive: false });
-            missileBtn.addEventListener('mousedown', () => this.keys.missile = true);
-            missileBtn.addEventListener('mouseup', () => this.keys.missile = false);
+            const missileBtn = document.getElementById('missile-btn');
+            if (missileBtn) {
+                const handleMissileStart = (e) => {
+                    e.preventDefault();
+                    this.keys.missile = true;
+                };
+                const handleMissileEnd = (e) => {
+                    e.preventDefault();
+                    this.keys.missile = false;
+                };
+                missileBtn.addEventListener('touchstart', handleMissileStart, { passive: false });
+                missileBtn.addEventListener('touchend', handleMissileEnd, { passive: false });
+                missileBtn.addEventListener('mousedown', () => this.keys.missile = true);
+                missileBtn.addEventListener('mouseup', () => this.keys.missile = false);
+            }
         }
+    }
+
+    setBindings(bindings) {
+        this.bindings = bindings || InputHandler.bindings.singlePlayer;
+    }
+
+    setEnabled(enabled) {
+        this.enabled = Boolean(enabled);
+        if (!this.enabled) {
+            this.keys.up = false;
+            this.keys.down = false;
+            this.keys.left = false;
+            this.keys.right = false;
+            this.keys.fire = false;
+            this.keys.missile = false;
+            this.keys.dash = false;
+            this.touch.active = false;
+            this.touch.dx = 0;
+            this.touch.dy = 0;
+        }
+    }
+
+    matchesBinding(action, e) {
+        const binding = this.bindings[action];
+        if (!binding) return false;
+
+        const code = e.code;
+        const key = (e.key || '').toLowerCase();
+
+        if (binding.codes && binding.codes.includes(code)) return true;
+        if (binding.keys && binding.keys.includes(key)) return true;
+
+        return false;
     }
 
     onKeyDown(e) {
-        const code = e.code;
-        const key = e.key.toLowerCase();
+        if (!this.enabled) return;
 
-        if (code === 'ArrowUp' || key === 'w' || key === 'arrowup') this.keys.up = true;
-        if (code === 'ArrowDown' || key === 's' || key === 'arrowdown') this.keys.down = true;
-        if (code === 'ArrowLeft' || key === 'a' || key === 'arrowleft') this.keys.left = true;
-        if (code === 'ArrowRight' || key === 'd' || key === 'arrowright') this.keys.right = true;
-        if (code === 'Space' || key === ' ') {
-            this.keys.fire = true;
-        }
-        if (code === 'AltLeft' || code === 'AltRight' || key === 'alt') {
-            e.preventDefault(); // Prevent browser menu
+        if (this.matchesBinding('up', e)) this.keys.up = true;
+        if (this.matchesBinding('down', e)) this.keys.down = true;
+        if (this.matchesBinding('left', e)) this.keys.left = true;
+        if (this.matchesBinding('right', e)) this.keys.right = true;
+        if (this.matchesBinding('fire', e)) this.keys.fire = true;
+        if (this.matchesBinding('missile', e)) {
+            e.preventDefault();
             this.keys.missile = true;
         }
-        if (code === 'ShiftLeft' || code === 'ShiftRight' || key === 'shift') {
-            this.keys.dash = true;
-        }
+        if (this.matchesBinding('dash', e)) this.keys.dash = true;
     }
 
     onKeyUp(e) {
-        const code = e.code;
-        const key = e.key.toLowerCase();
+        if (!this.enabled) return;
 
-        if (code === 'ArrowUp' || key === 'w' || key === 'arrowup') this.keys.up = false;
-        if (code === 'ArrowDown' || key === 's' || key === 'arrowdown') this.keys.down = false;
-        if (code === 'ArrowLeft' || key === 'a' || key === 'arrowleft') this.keys.left = false;
-        if (code === 'ArrowRight' || key === 'd' || key === 'arrowright') this.keys.right = false;
-        if (code === 'Space' || key === ' ') this.keys.fire = false;
-        if (code === 'AltLeft' || code === 'AltRight' || key === 'alt') {
+        if (this.matchesBinding('up', e)) this.keys.up = false;
+        if (this.matchesBinding('down', e)) this.keys.down = false;
+        if (this.matchesBinding('left', e)) this.keys.left = false;
+        if (this.matchesBinding('right', e)) this.keys.right = false;
+        if (this.matchesBinding('fire', e)) this.keys.fire = false;
+        if (this.matchesBinding('missile', e)) {
             e.preventDefault();
             this.keys.missile = false;
         }
-        if (code === 'ShiftLeft' || code === 'ShiftRight' || key === 'shift') {
-            this.keys.dash = false;
-        }
+        if (this.matchesBinding('dash', e)) this.keys.dash = false;
     }
 
     // Touch Logic
     onTouchStart(e) {
+        if (!this.enableTouch || !this.enabled) return;
         e.preventDefault();
         const now = Date.now();
         if (now - this.touch.lastTapTime < 250) {
@@ -152,6 +181,7 @@ export class InputHandler {
     }
 
     onTouchMove(e) {
+        if (!this.enableTouch || !this.enabled) return;
         e.preventDefault();
         for (let i = 0; i < e.changedTouches.length; i++) {
             const touch = e.changedTouches[i];
@@ -165,6 +195,7 @@ export class InputHandler {
     }
 
     onTouchEnd(e) {
+        if (!this.enableTouch || !this.enabled) return;
         e.preventDefault();
         for (let i = 0; i < e.changedTouches.length; i++) {
             if (e.changedTouches[i].identifier === this.touch.id) {
@@ -184,6 +215,7 @@ export class InputHandler {
     }
 
     updateTouchDirection() {
+        if (!this.enableTouch || !this.enabled) return;
         const maxDist = 35; // Max visual distance for knob
         let dx = this.touch.currX - this.touch.originX;
         let dy = this.touch.currY - this.touch.originY;
@@ -243,3 +275,33 @@ export class InputHandler {
         return { x, y };
     }
 }
+
+InputHandler.bindings = {
+    singlePlayer: {
+        up: { codes: ['KeyW', 'ArrowUp'], keys: ['w', 'arrowup'] },
+        down: { codes: ['KeyS', 'ArrowDown'], keys: ['s', 'arrowdown'] },
+        left: { codes: ['KeyA', 'ArrowLeft'], keys: ['a', 'arrowleft'] },
+        right: { codes: ['KeyD', 'ArrowRight'], keys: ['d', 'arrowright'] },
+        fire: { codes: ['Space'], keys: [' '] },
+        missile: { codes: ['AltLeft', 'AltRight'], keys: ['alt'] },
+        dash: { codes: ['ShiftLeft', 'ShiftRight'], keys: ['shift'] }
+    },
+    coopPlayerOne: {
+        up: { codes: ['KeyW'], keys: ['w'] },
+        down: { codes: ['KeyS'], keys: ['s'] },
+        left: { codes: ['KeyA'], keys: ['a'] },
+        right: { codes: ['KeyD'], keys: ['d'] },
+        fire: { codes: ['Space'], keys: [' '] },
+        missile: { codes: ['AltLeft', 'AltRight'], keys: ['alt'] },
+        dash: { codes: ['ShiftLeft', 'ShiftRight'], keys: ['shift'] }
+    },
+    coopPlayerTwo: {
+        up: { codes: ['ArrowUp'], keys: ['arrowup'] },
+        down: { codes: ['ArrowDown'], keys: ['arrowdown'] },
+        left: { codes: ['ArrowLeft'], keys: ['arrowleft'] },
+        right: { codes: ['ArrowRight'], keys: ['arrowright'] },
+        fire: { codes: ['Enter'], keys: ['enter'] },
+        missile: { codes: ['ControlRight'], keys: ['control'] },
+        dash: { codes: ['ShiftRight'], keys: ['shift'] }
+    }
+};

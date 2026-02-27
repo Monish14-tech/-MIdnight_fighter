@@ -23,23 +23,32 @@ export default async function handler(req, res) {
         const score = Number(body.score);
         const level = Number(body.level) || 1;
         const shipType = typeof body.shipType === 'string' ? body.shipType : 'default';
+        const teamMembers = Array.isArray(body.teamMembers) ? body.teamMembers : null;
+        const normalizedTeam = teamMembers ? teamMembers.map((name) => String(name).trim()).filter(Boolean) : null;
+        const isTeam = normalizedTeam && normalizedTeam.length === 2;
+        const teamKey = isTeam ? normalizedTeam.slice().sort().join('|') : null;
+        const displayName = isTeam ? normalizedTeam.join(' & ') : playerName;
 
-        if (!playerName || Number.isNaN(score)) {
+        if (!displayName || Number.isNaN(score)) {
             return res.status(400).json({ success: false, error: 'Player name and score are required' });
         }
 
         const collection = await getLeaderboardCollection();
-        const existingPlayer = await collection.findOne({ playerName });
+        const existingPlayer = teamKey
+            ? await collection.findOne({ teamKey })
+            : await collection.findOne({ playerName: displayName });
 
         if (existingPlayer) {
             if (score > existingPlayer.score) {
                 await collection.updateOne(
-                    { playerName },
+                    teamKey ? { teamKey } : { playerName: displayName },
                     {
                         $set: {
                             score,
                             level: level || existingPlayer.level,
                             shipType: shipType || existingPlayer.shipType,
+                            teamMembers: normalizedTeam || existingPlayer.teamMembers,
+                            playerName: displayName,
                             updatedAt: new Date()
                         }
                     }
@@ -64,7 +73,9 @@ export default async function handler(req, res) {
         }
 
         await collection.insertOne({
-            playerName,
+            playerName: displayName,
+            teamKey,
+            teamMembers: normalizedTeam,
             score,
             level,
             shipType,

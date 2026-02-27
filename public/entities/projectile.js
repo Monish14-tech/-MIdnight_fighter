@@ -84,7 +84,7 @@ export class Projectile {
         let closestDist = this.homingRange;
         this.target = null;
 
-        if (this.side === 'player') {
+        if (this.side === 'player' || this.side === 'player1' || this.side === 'player2') {
             // Player missiles target enemies and boss
             this.game.enemies.forEach(enemy => {
                 if (enemy.markedForDeletion) return;
@@ -103,9 +103,15 @@ export class Projectile {
             }
         } else {
             // Enemy missiles target player
-            if (this.game.player && !this.game.player.markedForDeletion) {
-                this.target = this.game.player;
-            }
+            const players = this.game.getPlayers ? this.game.getPlayers() : [this.game.player].filter(Boolean);
+            players.forEach(player => {
+                if (!player || player.markedForDeletion) return;
+                const dist = Math.hypot(player.x - this.x, player.y - this.y);
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    this.target = player;
+                }
+            });
         }
     }
 

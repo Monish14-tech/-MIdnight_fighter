@@ -33,7 +33,7 @@ export class LeaderboardManager {
     }
 
     // Submit score
-    async submitScore(score, level, shipType) {
+    async submitScore(score, level, shipType, teamMembers = null) {
         if (!this.playerName) {
             return null;
         }
@@ -48,7 +48,8 @@ export class LeaderboardManager {
                     playerName: this.playerName,
                     score,
                     level,
-                    shipType
+                    shipType,
+                    teamMembers
                 })
             });
 
@@ -104,7 +105,8 @@ export class LeaderboardManager {
             entryDiv.className = 'leaderboard-entry';
             
             // Highlight current player
-            if (entry.playerName === this.playerName) {
+            if (entry.playerName === this.playerName ||
+                (Array.isArray(entry.teamMembers) && entry.teamMembers.includes(this.playerName))) {
                 entryDiv.classList.add('current-player');
             }
             
@@ -113,9 +115,13 @@ export class LeaderboardManager {
             else if (rank === 2) entryDiv.classList.add('rank-2');
             else if (rank === 3) entryDiv.classList.add('rank-3');
             
+            const displayName = Array.isArray(entry.teamMembers) && entry.teamMembers.length > 0
+                ? entry.teamMembers.join(' + ')
+                : entry.playerName;
+
             entryDiv.innerHTML = `
                 <div class="leaderboard-rank">${rank}</div>
-                <div class="leaderboard-name">${entry.playerName}</div>
+                <div class="leaderboard-name">${displayName}</div>
                 <div class="leaderboard-score">${entry.score.toLocaleString()}</div>
             `;
             

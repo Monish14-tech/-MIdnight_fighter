@@ -91,6 +91,14 @@
                             <div id="health-fill"></div>
                         </div>
                     </div>
+                    <div class="score-container" id="p1-hud-name">P1: UNKNOWN</div>
+                    <div class="score-container" id="p1-hud-ship">SHIP: DEFAULT</div>
+                    <div class="health-container secondary" id="health-container-p2">P2 HP: <div id="health-bar-p2">
+                            <div id="health-fill-p2"></div>
+                        </div>
+                    </div>
+                    <div class="score-container" id="p2-hud-name" style="display:none;">P2: UNKNOWN</div>
+                    <div class="score-container" id="p2-hud-ship" style="display:none;">SHIP: DEFAULT</div>
                     <div class="missile-container">MISSILE: <div id="missile-bar">
                             <div id="missile-fill"></div>
                         </div>
@@ -137,6 +145,7 @@
                     <button id="start-btn" class="neon-btn">INITIATE SEQUENCE</button>
                     <button id="store-btn" class="neon-btn">ARMORY</button>
                     <button id="leaderboard-btn" class="neon-btn">LEADERBOARD</button>
+                    <button id="collab-btn" class="neon-btn">COLLABORATE</button>
                 </div>
                 <p id="total-coins-display">COINS: 0</p>
                 <p id="player-name-display" style="margin-top: 10px; font-size: 14px;">PILOT: <span id="current-player-name">UNKNOWN</span></p>
@@ -165,6 +174,7 @@
                 <div class="menu-buttons-vertical">
                     <button id="resume-btn" class="neon-btn">RESUME</button>
                     <button id="pause-armory-btn" class="neon-btn">ARMORY</button>
+                    <button id="leave-room-btn" class="neon-btn" style="display:none;">LEAVE ROOM</button>
                     <button id="main-menu-btn" class="neon-btn">MAIN MENU</button>
                 </div>
             </div>
@@ -220,6 +230,32 @@
                 </div>
                 <button id="refresh-leaderboard-btn" class="neon-btn" style="margin-top: 15px;">REFRESH</button>
                 <button id="back-from-leaderboard-btn" class="neon-btn" style="margin-top: 10px;">BACK</button>
+            </div>
+
+            <div id="collab-screen" class="screen">
+                <h2>COLLABORATE</h2>
+                <div class="collab-panel">
+                    <div class="collab-section">
+                        <h3>CREATE ROOM</h3>
+                        <p class="collab-subtitle">Host a co-op session</p>
+                        <button id="collab-create-btn" class="neon-btn">CREATE</button>
+                        <div id="collab-room-display" class="collab-room-display hidden">ROOM ID: <span id="collab-room-id"></span></div>
+                        <div id="collab-waiting" class="collab-waiting hidden">WAITING FOR PARTNER...</div>
+                        <button id="collab-leave-btn" class="neon-btn hidden">LEAVE ROOM</button>
+                    </div>
+                    <div class="collab-divider"></div>
+                    <div class="collab-section">
+                        <h3>JOIN ROOM</h3>
+                        <input type="text" id="collab-room-input" placeholder="ROOM ID" maxlength="12" class="name-input">
+                        <button id="collab-join-btn" class="neon-btn">JOIN</button>
+                    </div>
+                </div>
+                <div id="collab-status" class="collab-status"></div>
+                <div class="collab-controls">
+                    <div class="instruction-item">P1: WASD + SPACE/ALT/SHIFT</div>
+                    <div class="instruction-item">P2: ARROWS + ENTER/CTRL/SHIFT</div>
+                </div>
+                <button id="collab-back-btn" class="neon-btn">BACK</button>
             </div>
 
 

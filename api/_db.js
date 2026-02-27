@@ -3,6 +3,7 @@ import { MongoClient } from 'mongodb';
 const MONGO_URI = process.env.MONGO_URI;
 const DB_NAME = 'midnight_fighter';
 const COLLECTION_NAME = 'leaderboard';
+const ROOMS_COLLECTION_NAME = 'rooms';
 
 if (!MONGO_URI) {
     throw new Error('MONGO_URI is not set.');
@@ -25,6 +26,19 @@ export async function getLeaderboardCollection() {
     if (!global._leaderboardIndexCreated) {
         await collection.createIndex({ score: -1 });
         global._leaderboardIndexCreated = true;
+    }
+
+    return collection;
+}
+
+export async function getRoomsCollection() {
+    const client = await clientPromise;
+    const db = client.db(DB_NAME);
+    const collection = db.collection(ROOMS_COLLECTION_NAME);
+
+    if (!global._roomsIndexCreated) {
+        await collection.createIndex({ roomId: 1 }, { unique: true });
+        global._roomsIndexCreated = true;
     }
 
     return collection;

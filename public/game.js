@@ -6,6 +6,7 @@ import { AudioController } from './audio.js';
 import { ScreenShake, Nebula, CosmicDust, Planet, Asteroid } from './utils.js';
 import { PowerUp } from './entities/powerup.js';
 import { LeaderboardManager } from './leaderboard.js';
+import { NetplayClient } from './netplay.js';
 
 class AssetLoader {
     constructor() {
@@ -98,7 +99,17 @@ export class Game {
 
         // Controllers
         this.player = null;
-        this.input = new InputHandler();
+        this.playerTwo = null;
+        this.input = new InputHandler({
+            bindings: InputHandler.bindings.singlePlayer,
+            enableTouch: true,
+            enabled: true
+        });
+        this.inputTwo = new InputHandler({
+            bindings: InputHandler.bindings.coopPlayerTwo,
+            enableTouch: false,
+            enabled: false
+        });
         this.audio = new AudioController();
         this.screenShake = new ScreenShake();
         this.assets = new AssetLoader();
@@ -156,6 +167,39 @@ export class Game {
 
         // Leaderboard
         this.leaderboard = new LeaderboardManager();
+
+        // Co-op state
+        this.coopMode = false;
+        this.collabRoomId = null;
+        this.collabTeamMembers = null;
+        this.collabPollTimer = null;
+        this.onlineCoop = false;
+        this.onlineRole = null;
+        this.remotePlayerState = null;
+        this.remoteInputState = {
+            keys: { up: false, down: false, left: false, right: false, fire: false, missile: false, dash: false },
+            getMovementVector() {
+                let x = 0;
+                let y = 0;
+                if (this.keys.left) x -= 1;
+                if (this.keys.right) x += 1;
+                if (this.keys.up) y -= 1;
+                if (this.keys.down) y += 1;
+                if (x !== 0 || y !== 0) {
+                    const len = Math.sqrt(x * x + y * y);
+                    x /= len;
+                    y /= len;
+                }
+                return { x, y };
+            }
+        };
+        this.remoteShipType = this.selectedShip;
+        this.localShipType = this.selectedShip;
+        this.netplay = new NetplayClient();
+        this.netSyncTimer = 0;
+
+        // Fullscreen management
+        this.fullscreenCheckTimer = 0;
 
         // Bindings
         this.loop = this.loop.bind(this);
@@ -298,10 +342,46 @@ export class Game {
             leaderboardBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.openLeaderboard(); }, { passive: false });
         }
 
+        const collabBtn = document.getElementById('collab-btn');
+        if (collabBtn) {
+            collabBtn.addEventListener('click', () => this.openCollaborate());
+            collabBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.openCollaborate(); }, { passive: false });
+        }
+
         const backFromLeaderboardBtn = document.getElementById('back-from-leaderboard-btn');
         if (backFromLeaderboardBtn) {
             backFromLeaderboardBtn.addEventListener('click', () => this.closeLeaderboard());
             backFromLeaderboardBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.closeLeaderboard(); }, { passive: false });
+        }
+
+        const collabBackBtn = document.getElementById('collab-back-btn');
+        if (collabBackBtn) {
+            collabBackBtn.addEventListener('click', () => this.closeCollaborate());
+            collabBackBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.closeCollaborate(); }, { passive: false });
+        }
+
+        const collabCreateBtn = document.getElementById('collab-create-btn');
+        if (collabCreateBtn) {
+            collabCreateBtn.addEventListener('click', () => this.createCollaborateRoom());
+            collabCreateBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.createCollaborateRoom(); }, { passive: false });
+        }
+
+        const collabJoinBtn = document.getElementById('collab-join-btn');
+        if (collabJoinBtn) {
+            collabJoinBtn.addEventListener('click', () => this.joinCollaborateRoom());
+            collabJoinBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.joinCollaborateRoom(); }, { passive: false });
+        }
+
+        const collabLeaveBtn = document.getElementById('collab-leave-btn');
+        if (collabLeaveBtn) {
+            collabLeaveBtn.addEventListener('click', () => this.leaveCollaborateRoom());
+            collabLeaveBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.leaveCollaborateRoom(); }, { passive: false });
+        }
+
+        const pauseLeaveBtn = document.getElementById('leave-room-btn');
+        if (pauseLeaveBtn) {
+            pauseLeaveBtn.addEventListener('click', () => this.leaveCollaborateRoom(true));
+            pauseLeaveBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.leaveCollaborateRoom(true); }, { passive: false });
         }
 
         const goToLeaderboardBtn = document.getElementById('go-to-leaderboard-btn');
@@ -335,6 +415,24 @@ export class Game {
                 this.togglePause();
             }
         });
+
+        this.netplay.on('peer_state', (message) => this.applyPeerState(message));
+        this.netplay.on('peer_input', (message) => this.applyPeerInput(message));
+        this.netplay.on('peer_joined', (message) => {
+            if (message?.shipType) {
+                this.remoteShipType = message.shipType;
+                this.updatePlayerHudInfo();
+            }
+        });
+        this.netplay.on('force_game_over', () => this.handleGameOver());
+        this.netplay.on('room_closed', () => {
+            this.leaveCollaborateRoom(true, true);
+        });
+        this.netplay.on('closed', () => {
+            if (this.onlineCoop) {
+                this.leaveCollaborateRoom(true, true);
+            }
+        });
     }
 
     init() {
@@ -355,6 +453,8 @@ export class Game {
         const coinEl = document.getElementById('total-coins-display');
         if (coinEl) coinEl.innerText = `COINS: ${this.coins}`;
 
+        this.updatePlayerHudInfo();
+
         // Hide pause menu initially
         document.getElementById('pause-menu').classList.remove('active');
 
@@ -372,6 +472,8 @@ export class Game {
         // Resize listener is already added in constructor/addEventListeners
 
     }
+
+
 
     toggleFullScreen() {
         if (!document.fullscreenElement) {
@@ -554,11 +656,42 @@ export class Game {
         this.gameOverScreen.classList.remove('active');
         if (this.hud) this.hud.style.display = 'flex';
 
+        // Always enter fullscreen when starting game
+        this.enterFullscreen();
+
         // Fix: Ensure Boss HUD is hidden on restart
         const bossHud = document.getElementById('boss-hud');
         if (bossHud) bossHud.classList.remove('active');
 
-        this.player = new Player(this, this.selectedShip);
+        const healthP2 = document.getElementById('health-container-p2');
+        if (healthP2) healthP2.style.display = this.coopMode ? 'flex' : 'none';
+
+        if (this.coopMode) {
+            this.input.setBindings(InputHandler.bindings.coopPlayerOne);
+            this.inputTwo.setEnabled(!this.onlineCoop || this.onlineRole === 'host');
+        } else {
+            this.input.setBindings(InputHandler.bindings.singlePlayer);
+            this.inputTwo.setEnabled(false);
+        }
+
+        const localPlayerId = this.onlineCoop && this.onlineRole === 'guest' ? 'player2' : 'player1';
+        const remotePlayerId = localPlayerId === 'player1' ? 'player2' : 'player1';
+        const localShip = this.coopMode ? this.localShipType : this.selectedShip;
+        const remoteShip = this.coopMode ? this.remoteShipType : this.selectedShip;
+
+        this.player = new Player(this, localShip, { playerId: localPlayerId });
+        if (this.coopMode) {
+            this.playerTwo = new Player(this, remoteShip, { playerId: remotePlayerId });
+            this.playerTwo.x = this.player.x + 80;
+            this.playerTwo.y = this.player.y + 80;
+        } else {
+            this.playerTwo = null;
+        }
+
+        const leaveRoomBtn = document.getElementById('leave-room-btn');
+        if (leaveRoomBtn) leaveRoomBtn.style.display = this.onlineCoop ? 'inline-block' : 'none';
+
+        this.updatePlayerHudInfo();
 
         requestAnimationFrame(this.loop);
     }
@@ -591,9 +724,17 @@ export class Game {
     }
 
     goToMainMenu() {
+        if (this.onlineCoop) {
+            this.leaveCollaborateRoom(true, true);
+            return;
+        }
+
         this.isRunning = false;
         this.isPaused = false;
         this.gameOver = false;
+
+        this.stopCollabPolling();
+        this.resetCoop();
 
         document.getElementById('pause-menu').classList.remove('active');
         document.getElementById('settings-menu').classList.remove('active');
@@ -657,6 +798,238 @@ export class Game {
         this.startScreen.classList.add('active');
     }
 
+    openCollaborate() {
+        this.startScreen.classList.remove('active');
+        const screen = document.getElementById('collab-screen');
+        if (screen) screen.classList.add('active');
+
+        const roomInput = document.getElementById('collab-room-input');
+        if (roomInput) roomInput.value = '';
+
+        const roomDisplay = document.getElementById('collab-room-display');
+        const waiting = document.getElementById('collab-waiting');
+        const status = document.getElementById('collab-status');
+        const leaveBtn = document.getElementById('collab-leave-btn');
+        if (roomDisplay) roomDisplay.classList.add('hidden');
+        if (waiting) waiting.classList.add('hidden');
+        if (leaveBtn) leaveBtn.classList.add('hidden');
+        if (status) status.innerText = '';
+    }
+
+    closeCollaborate() {
+        const screen = document.getElementById('collab-screen');
+        if (screen) screen.classList.remove('active');
+        this.startScreen.classList.add('active');
+        this.stopCollabPolling();
+    }
+
+    async createCollaborateRoom() {
+        const status = document.getElementById('collab-status');
+        if (status) status.innerText = '';
+
+        const hostName = this.leaderboard.getPlayerName();
+        if (!hostName) {
+            if (status) status.innerText = 'Set your pilot name first.';
+            return;
+        }
+
+        try {
+            const response = await fetch(`${window.location.origin}/api/rooms/create`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ hostName })
+            });
+
+            const data = await response.json();
+            if (!data.success) {
+                if (status) status.innerText = data.error || 'Failed to create room.';
+                return;
+            }
+
+            this.collabRoomId = data.roomId;
+
+            const roomIdEl = document.getElementById('collab-room-id');
+            const roomDisplay = document.getElementById('collab-room-display');
+            const waiting = document.getElementById('collab-waiting');
+            const leaveBtn = document.getElementById('collab-leave-btn');
+
+            if (roomIdEl) roomIdEl.innerText = data.roomId;
+            if (roomDisplay) roomDisplay.classList.remove('hidden');
+            if (waiting) waiting.classList.remove('hidden');
+            if (leaveBtn) leaveBtn.classList.remove('hidden');
+
+            this.startCollabPolling(data.roomId, hostName);
+        } catch (error) {
+            if (status) status.innerText = 'Failed to create room.';
+        }
+    }
+
+    async joinCollaborateRoom() {
+        const status = document.getElementById('collab-status');
+        if (status) status.innerText = '';
+
+        const playerName = this.leaderboard.getPlayerName();
+        if (!playerName) {
+            if (status) status.innerText = 'Set your pilot name first.';
+            return;
+        }
+
+        const roomInput = document.getElementById('collab-room-input');
+        const roomId = roomInput ? roomInput.value.trim() : '';
+        if (!roomId) {
+            if (status) status.innerText = 'Enter a room ID.';
+            return;
+        }
+
+        try {
+            const response = await fetch(`${window.location.origin}/api/rooms/join`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roomId, playerName })
+            });
+
+            const data = await response.json();
+            if (!data.success) {
+                if (status) status.innerText = data.error || 'Failed to join room.';
+                return;
+            }
+
+            const room = data.room;
+            await this.activateCoop(room.roomId, room.hostName, room.guestName, 'guest');
+            this.closeCollaborate();
+            this.startGame();
+        } catch (error) {
+            if (status) status.innerText = 'Failed to join room.';
+        }
+    }
+
+    startCollabPolling(roomId, hostName) {
+        this.stopCollabPolling();
+        this.collabPollTimer = setInterval(async () => {
+            try {
+                const response = await fetch(`${window.location.origin}/api/rooms/${roomId}`);
+                const data = await response.json();
+                if (!data.success) return;
+
+                const room = data.room;
+                if (room.status === 'full' && room.guestName) {
+                    await this.activateCoop(room.roomId, hostName, room.guestName, 'host');
+                    this.closeCollaborate();
+                    this.startGame();
+                }
+            } catch (error) {
+                // Ignore polling errors
+            }
+        }, 2000);
+    }
+
+    stopCollabPolling() {
+        if (this.collabPollTimer) {
+            clearInterval(this.collabPollTimer);
+            this.collabPollTimer = null;
+        }
+    }
+
+    async activateCoop(roomId, hostName, guestName, role = 'host') {
+        this.coopMode = true;
+        this.onlineCoop = true;
+        this.onlineRole = role;
+        this.collabRoomId = roomId;
+        this.collabTeamMembers = [hostName, guestName];
+        this.localShipType = this.selectedShip;
+        this.remoteShipType = this.selectedShip;
+        this.input.setBindings(InputHandler.bindings.coopPlayerOne);
+        this.inputTwo.setEnabled(role === 'host');
+
+        const healthP2 = document.getElementById('health-container-p2');
+        if (healthP2) healthP2.style.display = 'flex';
+
+        try {
+            await this.connectNetplay();
+        } catch (error) {
+            this.resetCoop();
+            throw error;
+        }
+        this.updatePlayerNameDisplay();
+        this.updatePlayerHudInfo();
+    }
+
+    resetCoop() {
+        this.coopMode = false;
+        this.onlineCoop = false;
+        this.onlineRole = null;
+        this.collabRoomId = null;
+        this.collabTeamMembers = null;
+        this.remotePlayerState = null;
+        this.remoteShipType = this.selectedShip;
+        this.localShipType = this.selectedShip;
+        this.netplay.disconnect();
+        this.input.setBindings(InputHandler.bindings.singlePlayer);
+        this.inputTwo.setEnabled(false);
+
+        const healthP2 = document.getElementById('health-container-p2');
+        if (healthP2) healthP2.style.display = 'none';
+
+        const leaveRoomBtn = document.getElementById('leave-room-btn');
+        if (leaveRoomBtn) leaveRoomBtn.style.display = 'none';
+
+        this.updatePlayerNameDisplay();
+        this.updatePlayerHudInfo();
+    }
+
+    async connectNetplay() {
+        if (!this.collabRoomId) return;
+
+        const playerName = this.leaderboard.getPlayerName();
+        const joined = await this.netplay.connect({
+            roomId: this.collabRoomId,
+            playerName,
+            shipType: this.localShipType
+        });
+
+        const peerRole = this.onlineRole === 'host' ? 'guest' : 'host';
+        const peerState = joined?.players?.[peerRole];
+        if (peerState?.shipType) {
+            this.remoteShipType = peerState.shipType;
+        }
+    }
+
+    async leaveCollaborateRoom(goMainMenu = false, silent = false) {
+        if (this.collabRoomId) {
+            try {
+                await fetch(`${window.location.origin}/api/rooms/leave`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        roomId: this.collabRoomId,
+                        playerName: this.leaderboard.getPlayerName()
+                    })
+                });
+            } catch {
+                // ignore leave errors
+            }
+        }
+
+        this.stopCollabPolling();
+        this.resetCoop();
+
+        if (goMainMenu) {
+            this.isRunning = false;
+            this.gameOver = false;
+            document.getElementById('pause-menu').classList.remove('active');
+            document.getElementById('settings-menu').classList.remove('active');
+            if (this.hud) this.hud.style.display = 'none';
+            this.startScreen.classList.add('active');
+            if (!silent) {
+                const status = document.getElementById('collab-status');
+                if (status) status.innerText = 'Room closed.';
+            }
+            return;
+        }
+
+        this.closeCollaborate();
+    }
+
     setPlayerName() {
         const input = document.getElementById('player-name-input');
         if (!input || !input.value.trim()) {
@@ -680,7 +1053,79 @@ export class Game {
         const displayEl = document.getElementById('current-player-name');
         if (displayEl) {
             const playerName = this.leaderboard.getPlayerName();
-            displayEl.innerText = playerName || 'UNKNOWN';
+            if (this.coopMode && this.collabTeamMembers && this.collabTeamMembers.length === 2) {
+                displayEl.innerText = this.collabTeamMembers.join(' & ');
+            } else {
+                displayEl.innerText = playerName || 'UNKNOWN';
+            }
+        }
+    }
+
+    updatePlayerHudInfo() {
+        const p1NameEl = document.getElementById('p1-hud-name');
+        const p1ShipEl = document.getElementById('p1-hud-ship');
+        const p2NameEl = document.getElementById('p2-hud-name');
+        const p2ShipEl = document.getElementById('p2-hud-ship');
+
+        const localName = this.leaderboard.getPlayerName() || 'UNKNOWN';
+        const peerName = this.collabTeamMembers
+            ? this.collabTeamMembers.find(name => name !== localName) || 'UNKNOWN'
+            : 'UNKNOWN';
+
+        if (p1NameEl) p1NameEl.innerText = `YOU: ${localName}`;
+        if (p1ShipEl) p1ShipEl.innerText = `SHIP: ${(SHIP_DATA[this.localShipType]?.name || this.localShipType || 'DEFAULT').toUpperCase()}`;
+
+        const showP2 = this.coopMode;
+        if (p2NameEl) {
+            p2NameEl.style.display = showP2 ? 'block' : 'none';
+            p2NameEl.innerText = `ALLY: ${peerName}`;
+        }
+        if (p2ShipEl) {
+            p2ShipEl.style.display = showP2 ? 'block' : 'none';
+            p2ShipEl.innerText = `SHIP: ${(SHIP_DATA[this.remoteShipType]?.name || this.remoteShipType || 'DEFAULT').toUpperCase()}`;
+        }
+    }
+
+    applyPeerInput(message) {
+        if (!this.onlineCoop || this.onlineRole !== 'host') return;
+        if (!message || !message.input) return;
+        // Reset all keys to false first, then apply incoming input
+        // This prevents sticky keys (auto-shooting bug)
+        this.remoteInputState.keys = {
+            up: false,
+            down: false,
+            left: false,
+            right: false,
+            fire: false,
+            missile: false,
+            dash: false,
+            ...message.input
+        };
+    }
+
+    applyPeerState(message) {
+        if (!this.onlineCoop || !this.playerTwo || !message || !message.state) return;
+        const state = message.state;
+
+        // Both host and guest should apply peer state for proper synchronization
+        this.playerTwo.x = typeof state.x === 'number' ? state.x : this.playerTwo.x;
+        this.playerTwo.y = typeof state.y === 'number' ? state.y : this.playerTwo.y;
+        this.playerTwo.angle = typeof state.angle === 'number' ? state.angle : this.playerTwo.angle;
+        if (typeof state.currentHealth === 'number') this.playerTwo.currentHealth = state.currentHealth;
+        if (typeof state.maxHealth === 'number') this.playerTwo.maxHealth = state.maxHealth;
+
+        if (state.shipType && state.shipType !== this.remoteShipType) {
+            this.remoteShipType = state.shipType;
+            this.updatePlayerHudInfo();
+        }
+
+        // Only guest syncs game state from host
+        if (this.onlineRole === 'guest') {
+            if (typeof state.score === 'number') this.score = state.score;
+            if (typeof state.level === 'number') this.currentLevel = state.level;
+            if (state.gameOver && !this.gameOver) {
+                this.handleGameOver();
+            }
         }
     }
 
@@ -704,6 +1149,13 @@ export class Game {
         for (let i = 0; i < 15; i++) {
             this.asteroids.push(new Asteroid(this));
         }
+    }
+
+    getPlayers() {
+        const players = [];
+        if (this.player) players.push(this.player);
+        if (this.coopMode && this.playerTwo) players.push(this.playerTwo);
+        return players;
     }
 
     loop(timestamp) {
@@ -760,6 +1212,15 @@ export class Game {
         // Safety cap for deltaTime
         const dt = Math.min(deltaTime, 0.1);
 
+        // Periodically check and maintain fullscreen during gameplay
+        this.fullscreenCheckTimer += dt;
+        if (this.fullscreenCheckTimer >= 2.0) { // Check every 2 seconds
+            this.fullscreenCheckTimer = 0;
+            if (!document.fullscreenElement && this.isRunning && !this.gameOver) {
+                this.enterFullscreen();
+            }
+        }
+
         this.screenShake.update(dt);
 
         if (this.comboTimer > 0) {
@@ -779,8 +1240,47 @@ export class Game {
         }
 
         if (!this.gameOver) {
-            if (this.player) {
-                this.player.update(dt, this.input);
+            const players = this.getPlayers();
+            if (players.length > 0) {
+                if (this.onlineCoop && this.coopMode) {
+                    // Update local player with local input
+                    if (this.player) {
+                        this.player.update(dt, this.input);
+                    }
+                    // Update remote player with remote input for shooting/cooldowns
+                    // Position will be corrected by state updates
+                    if (this.playerTwo) {
+                        this.playerTwo.update(dt, this.remoteInputState);
+                    }
+                } else {
+                    players.forEach((player, index) => {
+                        const input = index === 0 ? this.input : this.inputTwo;
+                        player.update(dt, input);
+                    });
+                }
+            }
+
+            if (this.onlineCoop) {
+                this.netSyncTimer += dt;
+
+                this.netplay.emit('input_update', { input: { ...this.input.keys } });
+
+                if (this.netSyncTimer >= 0.05 && this.player) {
+                    this.netSyncTimer = 0;
+                    this.netplay.emit('state_update', {
+                        state: {
+                            x: this.player.x,
+                            y: this.player.y,
+                            angle: this.player.angle,
+                            currentHealth: this.player.currentHealth,
+                            maxHealth: this.player.maxHealth,
+                            shipType: this.player.shipType,
+                            score: this.score,
+                            level: this.currentLevel,
+                            gameOver: this.gameOver
+                        }
+                    });
+                }
             }
 
             // Spawn logic
@@ -886,8 +1386,11 @@ export class Game {
         this.ctx.save();
         this.ctx.translate(this.screenShake.offsetX, this.screenShake.offsetY);
 
-        // Draw Player
-        if (this.player && !this.gameOver) this.player.draw(this.ctx);
+        // Draw Players
+        if (!this.gameOver) {
+            if (this.player) this.player.draw(this.ctx);
+            if (this.coopMode && this.playerTwo) this.playerTwo.draw(this.ctx);
+        }
 
         // Draw Boss
         if (this.boss) this.boss.draw(this.ctx);
@@ -1224,42 +1727,52 @@ export class Game {
     }
 
     checkCollisions() {
-        if (!this.player || this.gameOver || this.isWarping) return;
+        if (this.gameOver || this.isWarping) return;
+
+        const players = this.getPlayers();
+        if (players.length === 0) return;
 
         this.enemies.forEach(enemy => {
             if (enemy.markedForDeletion) return;
 
-            const dx = enemy.x - this.player.x;
-            const dy = enemy.y - this.player.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            for (let i = 0; i < players.length; i += 1) {
+                const player = players[i];
+                const dx = enemy.x - player.x;
+                const dy = enemy.y - player.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
 
-            if (distance < enemy.radius + this.player.radius) {
-                if (this.player.isInvulnerable()) {
-                    this.handleEnemyDefeat(enemy, true);
-                } else {
-                    const playerDied = this.player.takeDamage(1);
-                    this.triggerImpact(0.1, 0.5);
-                    this.hudFlashDamage();
-                    if (playerDied) {
-                        this.handleGameOver();
+                if (distance < enemy.radius + player.radius) {
+                    if (player.isInvulnerable()) {
+                        this.handleEnemyDefeat(enemy, true);
                     } else {
-                        this.handleEnemyDefeat(enemy, false);
+                        const playerDied = player.takeDamage(1);
+                        this.triggerImpact(0.1, 0.5);
+                        this.hudFlashDamage();
+                        if (playerDied) {
+                            this.handleGameOver();
+                        } else {
+                            this.handleEnemyDefeat(enemy, false);
+                        }
                     }
+                    break;
                 }
             }
         });
 
         // Boss Collision
-        if (this.boss && !this.player.isInvulnerable()) {
-            const dx = this.boss.x - this.player.x;
-            const dy = this.boss.y - this.player.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < this.boss.radius + this.player.radius) {
-                const died = this.player.takeDamage(1);
-                this.triggerImpact(0.15, 0.6);
-                this.hudFlashDamage();
-                if (died) this.handleGameOver();
-            }
+        if (this.boss) {
+            players.forEach(player => {
+                if (player.isInvulnerable()) return;
+                const dx = this.boss.x - player.x;
+                const dy = this.boss.y - player.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < this.boss.radius + player.radius) {
+                    const died = player.takeDamage(1);
+                    this.triggerImpact(0.15, 0.6);
+                    this.hudFlashDamage();
+                    if (died) this.handleGameOver();
+                }
+            });
         }
     }
 
@@ -1270,7 +1783,8 @@ export class Game {
             if (proj.markedForDeletion) return;
 
             // Player vs Enemies/Boss
-            if (proj.side === 'player') {
+            const isPlayerProjectile = proj.side === 'player' || (typeof proj.side === 'string' && proj.side.startsWith('player'));
+            if (isPlayerProjectile) {
                 this.enemies.forEach(enemy => {
                     if (enemy.markedForDeletion || proj.markedForDeletion) return;
                     const dx = proj.x - enemy.x;
@@ -1318,18 +1832,20 @@ export class Game {
             } else {
                 // Enemy vs Player logic omitted here but remains in file
                 // Enemy vs Player
-                if (this.player && !this.player.isInvulnerable()) {
-                    const dx = proj.x - this.player.x;
-                    const dy = proj.y - this.player.y;
+                const players = this.getPlayers();
+                players.forEach(player => {
+                    if (!player || player.isInvulnerable() || proj.markedForDeletion) return;
+                    const dx = proj.x - player.x;
+                    const dy = proj.y - player.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < this.player.radius + proj.radius) {
+                    if (dist < player.radius + proj.radius) {
                         proj.markedForDeletion = true;
-                        const died = this.player.takeDamage(proj.damage);
+                        const died = player.takeDamage(proj.damage);
                         this.triggerImpact(0.1, 0.5);
                         this.hudFlashDamage();
                         if (died) this.handleGameOver();
                     }
-                }
+                });
             }
         });
     }
@@ -1408,19 +1924,26 @@ export class Game {
     }
 
     checkPowerUpCollisions() {
-        if (!this.player || this.gameOver) return;
+        if (this.gameOver) return;
+
+        const players = this.getPlayers();
+        if (players.length === 0) return;
 
         this.powerups.forEach(p => {
             if (p.markedForDeletion) return;
-            const dx = p.x - this.player.x;
-            const dy = p.y - this.player.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            for (let i = 0; i < players.length; i += 1) {
+                const player = players[i];
+                const dx = p.x - player.x;
+                const dy = p.y - player.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
 
-            if (distance < p.radius + this.player.radius) {
-                this.player.applyPowerUp(p.type);
-                p.markedForDeletion = true;
-                this.screenShake.trigger(10, 0.1);
-                if (this.audio) this.audio.dash();
+                if (distance < p.radius + player.radius) {
+                    player.applyPowerUp(p.type);
+                    p.markedForDeletion = true;
+                    this.screenShake.trigger(10, 0.1);
+                    if (this.audio) this.audio.dash();
+                    break;
+                }
             }
         });
     }
@@ -1429,6 +1952,7 @@ export class Game {
         const scoreEl = document.getElementById('score-display');
         const levelEl = document.getElementById('level-display');
         const healthFill = document.getElementById('health-fill');
+        const healthFillP2 = document.getElementById('health-fill-p2');
 
         if (scoreEl) scoreEl.innerText = this.score;
 
@@ -1456,6 +1980,15 @@ export class Game {
 
 
 
+        }
+
+        if (healthFillP2) {
+            if (this.coopMode && this.playerTwo) {
+                const pct = (this.playerTwo.currentHealth / this.playerTwo.maxHealth) * 100;
+                healthFillP2.style.width = pct + '%';
+            } else {
+                healthFillP2.style.width = '0%';
+            }
         }
 
         // Update Missile Reload Bar
@@ -1492,6 +2025,9 @@ export class Game {
     handleGameOver() {
         if (this.gameOver) return; // Prevent multiple calls
         this.gameOver = true;
+        if (this.onlineCoop) {
+            this.netplay.emit('player_died', { reason: 'hp_zero' });
+        }
         // Do NOT set isRunning to false, so particles can animate
 
         // Calculate Coins (1 coin per 10 score)
@@ -1501,6 +2037,9 @@ export class Game {
 
         if (this.player) {
             this.particles.push(new Explosion(this, this.player.x, this.player.y, '#00f3ff'));
+        }
+        if (this.coopMode && this.playerTwo) {
+            this.particles.push(new Explosion(this, this.playerTwo.x, this.playerTwo.y, '#33ff99'));
         }
 
         if (this.audio && this.audio.gameOver) {
@@ -1526,7 +2065,12 @@ export class Game {
         if (coinsEarnedEl) coinsEarnedEl.innerText = `+${earnedCoins} COINS`;
 
         // Submit score to leaderboard
-        await this.leaderboard.submitScore(this.score, this.level, this.currentShipType);
+        // In collaborative mode, only the host submits to prevent duplicate entries
+        const shouldSubmit = !this.onlineCoop || this.onlineRole === 'host';
+        if (shouldSubmit) {
+            const teamMembers = this.coopMode ? this.collabTeamMembers : null;
+            await this.leaderboard.submitScore(this.score, this.currentLevel, this.selectedShip, teamMembers);
+        }
 
         // Hide boss HUD on termination screen
         const bossHud = document.getElementById('boss-hud');
@@ -1571,7 +2115,7 @@ export class Game {
                     };
                     
                     // Create new player with selected ship
-                    this.player = new Player(this, this.selectedShip);
+                    this.player = new Player(this, this.selectedShip, { playerId: this.player.playerId || 'player1' });
                     
                     // Restore position and health (capped at new max)
                     this.player.x = oldX;
@@ -1672,6 +2216,7 @@ export class Game {
             this.coins -= ship.price;
             this.ownedShips.push(type);
             this.selectedShip = type;
+            this.localShipType = type;
 
             // Save
             localStorage.setItem('midnight_coins', this.coins);
@@ -1686,6 +2231,7 @@ export class Game {
     selectShip(type) {
         if (this.ownedShips.includes(type)) {
             this.selectedShip = type;
+            this.localShipType = type;
             localStorage.setItem('midnight_selected_ship', this.selectedShip);
             if (this.audio) this.audio.dash(); // Select sound
             
@@ -1705,7 +2251,7 @@ export class Game {
                     };
                     
                     // Create new player with selected ship
-                    this.player = new Player(this, this.selectedShip);
+                    this.player = new Player(this, this.selectedShip, { playerId: this.player.playerId || 'player1' });
                     
                     // Restore position and health (capped at new max)
                     this.player.x = oldX;
@@ -1719,6 +2265,8 @@ export class Game {
                     this.player.invulnerabilityTimer = oldPowerups.invulnerabilityTimer;
                 }
             }
+
+            this.updatePlayerHudInfo();
             
             this.renderStore();
         }

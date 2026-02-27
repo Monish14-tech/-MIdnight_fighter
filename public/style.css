@@ -147,6 +147,10 @@ canvas {
     display: flex;
 }
 
+.hidden {
+    display: none;
+}
+
 h1 {
     font-size: 4rem;
     color: #fff;
@@ -300,6 +304,76 @@ h1 {
     gap: 20px;
     justify-content: center;
     flex-wrap: wrap;
+}
+
+.collab-panel {
+    display: grid;
+    grid-template-columns: 1fr 1px 1fr;
+    gap: 20px;
+    align-items: center;
+    width: min(900px, 90%);
+    margin: 20px 0;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid rgba(0, 243, 255, 0.4);
+    box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
+}
+
+.collab-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.collab-divider {
+    width: 1px;
+    height: 100%;
+    background: linear-gradient(180deg, transparent, #00f3ff, transparent);
+}
+
+.collab-subtitle {
+    color: #aaffff;
+    font-size: 0.9rem;
+}
+
+.collab-room-display {
+    margin-top: 10px;
+    padding: 10px 16px;
+    border: 1px solid #00f3ff;
+    color: #00f3ff;
+    letter-spacing: 2px;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.collab-waiting {
+    color: #ffcc00;
+    font-size: 0.9rem;
+}
+
+.collab-status {
+    min-height: 24px;
+    color: #ff6666;
+    margin-bottom: 10px;
+}
+
+.collab-controls {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+
+@media screen and (max-width: 900px) {
+    .collab-panel {
+        grid-template-columns: 1fr;
+    }
+
+    .collab-divider {
+        width: 100%;
+        height: 1px;
+    }
 }
 
 /* Mobile menu buttons - Stack vertically for easier touch */
@@ -700,6 +774,13 @@ h1 {
     white-space: nowrap;
 }
 
+.health-container.secondary {
+    color: #33ff99;
+    border-color: #33ff99;
+    box-shadow: 0 0 15px rgba(51, 255, 153, 0.5);
+    display: none;
+}
+
 /* Mobile health container optimization */
 @media screen and (max-width: 900px) {
     .health-container {
@@ -722,9 +803,28 @@ h1 {
     overflow: hidden;
 }
 
+#health-bar-p2 {
+    width: 150px;
+    height: 20px;
+    border: 2px solid #33ff99;
+    background: rgba(0, 0, 0, 0.8);
+    position: relative;
+    box-shadow: 0 0 15px rgba(51, 255, 153, 0.5), inset 0 0 10px rgba(0, 0, 0, 0.5);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
 /* Mobile health bar - Smaller but still visible */
 @media screen and (max-width: 900px) {
     #health-bar {
+        width: 80px;
+        height: 6px;
+        border-width: 1px;
+    }
+}
+
+@media screen and (max-width: 900px) {
+    #health-bar-p2 {
         width: 80px;
         height: 6px;
         border-width: 1px;
@@ -739,6 +839,15 @@ h1 {
     transition: width 0.3s, background 0.3s;
     position: relative;
     animation: health-pulse 2s infinite ease-in-out;
+}
+
+#health-fill-p2 {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #33ff99 0%, #66ffcc 100%);
+    box-shadow: 0 0 15px #33ff99, inset 0 0 10px rgba(255, 255, 255, 0.3);
+    transition: width 0.3s, background 0.3s;
+    position: relative;
 }
 
 #health-fill.damage-flash {
