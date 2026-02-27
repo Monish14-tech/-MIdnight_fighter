@@ -372,6 +372,7 @@ function setupRealtimeServer(httpServer) {
     const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 
     wss.on('connection', (ws) => {
+        console.log('[WebSocket] New client connected');
         let context = {
             roomId: null,
             playerName: null,
@@ -389,23 +390,29 @@ function setupRealtimeServer(httpServer) {
             try {
                 message = JSON.parse(raw.toString());
             } catch {
+                console.error('[WebSocket] Failed to parse message');
                 return;
             }
 
             if (message.type === 'join_room') {
                 const { roomId, playerName, shipType } = message;
+                console.log(`[WebSocket] Player "${playerName}" joining room "${roomId}"`);
+                
                 if (!roomId || !playerName) {
+                    console.error('[WebSocket] Missing roomId or playerName');
                     safeSend(ws, { type: 'error', error: 'roomId and playerName are required' });
                     return;
                 }
 
                 const room = await roomsCollection.findOne({ roomId });
                 if (!room || room.status === 'closed' || room.status === 'expired') {
+                    console.error(`[WebSocket] Room unavailable: ${roomId}`);
                     safeSend(ws, { type: 'error', error: 'Room unavailable' });
                     return;
                 }
 
                 if (room.expiresAt && new Date(room.expiresAt).getTime() < Date.now()) {
+                    console.error(`[WebSocket] Room expired: ${roomId}`);
                     safeSend(ws, { type: 'error', error: 'Room expired' });
                     return;
                 }
@@ -415,6 +422,7 @@ function setupRealtimeServer(httpServer) {
                 else if (room.guestName === playerName) role = 'guest';
 
                 if (!role) {
+                    console.error(`[WebSocket] Player not in room: ${playerName} in ${roomId}`);
                     safeSend(ws, { type: 'error', error: 'Player is not part of this room' });
                     return;
                 }
@@ -458,9 +466,13 @@ function setupRealtimeServer(httpServer) {
                     players: liveRoom.state.players
                 });
 
+                console.log(`[WebSocket] Player "${playerName}" (${role}) joined room "${roomId}"`);
+                console.log(`[WebSocket] Room "${roomId}" now has ${liveRoom.clients.size} clients`);
+
                 for (const [peerRole, peer] of liveRoom.clients.entries()) {
                     if (peerRole !== role) {
                         safeSend(peer.ws, { type: 'peer_joined', role, playerName, shipType: shipType || 'default' });
+                        console.log(`[WebSocket] Notified peer (${peerRole}) about new player (${role})`);
                     }
                 }
                 return;
@@ -537,8 +549,13 @@ function setupRealtimeServer(httpServer) {
         });
 
         ws.on('close', async () => {
+            console.log(`[WebSocket] Client disconnected (room: ${context.roomId}, role: ${context.role})`);
             if (!context.roomId || !context.role) return;
             await closeRoomForEveryone(context.roomId, 'disconnected');
+        });
+
+        ws.on('error', (error) => {
+            console.error(`[WebSocket] Error on connection:`, error.message);
         });
     });
 }

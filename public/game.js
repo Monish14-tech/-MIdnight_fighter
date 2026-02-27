@@ -947,8 +947,12 @@ export class Game {
         if (healthP2) healthP2.style.display = 'flex';
 
         try {
+            console.log('[Game] Activating co-op mode...');
             await this.connectNetplay();
+            console.log('[Game] Co-op mode activated successfully');
         } catch (error) {
+            console.error('[Game] Failed to activate co-op:', error);
+            alert(`Connection failed: ${error.message}\n\nMake sure the server is running (npm start)`);
             this.resetCoop();
             throw error;
         }
@@ -980,19 +984,31 @@ export class Game {
     }
 
     async connectNetplay() {
-        if (!this.collabRoomId) return;
+        if (!this.collabRoomId) {
+            console.error('No room ID available for connection');
+            throw new Error('No room ID');
+        }
 
         const playerName = this.leaderboard.getPlayerName();
-        const joined = await this.netplay.connect({
-            roomId: this.collabRoomId,
-            playerName,
-            shipType: this.localShipType
-        });
+        console.log(`[Game] Connecting to room ${this.collabRoomId} as ${playerName}...`);
+        
+        try {
+            const joined = await this.netplay.connect({
+                roomId: this.collabRoomId,
+                playerName,
+                shipType: this.localShipType
+            });
 
-        const peerRole = this.onlineRole === 'host' ? 'guest' : 'host';
-        const peerState = joined?.players?.[peerRole];
-        if (peerState?.shipType) {
-            this.remoteShipType = peerState.shipType;
+            console.log('[Game] Successfully connected to room');
+
+            const peerRole = this.onlineRole === 'host' ? 'guest' : 'host';
+            const peerState = joined?.players?.[peerRole];
+            if (peerState?.shipType) {
+                this.remoteShipType = peerState.shipType;
+            }
+        } catch (error) {
+            console.error('[Game] WebSocket connection failed:', error.message);
+            throw error;
         }
     }
 
