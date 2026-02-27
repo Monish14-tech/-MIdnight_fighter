@@ -105,7 +105,7 @@ export class LeaderboardManager {
         const leaderboard = await this.fetchLeaderboard(10);
 
         if (leaderboard.length === 0) {
-            container.innerHTML = '<div class="leaderboard-empty">No scores yet. Be the first!<br><small style="margin-top: 10px; display: block;">Make sure the server is running (start_server.bat)</small></div>';
+            container.innerHTML = '<div class="leaderboard-empty">No scores yet. Be the first!<br><small style="margin-top: 10px; display: block;">Make sure you enter the pilot name</small></div>';
             return;
         }
 
