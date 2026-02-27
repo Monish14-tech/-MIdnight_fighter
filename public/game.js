@@ -632,6 +632,13 @@ export class Game {
         if (input && this.leaderboard.getPlayerName()) {
             input.value = this.leaderboard.getPlayerName();
         }
+        
+        // Hide SET NAME button if player already has a name
+        const setNameBtn = document.getElementById('set-name-btn');
+        const playerName = this.leaderboard.getPlayerName();
+        if (setNameBtn) {
+            setNameBtn.style.display = playerName ? 'none' : 'inline-block';
+        }
     }
 
     openLeaderboardFromGameOver() {
@@ -643,6 +650,13 @@ export class Game {
         const input = document.getElementById('player-name-input');
         if (input && this.leaderboard.getPlayerName()) {
             input.value = this.leaderboard.getPlayerName();
+        }
+        
+        // Hide SET NAME button if player already has a name
+        const setNameBtn = document.getElementById('set-name-btn');
+        const playerName = this.leaderboard.getPlayerName();
+        if (setNameBtn) {
+            setNameBtn.style.display = playerName ? 'none' : 'inline-block';
         }
     }
 
@@ -662,6 +676,12 @@ export class Game {
         this.leaderboard.setPlayerName(name);
         this.updatePlayerNameDisplay();
         alert(`Pilot name set to: ${name}`);
+        
+        // Hide SET NAME button after setting the name
+        const setNameBtn = document.getElementById('set-name-btn');
+        if (setNameBtn) {
+            setNameBtn.style.display = 'none';
+        }
     }
 
     updatePlayerNameDisplay() {
