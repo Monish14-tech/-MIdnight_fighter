@@ -28,6 +28,7 @@ export class InputHandler {
 
         // Touch listeners
         const joystickZone = document.getElementById('joystick-zone');
+        const fireBtn = document.getElementById('fire-btn');
         const dashBtn = document.getElementById('dash-btn');
 
         if (joystickZone) {
@@ -36,7 +37,7 @@ export class InputHandler {
             joystickZone.addEventListener('touchend', (e) => this.onTouchEnd(e), { passive: false });
         }
 
-        if (dashBtn) {
+        if (fireBtn) {
             const handleFireStart = (e) => {
                 e.preventDefault();
                 this.keys.fire = true;
@@ -45,10 +46,25 @@ export class InputHandler {
                 e.preventDefault();
                 this.keys.fire = false;
             };
-            dashBtn.addEventListener('touchstart', handleFireStart, { passive: false });
-            dashBtn.addEventListener('touchend', handleFireEnd, { passive: false });
-            dashBtn.addEventListener('mousedown', () => this.keys.fire = true);
-            dashBtn.addEventListener('mouseup', () => this.keys.fire = false);
+            fireBtn.addEventListener('touchstart', handleFireStart, { passive: false });
+            fireBtn.addEventListener('touchend', handleFireEnd, { passive: false });
+            fireBtn.addEventListener('mousedown', () => this.keys.fire = true);
+            fireBtn.addEventListener('mouseup', () => this.keys.fire = false);
+        }
+
+        if (dashBtn) {
+            const handleDashStart = (e) => {
+                e.preventDefault();
+                this.keys.dash = true;
+            };
+            const handleDashEnd = (e) => {
+                e.preventDefault();
+                this.keys.dash = false;
+            };
+            dashBtn.addEventListener('touchstart', handleDashStart, { passive: false });
+            dashBtn.addEventListener('touchend', handleDashEnd, { passive: false });
+            dashBtn.addEventListener('mousedown', () => this.keys.dash = true);
+            dashBtn.addEventListener('mouseup', () => this.keys.dash = false);
         }
 
         const missileBtn = document.getElementById('missile-btn');
