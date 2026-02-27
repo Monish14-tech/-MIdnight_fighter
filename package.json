@@ -5,6 +5,7 @@
   "main": "api/leaderboard.js",
   "type": "module",
   "scripts": {
+    "start": "node server.js",
     "dev": "vercel dev"
   },
   "dependencies": {

@@ -890,6 +890,7 @@ export class Game {
 
             const data = await response.json();
             if (!data.success) {
+                console.error('Failed to join room:', data.error);
                 if (status) status.innerText = data.error || 'Failed to join room.';
                 return;
             }
@@ -899,7 +900,8 @@ export class Game {
             this.closeCollaborate();
             this.startGame();
         } catch (error) {
-            if (status) status.innerText = 'Failed to join room.';
+            console.error('Error joining room:', error);
+            if (status) status.innerText = 'Failed to join room. Check room ID.';
         }
     }
 

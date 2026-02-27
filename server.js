@@ -263,7 +263,7 @@ app.post('/api/rooms/join', async (req, res) => {
             return res.status(409).json({ success: false, error: 'Host cannot join as guest' });
         }
 
-        await roomsCollection.updateOne(
+        const updateResult = await roomsCollection.updateOne(
             { roomId, status: 'waiting' },
             {
                 $set: {
@@ -276,9 +276,14 @@ app.post('/api/rooms/join', async (req, res) => {
             }
         );
 
+        if (updateResult.matchedCount === 0) {
+            return res.status(409).json({ success: false, error: 'Room is no longer available' });
+        }
+
         const updated = await roomsCollection.findOne({ roomId });
         return res.json({ success: true, room: updated });
     } catch (error) {
+        console.error('Error joining room:', error);
         return res.status(500).json({ success: false, error: 'Failed to join room' });
     }
 });
