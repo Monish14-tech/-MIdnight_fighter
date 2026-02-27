@@ -80,7 +80,6 @@ export default async function handler(req, res) {
             newRecord: true
         });
     } catch (error) {
-        console.error('Error submitting score:', error);
         return res.status(500).json({ success: false, error: 'Failed to submit score' });
     }
 }

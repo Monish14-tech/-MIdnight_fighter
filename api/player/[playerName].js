@@ -40,7 +40,6 @@ export default async function handler(req, res) {
             }
         });
     } catch (error) {
-        console.error('Error fetching player data:', error);
         return res.status(500).json({ success: false, error: 'Failed to fetch player data' });
     }
 }

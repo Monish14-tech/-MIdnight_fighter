@@ -22,7 +22,6 @@ class AssetLoader {
                 resolve(img);
             };
             img.onerror = () => {
-                console.error(`Failed to load asset: ${name} at ${src}`);
                 resolve(null); // Fallback to vector
             };
         });
@@ -189,7 +188,6 @@ export class Game {
 
         const handleStart = (e) => {
             if (e.type === 'touchstart') e.preventDefault();
-            console.log(`${e.target.id} triggered via ${e.type}`);
             // Auto-fullscreen on game start
             this.enterFullscreen();
             this.startGame();
@@ -277,7 +275,6 @@ export class Game {
         if (goToStoreBtn) {
             const handleStore = (e) => {
                 if (e.type === 'touchstart') e.preventDefault();
-                console.log('Go To Store Clicked');
                 this.goToStoreFromGameOver();
             };
             goToStoreBtn.addEventListener('click', handleStore);
@@ -288,7 +285,6 @@ export class Game {
         if (goToMainBtn) {
             const handleMain = (e) => {
                 if (e.type === 'touchstart') e.preventDefault();
-                console.log('Go To Main Menu Clicked');
                 this.goToMainMenu();
             };
             goToMainBtn.addEventListener('click', handleMain);
@@ -355,7 +351,6 @@ export class Game {
         // Initialize cosmic atmosphere
         this.initializeCosmicAtmosphere();
 
-        console.log("MIDNIGHT Initialized");
         // Update coin display on start screen
         const coinEl = document.getElementById('total-coins-display');
         if (coinEl) coinEl.innerText = `COINS: ${this.coins}`;
@@ -381,7 +376,6 @@ export class Game {
     toggleFullScreen() {
         if (!document.fullscreenElement) {
             document.documentElement.requestFullscreen().catch(err => {
-                console.log(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
             });
         } else {
             if (document.exitFullscreen) {
@@ -393,7 +387,6 @@ export class Game {
     enterFullscreen() {
         if (!document.fullscreenElement) {
             document.documentElement.requestFullscreen().catch(err => {
-                console.log(`Auto-fullscreen failed: ${err.message}`);
             });
         }
     }
@@ -528,7 +521,6 @@ export class Game {
     }
 
     startGame() {
-        console.log('startGame() called');
         this.isRunning = true;
         this.gameOver = false;
         this.isPaused = false;
@@ -739,7 +731,7 @@ export class Game {
             this.update(deltaTime);
             this.draw();
         } catch (e) {
-            console.error("Game Loop Crash:", e);
+
             this.isRunning = false;
             throw e; // Re-throw to trigger window.onerror
         }
@@ -1252,7 +1244,6 @@ export class Game {
                         this.handleGameOver();
                     } else {
                         this.handleEnemyDefeat(enemy, false);
-                        this.screenShake.trigger(20, 0.2);
                     }
                 }
             }
@@ -1346,7 +1337,6 @@ export class Game {
     triggerExplosion(x, y, radius, damage) {
         // Visual explosion
         this.particles.push(new Explosion(this, x, y, '#ffaa00'));
-        this.screenShake.trigger(15, 0.3);
 
         // Damage all enemies in range
         this.enemies.forEach(enemy => {
@@ -1465,9 +1455,7 @@ export class Game {
             healthFill.style.width = pct + '%';
 
 
-            if (Math.random() < 0.01) {
-                console.log(`Health Update: ${this.player.currentHealth}/${this.player.maxHealth} (${pct}%)`);
-            }
+
         }
 
         // Update Missile Reload Bar
@@ -1510,7 +1498,6 @@ export class Game {
         const earnedCoins = Math.floor(this.score / 10);
         this.coins += earnedCoins;
         localStorage.setItem('midnight_coins', this.coins);
-        console.log(`Earned ${earnedCoins} coins. Total: ${this.coins}`);
 
         if (this.player) {
             this.particles.push(new Explosion(this, this.player.x, this.player.y, '#00f3ff'));
@@ -1521,7 +1508,6 @@ export class Game {
             try {
                 this.audio.gameOver();
             } catch (e) {
-                console.error("Audio error:", e);
             }
         }
 

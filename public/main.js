@@ -48,9 +48,6 @@ function showNamePrompt(game) {
         
         // Hide modal
         modal.style.display = 'none';
-        
-        // Show welcome message
-        console.log(`✅ Welcome, Pilot ${name}!`);
     };
     
     // Submit on button click

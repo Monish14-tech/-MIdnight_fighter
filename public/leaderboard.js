@@ -23,15 +23,11 @@ export class LeaderboardManager {
             const data = await response.json();
             
             if (data.success) {
-                console.log(`📊 Fetched ${data.data.length} leaderboard entries`);
                 return data.data;
             } else {
-                console.error('❌ Failed to fetch leaderboard:', data.error);
                 return [];
             }
         } catch (error) {
-            console.error('❌ Error fetching leaderboard (Server may not be running):', error);
-            console.log('💡 Make sure to run start_server.bat first!');
             return [];
         }
     }
@@ -39,11 +35,8 @@ export class LeaderboardManager {
     // Submit score
     async submitScore(score, level, shipType) {
         if (!this.playerName) {
-            console.warn('⚠️ No player name set. Score not submitted.');
             return null;
         }
-
-        console.log(`📊 Submitting score: ${score} for player: ${this.playerName}`);
 
         try {
             const response = await fetch(`${this.apiUrl}/score`, {
@@ -62,15 +55,11 @@ export class LeaderboardManager {
             const data = await response.json();
             
             if (data.success) {
-                console.log(`✅ Score submitted successfully! Rank: #${data.rank}`);
                 return data;
             } else {
-                console.error('❌ Failed to submit score:', data.error);
                 return null;
             }
         } catch (error) {
-            console.error('❌ Error submitting score (Server may not be running):', error);
-            console.log('💡 Make sure to run start_server.bat first!');
             return null;
         }
     }
@@ -84,11 +73,9 @@ export class LeaderboardManager {
             if (data.success) {
                 return data.data;
             } else {
-                console.error('Failed to fetch player stats:', data.error);
                 return null;
             }
         } catch (error) {
-            console.error('Error fetching player stats:', error);
             return null;
         }
     }
