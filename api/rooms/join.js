@@ -1,4 +1,4 @@
-import { getRoomsCollection } from '../../_db.js';
+import { getRoomsCollection } from '../_db.js';
 
 function setCors(res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -18,8 +18,10 @@ export default async function handler(req, res) {
     }
 
     try {
+        // Get roomId from query, playerName and shipType from body
         const { roomId } = req.query;
-        const { playerName, shipType } = req.body;
+        const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+        const { playerName, shipType } = body;
 
         if (!roomId || !playerName) {
             return res.status(400).json({ success: false, error: 'Room ID and player name required' });
