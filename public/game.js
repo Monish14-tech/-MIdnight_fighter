@@ -896,8 +896,8 @@ export class Game {
                 return;
             }
 
-            const room = data.room;
-            await this.activateCoop(room.roomId, room.hostName, room.guestName, 'guest');
+            // Data contains roomId, hostName, guestName at top level
+            await this.activateCoop(data.roomId, data.hostName, data.guestName, 'guest');
             this.closeCollaborate();
             this.startGame();
         } catch (error) {
