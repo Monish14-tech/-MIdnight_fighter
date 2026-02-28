@@ -799,6 +799,12 @@ export class Game {
     }
 
     openCollaborate() {
+        // Coming Soon notification - restrict access
+        alert('🚀 COLLABORATE MODE\n\n⏳ COMING SOON!\n\nMultiplayer co-op functionality is currently under development.\n\nStay tuned for updates!');
+        return;
+        
+        // Original code disabled
+        /*
         this.startScreen.classList.remove('active');
         const screen = document.getElementById('collab-screen');
         if (screen) screen.classList.add('active');
@@ -814,6 +820,7 @@ export class Game {
         if (waiting) waiting.classList.add('hidden');
         if (leaveBtn) leaveBtn.classList.add('hidden');
         if (status) status.innerText = '';
+        */
     }
 
     closeCollaborate() {
