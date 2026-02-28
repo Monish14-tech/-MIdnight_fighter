@@ -39,16 +39,37 @@ export default async function handler(req, res) {
             return res.status(404).json({ success: false, error: 'Room not found' });
         }
 
-        if (room.status !== 'full' && room.status !== 'waiting') {
-            return res.status(409).json({ success: false, error: 'Room unavailable' });
+        // Determine player role
+        let role = null;
+        let isNewGuest = false;
+
+        if (room.hostName === playerName) {
+            // Host re-joining
+            role = 'host';
+        } else if (room.guestName === playerName) {
+            // Guest re-joining
+            role = 'guest';
+        } else if (!room.guestName) {
+            // NEW guest joining empty slot
+            role = 'guest';
+            isNewGuest = true;
+        } else {
+            // Room is full (both host and guest already assigned to different players)
+            return res.status(409).json({ success: false, error: 'Room is full' });
         }
 
-        let role = null;
-        if (room.hostName === playerName) role = 'host';
-        else if (room.guestName === playerName) role = 'guest';
-
-        if (!role) {
-            return res.status(409).json({ success: false, error: 'Player not in room' });
+        // If new guest joining, update guestName
+        if (isNewGuest) {
+            await collection.updateOne(
+                { roomId },
+                {
+                    $set: {
+                        guestName: playerName,
+                        status: 'full',
+                        updatedAt: new Date()
+                    }
+                }
+            );
         }
 
         // Initialize polling state in MongoDB for this player
@@ -65,8 +86,7 @@ export default async function handler(req, res) {
                     },
                     updatedAt: new Date()
                 }
-            },
-            { upsert: false }
+            }
         );
 
         return res.json({
@@ -74,7 +94,7 @@ export default async function handler(req, res) {
             role,
             roomId,
             hostName: room.hostName,
-            guestName: room.guestName
+            guestName: isNewGuest ? playerName : room.guestName
         });
     } catch (error) {
         console.error('Polling join error:', error);
