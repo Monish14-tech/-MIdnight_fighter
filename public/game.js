@@ -40,22 +40,32 @@ class AssetLoader {
 }
 
 export const SHIP_DATA = {
-    'default': { name: 'INTERCEPTOR', price: 0, hp: 3, speed: 320, damage: 1, fireRate: 0.15, missileCooldown: 3.0, missileCount: 1, color: '#00f3ff', bulletType: 'normal', desc: 'Standard issue.' },
-    'tank': { name: 'V.G. TITAN', price: 1000, hp: 5, speed: 280, damage: 2, fireRate: 0.25, missileCooldown: 4.0, missileCount: 1, color: '#00ff44', bulletType: 'piercing', desc: 'Heavy armor, piercing shots.' },
-    'scout': { name: 'RAZORBACK', price: 1500, hp: 2, speed: 420, damage: 1, fireRate: 0.12, missileCooldown: 2.5, missileCount: 1, color: '#ffff00', bulletType: 'spread', desc: 'Fast, spread fire.' },
-    'fighter': { name: 'CRIMSON FURY', price: 3000, hp: 3, speed: 340, damage: 2, fireRate: 0.15, missileCooldown: 3.0, missileCount: 1, color: '#ff0055', bulletType: 'normal', desc: 'High damage fighter.' },
-    'rapid': { name: 'STORM BRINGER', price: 5000, hp: 3, speed: 320, damage: 1, fireRate: 0.06, missileCooldown: 2.0, missileCount: 1, color: '#aa00ff', bulletType: 'normal', desc: 'Extreme fire rate.' },
-    'bomber': { name: 'DOOMSDAY', price: 8000, hp: 4, speed: 280, damage: 2, fireRate: 0.2, missileCooldown: 4.0, missileCount: 3, color: '#ff6600', bulletType: 'normal', desc: 'Triple missile barrage.' },
-    'phantom': { name: 'PHANTOM', price: 6000, hp: 2, speed: 400, damage: 1, fireRate: 0.1, missileCooldown: 2.0, missileCount: 1, color: '#9900ff', bulletType: 'spread', desc: 'Nimbly spread.' },
-    'vanguard': { name: 'VANGUARD', price: 10000, hp: 5, speed: 340, damage: 2, fireRate: 0.12, missileCooldown: 3.0, missileCount: 2, color: '#00ffcc', bulletType: 'piercing', desc: 'Elite piercing fighter.' },
-    'juggernaut': { name: 'JUGGERNAUT', price: 15000, hp: 8, speed: 240, damage: 3, fireRate: 0.3, missileCooldown: 5.0, missileCount: 4, color: '#ff9900', bulletType: 'piercing', desc: 'God of War, 4 missiles.' },
-    'void': { name: 'VOID STALKER', price: 20000, hp: 4, speed: 360, damage: 5, fireRate: 0.4, missileCooldown: 3.0, missileCount: 1, color: '#4400ff', bulletType: 'railgun', desc: 'Experimental Railgun.' },
-    'pulse': { name: 'NEON PULSE', price: 12000, hp: 3, speed: 380, damage: 1, fireRate: 0.04, missileCooldown: 2.5, missileCount: 1, color: '#00ffff', bulletType: 'normal', desc: 'Hyper-frequency pulse.' },
-    'guardian': { name: 'GALAXY GUARDIAN', price: 25000, hp: 12, speed: 260, damage: 2, fireRate: 0.2, missileCooldown: 4.0, missileCount: 2, color: '#ffffff', bulletType: 'normal', desc: 'Invincible protector.' },
-    'solar': { name: 'SOLAR FLARE', price: 18000, hp: 4, speed: 310, damage: 2, fireRate: 0.25, missileCooldown: 3.5, missileCount: 1, color: '#ffcc00', bulletType: 'explosive', desc: 'Explosive solar rounds.' },
-    'eclipse': { name: 'ECLIPSE SERAPH', price: 45000, hp: 6, speed: 360, damage: 5, fireRate: 0.08, missileCooldown: 2.2, missileCount: 3, color: '#66ccff', bulletType: 'piercing', invincible: true, desc: 'Angel core. Invincible hull.' },
-    'obliterator': { name: 'OBLITERATOR PRIME', price: 75000, hp: 7, speed: 300, damage: 7, fireRate: 0.12, missileCooldown: 2.8, missileCount: 4, color: '#ff3366', bulletType: 'explosive', invincible: true, desc: 'Siege frame. Invincible core.' },
-    'starborn': { name: 'STARBORN TITAN', price: 120000, hp: 10, speed: 340, damage: 8, fireRate: 0.1, missileCooldown: 2.0, missileCount: 5, color: '#99ffcc', bulletType: 'railgun', invincible: true, desc: 'Mythic relic. Invincible.' }
+    'default': { name: 'INTERCEPTOR', price: 0, hp: 3, speed: 320, damage: 1, fireRate: 0.20, missileCooldown: 3.0, missileCount: 1, color: '#00f3ff', bulletType: 'normal', desc: 'Standard issue.', requiresPrevious: false },
+    'scout': { name: 'RAZORBACK', price: 15000, hp: 2, speed: 420, damage: 1, fireRate: 0.20, missileCooldown: 2.5, missileCount: 1, color: '#ffff00', bulletType: 'spread', desc: 'Fast, spread fire.', requiresPrevious: true },
+    'phantom': { name: 'PHANTOM', price: 16000, hp: 2, speed: 400, damage: 1, fireRate: 0.22, missileCooldown: 2.0, missileCount: 1, color: '#9900ff', bulletType: 'spread', desc: 'Nimbly spread.', requiresPrevious: true },
+    'rapid': { name: 'STORM BRINGER', price: 17000, hp: 3, speed: 320, damage: 1, fireRate: 0.23, missileCooldown: 2.0, missileCount: 1, color: '#aa00ff', bulletType: 'normal', desc: 'Extreme fire rate.', requiresPrevious: true },
+    'fighter': { name: 'CRIMSON FURY', price: 18000, hp: 3, speed: 340, damage: 2, fireRate: 0.24, missileCooldown: 3.0, missileCount: 1, color: '#ff0055', bulletType: 'normal', desc: 'High damage fighter.', requiresPrevious: true },
+    'pulse': { name: 'NEON PULSE', price: 19000, hp: 3, speed: 380, damage: 1, fireRate: 0.08, missileCooldown: 2.5, missileCount: 1, color: '#00ffff', bulletType: 'normal', desc: 'Hyper-frequency pulse.', requiresPrevious: true },
+    'quantum': { name: 'QUANTUM GHOST', price: 20000, hp: 4, speed: 480, damage: 8, fireRate: 0.08, missileCooldown: 1.8, missileCount: 3, color: '#39ff14', bulletType: 'railgun', invincible: true, desc: 'Quantum entity. Hyper velocity.', requiresPrevious: true },
+    'void': { name: 'VOID STALKER', price: 21000, hp: 4, speed: 360, damage: 5, fireRate: 0.40, missileCooldown: 3.0, missileCount: 1, color: '#4400ff', bulletType: 'railgun', desc: 'Experimental Railgun.', requiresPrevious: true },
+    'solar': { name: 'SOLAR FLARE', price: 22000, hp: 4, speed: 310, damage: 2, fireRate: 0.25, missileCooldown: 3.5, missileCount: 1, color: '#ffcc00', bulletType: 'explosive', desc: 'Explosive solar rounds.', requiresPrevious: true },
+    'bomber': { name: 'DOOMSDAY', price: 23000, hp: 4, speed: 280, damage: 2, fireRate: 0.20, missileCooldown: 4.0, missileCount: 3, color: '#ff6600', bulletType: 'normal', desc: 'Triple missile barrage.', requiresPrevious: true },
+    'tank': { name: 'V.G. TITAN', price: 25000, hp: 5, speed: 280, damage: 2, fireRate: 0.25, missileCooldown: 4.0, missileCount: 1, color: '#00ff44', bulletType: 'piercing', desc: 'Heavy armor, piercing shots.', requiresPrevious: true },
+    'wraith': { name: 'COSMIC WRAITH', price: 28000, hp: 5, speed: 440, damage: 10, fireRate: 0.09, missileCooldown: 2.0, missileCount: 2, color: '#2d1b69', bulletType: 'railgun', invincible: true, desc: 'Void phantom. Reality breaker.', requiresPrevious: true },
+    'vanguard': { name: 'VANGUARD', price: 31000, hp: 5, speed: 340, damage: 2, fireRate: 0.12, missileCooldown: 3.0, missileCount: 2, color: '#00ffcc', bulletType: 'piercing', desc: 'Elite piercing fighter.', requiresPrevious: true },
+    'eclipse': { name: 'ECLIPSE SERAPH', price: 34000, hp: 6, speed: 360, damage: 5, fireRate: 0.08, missileCooldown: 2.2, missileCount: 3, color: '#66ccff', bulletType: 'piercing', invincible: true, desc: 'Angel core. Invincible hull.', requiresPrevious: true },
+    'shadowblade': { name: 'SHADOWBLADE', price: 37000, hp: 6, speed: 420, damage: 6, fireRate: 0.11, missileCooldown: 2.5, missileCount: 3, color: '#1a1a2e', bulletType: 'piercing', invincible: true, desc: 'Silent assassin. Stealth enhanced.', requiresPrevious: true },
+    'guardian': { name: 'GALAXY GUARDIAN', price: 40000, hp: 6, speed: 260, damage: 2, fireRate: 0.20, missileCooldown: 4.0, missileCount: 2, color: '#ffffff', bulletType: 'normal', desc: 'Invincible protector.', requiresPrevious: true },
+    'obliterator': { name: 'OBLITERATOR PRIME', price: 45000, hp: 7, speed: 300, damage: 7, fireRate: 0.12, missileCooldown: 2.8, missileCount: 4, color: '#ff3366', bulletType: 'explosive', invincible: true, desc: 'Siege frame. Invincible core.', requiresPrevious: true },
+    'inferno': { name: 'INFERNO KING', price: 52000, hp: 7, speed: 380, damage: 9, fireRate: 0.14, missileCooldown: 2.3, missileCount: 4, color: '#ff4500', bulletType: 'explosive', invincible: true, desc: 'Blazing hellfire. Pure devastation.', requiresPrevious: true },
+    'juggernaut': { name: 'JUGGERNAUT', price: 60000, hp: 8, speed: 240, damage: 3, fireRate: 0.30, missileCooldown: 5.0, missileCount: 4, color: '#ff9900', bulletType: 'piercing', desc: 'God of War, 4 missiles.', requiresPrevious: true },
+    'tempest': { name: 'TEMPEST LORD', price: 72000, hp: 8, speed: 360, damage: 7, fireRate: 0.13, missileCooldown: 2.7, missileCount: 5, color: '#00d9ff', bulletType: 'spread', invincible: true, desc: 'Lightning god. Storm incarnate.', requiresPrevious: true },
+    'reaper': { name: 'VOID REAPER', price: 82000, hp: 8, speed: 400, damage: 14, fireRate: 0.11, missileCooldown: 2.2, missileCount: 4, color: '#1a1a1a', bulletType: 'explosive', invincible: true, desc: 'Death embodied. Final judgment.', requiresPrevious: true },
+    'crimson_emperor': { name: 'CRIMSON EMPEROR', price: 98000, hp: 9, speed: 350, damage: 12, fireRate: 0.12, missileCooldown: 2.5, missileCount: 7, color: '#dc143c', bulletType: 'piercing', invincible: true, desc: 'Royal ruler. Absolute dominion.', requiresPrevious: true },
+    'phoenix': { name: 'CELESTIAL PHOENIX', price: 125000, hp: 10, speed: 390, damage: 13, fireRate: 0.15, missileCooldown: 2.4, missileCount: 6, color: '#ffa500', bulletType: 'explosive', invincible: true, desc: 'Mythic firebird. Eternal rebirth.', requiresPrevious: true },
+    'starborn': { name: 'STARBORN TITAN', price: 162000, hp: 10, speed: 340, damage: 8, fireRate: 0.10, missileCooldown: 2.0, missileCount: 5, color: '#99ffcc', bulletType: 'railgun', invincible: true, desc: 'Mythic relic. Invincible.', requiresPrevious: true },
+    'leviathan': { name: 'LEVIATHAN ROX', price: 220000, hp: 12, speed: 320, damage: 11, fireRate: 0.16, missileCooldown: 3.0, missileCount: 6, color: '#003d82', bulletType: 'explosive', invincible: true, desc: 'Deep sea titan. Unstoppable force.', requiresPrevious: true },
+    'sentinel': { name: 'ETERNAL SENTINEL', price: 300000, hp: 15, speed: 360, damage: 15, fireRate: 0.13, missileCooldown: 2.1, missileCount: 8, color: '#e8e8e8', bulletType: 'railgun', invincible: true, desc: 'Ultimate guardian. Infinite power.', requiresPrevious: true }
 };
 
 export class Game {
@@ -71,8 +81,32 @@ export class Game {
         // Persistence
         this.highScore = parseInt(localStorage.getItem('midnight_highscore')) || 0;
         this.coins = parseInt(localStorage.getItem('midnight_coins')) || 0;
-        this.ownedShips = JSON.parse(localStorage.getItem('midnight_owned_ships')) || ['default'];
-        this.selectedShip = localStorage.getItem('midnight_selected_ship') || 'default';
+        
+        // Testing toggles
+        const UNLOCK_ALL_SHIPS_FOR_TESTING = false;
+        const RESET_SHIPS = true;
+        const RESET_COINS = true;
+
+        if (RESET_COINS) {
+            this.coins = 0;
+            localStorage.setItem('midnight_coins', this.coins);
+        }
+
+        if (UNLOCK_ALL_SHIPS_FOR_TESTING) {
+            this.ownedShips = Object.keys(SHIP_DATA);
+            const savedSelected = localStorage.getItem('midnight_selected_ship') || 'default';
+            this.selectedShip = this.ownedShips.includes(savedSelected) ? savedSelected : 'default';
+            localStorage.setItem('midnight_owned_ships', JSON.stringify(this.ownedShips));
+            localStorage.setItem('midnight_selected_ship', this.selectedShip);
+        } else if (RESET_SHIPS) {
+            this.ownedShips = ['default'];
+            this.selectedShip = 'default';
+            localStorage.setItem('midnight_owned_ships', JSON.stringify(this.ownedShips));
+            localStorage.setItem('midnight_selected_ship', 'default');
+        } else {
+            this.ownedShips = JSON.parse(localStorage.getItem('midnight_owned_ships')) || ['default'];
+            this.selectedShip = localStorage.getItem('midnight_selected_ship') || 'default';
+        }
         
         // Ensure guardian is not equipped by default
         if (this.selectedShip === 'guardian') {
@@ -502,6 +536,25 @@ export class Game {
         return SHIP_DATA[type] || SHIP_DATA['default'];
     }
 
+    getMaxEnemiesOnScreen() {
+        if (this.currentLevel >= 24) {
+            return 101 + ((this.currentLevel - 24) * 20);
+        }
+        return 50;
+    }
+
+    getEnemyContactDamage() {
+        if (this.currentLevel >= 24) return 2;
+        if (this.currentLevel >= 15) return 1.5;
+        return 1;
+    }
+
+    getEnemyProjectileDamage(baseDamage = 1) {
+        if (this.currentLevel >= 24) return Math.max(2, baseDamage + 1);
+        if (this.currentLevel >= 15) return Math.max(1.5, baseDamage * 1.25);
+        return baseDamage;
+    }
+
     generateLevelThresholds() {
         const thresholds = [];
         // Level 1: 0, Level 2: 1000, Level 3: 2000, etc.
@@ -523,7 +576,11 @@ export class Game {
             this.currentLevel++;
 
             // New Level Setup
-            this.enemiesForLevel = 5 + (this.currentLevel * 3);
+            if (this.currentLevel >= 24) {
+                this.enemiesForLevel = 101 + ((this.currentLevel - 24) * 20);
+            } else {
+                this.enemiesForLevel = 5 + (this.currentLevel * 3);
+            }
             this.enemiesSpawned = 0;
 
             // Trigger Boss Warp every 5 levels
@@ -1317,7 +1374,7 @@ export class Game {
             this.enemyTimer += dt;
             // No enemies spawn during boss fights - only boss appears
             if (this.enemyTimer > this.enemyInterval &&
-                this.enemies.length < 50 &&
+                this.enemies.length < this.getMaxEnemiesOnScreen() &&
                 !this.boss &&
                 this.enemiesSpawned < this.enemiesForLevel) {
                 this.spawnEnemy();
@@ -1775,7 +1832,7 @@ export class Game {
                     if (player.isInvulnerable()) {
                         this.handleEnemyDefeat(enemy, true);
                     } else {
-                        const playerDied = player.takeDamage(1);
+                        const playerDied = player.takeDamage(this.getEnemyContactDamage());
                         this.triggerImpact(0.1, 0.5);
                         this.hudFlashDamage();
                         if (playerDied) {
@@ -1797,7 +1854,8 @@ export class Game {
                 const dy = this.boss.y - player.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist < this.boss.radius + player.radius) {
-                    const died = player.takeDamage(1);
+                    const bossContactDamage = this.currentLevel >= 20 ? Math.max(2, Math.ceil(player.maxHealth / 2)) : this.getEnemyContactDamage();
+                    const died = player.takeDamage(bossContactDamage);
                     this.triggerImpact(0.15, 0.6);
                     this.hudFlashDamage();
                     if (died) this.handleGameOver();
@@ -1870,7 +1928,10 @@ export class Game {
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist < player.radius + proj.radius) {
                         proj.markedForDeletion = true;
-                        const died = player.takeDamage(proj.damage);
+                        const hitDamage = (proj.source === 'boss' && this.currentLevel >= 20)
+                            ? Math.max(2, Math.ceil(player.maxHealth / 2))
+                            : this.getEnemyProjectileDamage(proj.damage || 1);
+                        const died = player.takeDamage(hitDamage);
                         this.triggerImpact(0.1, 0.5);
                         this.hudFlashDamage();
                         if (died) this.handleGameOver();
@@ -2242,6 +2303,20 @@ export class Game {
 
     buyShip(type) {
         const ship = SHIP_DATA[type];
+        
+        // Check if ship requires previous ship to be unlocked
+        if (ship.requiresPrevious) {
+            const shipKeys = Object.keys(SHIP_DATA);
+            const currentIndex = shipKeys.indexOf(type);
+            if (currentIndex > 0) {
+                const previousKey = shipKeys[currentIndex - 1];
+                if (!this.ownedShips.includes(previousKey)) {
+                    alert(`You must unlock ${SHIP_DATA[previousKey].name} first!`);
+                    return;
+                }
+            }
+        }
+        
         if (this.coins >= ship.price) {
             this.coins -= ship.price;
             this.ownedShips.push(type);
@@ -2255,7 +2330,19 @@ export class Game {
 
             if (this.audio) this.audio.powerUp(); // Success sound
             this.renderStore();
+        } else {
+            alert('Not enough coins!');
         }
+    }
+
+    resetShipsSection() {
+        this.ownedShips = ['default'];
+        this.selectedShip = 'default';
+        this.localShipType = 'default';
+        localStorage.setItem('midnight_owned_ships', JSON.stringify(this.ownedShips));
+        localStorage.setItem('midnight_selected_ship', this.selectedShip);
+        if (this.audio) this.audio.powerUp();
+        alert('Ships section has been reset!');
     }
 
     selectShip(type) {

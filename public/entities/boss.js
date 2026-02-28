@@ -53,6 +53,7 @@ export class Boss {
 
         // Visuals
         this.tilt = 0;
+        this.hasFiredSingleMissile = false;
     }
 
     update(deltaTime) {
@@ -67,6 +68,14 @@ export class Boss {
             // Push away effect and visual change
             this.game.particles.push(new Explosion(this.game, this.x, this.y, '#ffffff'));
             this.color = '#ff0000'; // Enrage color
+        }
+
+        if (this.level >= 20 && !this.hasFiredSingleMissile && this.state !== 'entering' && this.game.player) {
+            const dx = this.game.player.x - this.x;
+            const dy = this.game.player.y - this.y;
+            const missileAngle = Math.atan2(dy, dx);
+            this.fireProjectile(this.x, this.y, missileAngle, 'missile');
+            this.hasFiredSingleMissile = true;
         }
 
         switch (this.state) {
@@ -213,7 +222,8 @@ export class Boss {
 
     spiralShoot(deltaTime) {
         // Rotational fire
-        const fireRate = 0.08;
+        const fireRateMult = this.level >= 20 ? 1.9 : (this.level >= 15 ? 1.35 : 1.0);
+        const fireRate = 0.08 / fireRateMult;
         const totalShots = Math.floor(this.stateTimer / fireRate);
         const prevShots = Math.floor((this.stateTimer - deltaTime) / fireRate);
 
@@ -228,7 +238,8 @@ export class Boss {
     }
 
     spreadShoot(deltaTime) {
-        const burstRate = 0.6;
+        const fireRateMult = this.level >= 20 ? 1.9 : (this.level >= 15 ? 1.35 : 1.0);
+        const burstRate = 0.6 / fireRateMult;
         const totalBursts = Math.floor(this.stateTimer / burstRate);
         const prevBursts = Math.floor((this.stateTimer - deltaTime) / burstRate);
 
@@ -244,7 +255,8 @@ export class Boss {
     }
 
     rapidShoot(deltaTime) {
-        const fireRate = 0.1;
+        const fireRateMult = this.level >= 20 ? 1.9 : (this.level >= 15 ? 1.35 : 1.0);
+        const fireRate = 0.1 / fireRateMult;
         const total = Math.floor(this.stateTimer / fireRate);
         const prev = Math.floor((this.stateTimer - deltaTime) / fireRate);
 
@@ -256,12 +268,13 @@ export class Boss {
 
     fireProjectile(x, y, angle, type) {
         const p = new Projectile(this.game, x, y, angle, type, 'enemy');
+        p.source = 'boss';
         if (type === 'missile') {
             // Drastically reduced missile stats for fairness
-            p.speed = 80;      // Was 150
-            p.maxSpeed = 160;  // Was 300
-            p.acceleration = 50; // Was 150
-            p.damage = 1;      // Minimized damage
+            p.speed = 160;
+            p.maxSpeed = 420;
+            p.acceleration = 180;
+            p.damage = this.level >= 20 ? 2 : 1;
             p.lifetime = 4.0;
         } else {
             p.speed = 350 + (this.level * 5);

@@ -25,6 +25,8 @@ export class Enemy {
         // Difficulty Scaling
         const difficulty = this.game.difficultyMultiplier || 1;
         const level = this.game.currentLevel || 1;
+        this.spawnLevel = level;
+        this.hasFiredSingleMissile = false;
 
         // Slight speed increase per difficulty level (10% per difficulty multiplier)
         const speedMultiplier = 1 + (difficulty - 1) * 0.1;
@@ -282,38 +284,80 @@ export class Enemy {
 
         // Shooter Logic (only shooter, sniper, launcher, and pulsar can attack)
         // No enemies can shoot until first boss appears
+        const level = this.game.currentLevel || 1;
+        const singleMissileMode = level >= 11;
+        const fireRateMultiplier = level >= 24 ? 2.5 : (level >= 15 ? 1.7 : 1.0);
+        const spreadMultiplier = level >= 24 ? 0.25 : (level >= 15 ? 0.6 : 1.0);
+
         if (!this.game.firstBossAppeared) {
             // No shooting allowed before first boss
         } else if (this.type === 'shooter') {
             this.shootTimer += deltaTime;
-            if (this.shootTimer > 2.0) {
+            if (this.shootTimer > (2.0 / fireRateMultiplier)) {
                 this.shootTimer = 0;
-                // Add spread to reduce accuracy
-                const spread = (Math.random() - 0.5) * 0.5; // +/- 0.25 radians (~14 degrees)
-                this.game.projectiles.push(new Projectile(this.game, this.x, this.y, this.angle + spread, 'bullet', 'enemy'));
+                if (singleMissileMode) {
+                    if (!this.hasFiredSingleMissile) {
+                        const missile = new Projectile(this.game, this.x, this.y, this.angle, 'missile', 'enemy');
+                        missile.speed = 260;
+                        missile.maxSpeed = 700;
+                        missile.acceleration = 300;
+                        missile.damage = 2;
+                        this.game.projectiles.push(missile);
+                        this.hasFiredSingleMissile = true;
+                    }
+                } else {
+                    const spread = (Math.random() - 0.5) * 0.5 * spreadMultiplier;
+                    this.game.projectiles.push(new Projectile(this.game, this.x, this.y, this.angle + spread, 'bullet', 'enemy'));
+                }
             }
         } else if (this.type === 'sniper') {
             this.shootTimer += deltaTime;
-            if (this.shootTimer > 2.8) {
+            if (this.shootTimer > (2.8 / fireRateMultiplier)) {
                 this.shootTimer = 0;
-                const spread = (Math.random() - 0.5) * 0.2;
-                const shot = new Projectile(this.game, this.x, this.y, this.angle + spread, 'bullet', 'enemy');
-                shot.speed = 700;
-                shot.damage = 2;
-                shot.color = '#6bd6ff';
-                this.game.projectiles.push(shot);
+                if (singleMissileMode) {
+                    if (!this.hasFiredSingleMissile) {
+                        const missile = new Projectile(this.game, this.x, this.y, this.angle, 'missile', 'enemy');
+                        missile.speed = 300;
+                        missile.maxSpeed = 800;
+                        missile.acceleration = 350;
+                        missile.damage = 2;
+                        missile.color = '#6bd6ff';
+                        this.game.projectiles.push(missile);
+                        this.hasFiredSingleMissile = true;
+                    }
+                } else {
+                    const spread = (Math.random() - 0.5) * 0.2 * spreadMultiplier;
+                    const shot = new Projectile(this.game, this.x, this.y, this.angle + spread, 'bullet', 'enemy');
+                    shot.speed = 700;
+                    shot.damage = 2;
+                    shot.color = '#6bd6ff';
+                    this.game.projectiles.push(shot);
+                }
             }
         } else if (this.type === 'launcher') {
-            // Launches bullets instead of missiles
+            // Launches one missile only from level 11+, otherwise bullets
             this.shootTimer += deltaTime;
-            if (this.shootTimer > 3.0) {
+            if (this.shootTimer > (3.0 / fireRateMultiplier)) {
                 this.shootTimer = 0;
-                const spread = (Math.random() - 0.5) * 0.3;
-                const bullet = new Projectile(this.game, this.x, this.y, this.angle + spread, 'bullet', 'enemy');
-                bullet.speed = 350;
-                bullet.damage = 2;
-                bullet.color = '#ff0099';
-                this.game.projectiles.push(bullet);
+                if (singleMissileMode) {
+                    if (!this.hasFiredSingleMissile) {
+                        const missile = new Projectile(this.game, this.x, this.y, this.angle, 'missile', 'enemy');
+                        missile.speed = 220;
+                        missile.maxSpeed = 650;
+                        missile.acceleration = 260;
+                        missile.damage = 2;
+                        missile.color = '#ff0099';
+                        this.game.projectiles.push(missile);
+                        this.hasFiredSingleMissile = true;
+                    }
+                } else {
+                    const spread = (Math.random() - 0.5) * 0.3 * spreadMultiplier;
+                    const bullet = new Projectile(this.game, this.x, this.y, this.angle + spread, 'bullet', 'enemy');
+                    bullet.speed = 350;
+                    bullet.damage = 2;
+                    bullet.color = '#ff0099';
+                    this.game.projectiles.push(bullet);
+                }
             }
         } else if (this.type === 'pulsar') {
             // Create damaging pulse waves

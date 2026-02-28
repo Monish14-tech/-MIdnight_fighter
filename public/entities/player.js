@@ -287,12 +287,8 @@ export class Player {
 
             if (this.game.audio) this.game.audio.dash();
         } else if (type === 'missile') {
-            const count = this.missileCount || 1;
-            for (let i = 0; i < count; i++) {
-                const offset = count > 1 ? (i - (count - 1) / 2) * 0.2 : 0;
-                const p = new Projectile(this.game, this.x, this.y, this.angle + offset, 'missile', this.playerId);
-                this.game.projectiles.push(p);
-            }
+            const p = new Projectile(this.game, this.x, this.y, this.angle, 'missile', this.playerId);
+            this.game.projectiles.push(p);
             if (this.game.screenShake) this.game.screenShake.trigger(5, 0.2);
         }
     }
@@ -360,570 +356,850 @@ export class Player {
     }
 
     drawShape(ctx, mainColor) {
-        // Use shipType to determine visuals
-        // If drawing from store preview (mockGame), we might rely on the passed color or context.
-        // But for shape, we need the type.
-        // We added this.shipType in constructor.
-
         const type = this.shipType || 'default';
-
-        ctx.fillStyle = mainColor;
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
         ctx.lineWidth = 1;
 
         switch (type) {
-            case 'tank': // V.G. TITAN - Heavy Industrial Tech
-                // Main Hull - Metallic Green
-                const tankGrad = ctx.createLinearGradient(-15, -15, 15, 15);
-                tankGrad.addColorStop(0, '#1a331a');
-                tankGrad.addColorStop(0.5, '#4d994d');
-                tankGrad.addColorStop(1, '#004d00');
-                ctx.fillStyle = tankGrad;
-
-                // Armor Block Shape
+            case 'default': // INTERCEPTOR - Diamond Arrow
+                const defaultGrad = ctx.createRadialGradient(-5, 0, 3, 5, 0, 25);
+                defaultGrad.addColorStop(0, '#00ffff');
+                defaultGrad.addColorStop(0.6, '#0066ff');
+                defaultGrad.addColorStop(1, '#000055');
+                ctx.fillStyle = defaultGrad;
                 ctx.beginPath();
-                ctx.moveTo(18, 0); // Blunt nose
+                ctx.moveTo(32, 0);
                 ctx.lineTo(8, 14);
-                ctx.lineTo(-12, 16); // Wide rear
-                ctx.lineTo(-18, 8);
-                ctx.lineTo(-18, -8);
-                ctx.lineTo(-12, -16);
+                ctx.lineTo(0, 6);
                 ctx.lineTo(8, -14);
                 ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
-
-                // Heavy Plating Detail
-                ctx.fillStyle = 'rgba(255,255,255,0.1)';
-                ctx.fillRect(-10, -6, 12, 12); // Center plate
-
-                // Engine Vents
-                ctx.fillStyle = '#000';
-                ctx.fillRect(-18, -4, 4, 8);
-                break;
-
-            case 'scout': // RAZORBACK - Aerodynamic Needle
-                // Fuselage - Racing Yellow
-                const scoutGrad = ctx.createLinearGradient(0, -10, 0, 10);
-                scoutGrad.addColorStop(0, '#b3b300');
-                scoutGrad.addColorStop(0.5, '#ffff00');
-                scoutGrad.addColorStop(1, '#b3b300');
-                ctx.fillStyle = scoutGrad;
-
-                ctx.beginPath();
-                ctx.moveTo(35, 0); // Extremely long nose
-                ctx.lineTo(-5, 4);
-                ctx.lineTo(-20, 10); // Wing tip back
-                ctx.lineTo(-15, 2);
-                ctx.lineTo(-15, -2);
-                ctx.lineTo(-20, -10);
-                ctx.lineTo(-5, -4);
-                ctx.closePath();
-                ctx.fill();
-
-                // Cockpit Strip
-                ctx.strokeStyle = '#000';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(10, 0);
-                ctx.lineTo(-5, 0);
-                ctx.stroke();
-                break;
-
-            case 'fighter': // CRIMSON FURY - Stealth Aggressor
-                // Gradient - menacing red/black
-                const fighterGrad = ctx.createLinearGradient(-10, 0, 20, 0);
-                fighterGrad.addColorStop(0, '#330000');
-                fighterGrad.addColorStop(0.5, '#cc0000');
-                fighterGrad.addColorStop(1, '#ff3333');
-                ctx.fillStyle = fighterGrad;
-
-                // Main body
-                ctx.beginPath();
-                ctx.moveTo(25, 0);
-                ctx.lineTo(5, 4);
-                ctx.lineTo(0, 12);
-                ctx.lineTo(15, 20); // Forward swept wing tip
-                ctx.lineTo(-10, 8);
-                ctx.lineTo(-20, 0); // Tail
-                ctx.lineTo(-10, -8);
-                ctx.lineTo(15, -20); // Forward swept wing tip
-                ctx.lineTo(0, -12);
-                ctx.lineTo(5, -4);
-                ctx.closePath();
-                ctx.fill();
-
-                // Highlights
-                ctx.strokeStyle = '#ff9999';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-                break;
-
-            case 'rapid': // STORM BRINGER - Gatling Tech
-                // Purple/Chrome
-                const rapidGrad = ctx.createLinearGradient(-20, 0, 20, 0);
-                rapidGrad.addColorStop(0, '#2a004d');
-                rapidGrad.addColorStop(0.4, '#aa00ff');
-                rapidGrad.addColorStop(1, '#eebbff');
-                ctx.fillStyle = rapidGrad;
-
-                ctx.beginPath();
-                ctx.moveTo(15, 0);
-                ctx.lineTo(5, 5);
-                ctx.lineTo(-5, 12); // Stabilizer
-                ctx.lineTo(-20, 5); // Engine pod
-                ctx.lineTo(-15, 0);
-                ctx.lineTo(-20, -5); // Engine pod
-                ctx.lineTo(-5, -12);
-                ctx.lineTo(5, -5);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-
-                // Multi-barrel Nose
-                ctx.fillStyle = '#ccc';
-                ctx.beginPath();
-                ctx.arc(18, 0, 4, 0, Math.PI * 2); // Gun nose
-                ctx.fill();
-                ctx.fillStyle = '#000';
-                ctx.beginPath();
-                ctx.arc(18, -1.5, 1, 0, Math.PI * 2);
-                ctx.arc(18, 1.5, 1, 0, Math.PI * 2);
-                ctx.arc(19.5, 0, 1, 0, Math.PI * 2);
-                ctx.fill();
-                break;
-
-            case 'bomber': // DOOMSDAY - Strategic Wing
-                // Metallic Orange
-                const bomberGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, 20);
-                bomberGrad.addColorStop(0, '#ff6600');
-                bomberGrad.addColorStop(1, '#662200');
-                ctx.fillStyle = bomberGrad;
-
-                // Flying Wing Shape
-                ctx.beginPath();
-                ctx.moveTo(15, 0); // Nose
-                ctx.lineTo(5, 8);
-                ctx.lineTo(0, 25); // Wide wing tip
-                ctx.lineTo(-10, 20);
-                ctx.lineTo(-5, 5);
-                ctx.lineTo(-15, 0); // Rear center
-                ctx.lineTo(-5, -5);
-                ctx.lineTo(-10, -20);
-                ctx.lineTo(0, -25);
-                ctx.lineTo(5, -8);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-
-                // Missile Bay Doors
-                ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                ctx.fillRect(-5, 5, 6, 10);
-                ctx.fillRect(-5, -15, 6, 10);
-                break;
-
-            case 'phantom': // PHANTOM - Stealth Glass Cannon
-                // Dark Purple/Black Stealth
-                const phantomGrad = ctx.createLinearGradient(-20, 0, 25, 0);
-                phantomGrad.addColorStop(0, '#1a001a');
-                phantomGrad.addColorStop(0.5, '#9900ff');
-                phantomGrad.addColorStop(1, '#cc66ff');
-                ctx.fillStyle = phantomGrad;
-
-                // Sleek Stealth Body
-                ctx.beginPath();
-                ctx.moveTo(30, 0); // Sharp nose
-                ctx.lineTo(10, 3);
-                ctx.lineTo(5, 15); // Angled wing
-                ctx.lineTo(-15, 12);
-                ctx.lineTo(-22, 0);
-                ctx.lineTo(-15, -12);
-                ctx.lineTo(5, -15);
-                ctx.lineTo(10, -3);
-                ctx.closePath();
-                ctx.fill();
-
-                // Stealth Coating Lines
-                ctx.strokeStyle = 'rgba(153,0,255,0.3)';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-                break;
-
-            case 'vanguard': // VANGUARD - Elite All-Rounder
-                // Cyan/Teal Elite
-                const vanguardGrad = ctx.createLinearGradient(-15, 0, 25, 0);
-                vanguardGrad.addColorStop(0, '#004d4d');
-                vanguardGrad.addColorStop(0.5, '#00ffcc');
-                vanguardGrad.addColorStop(1, '#ccffff');
-                ctx.fillStyle = vanguardGrad;
-
-                // Advanced Fighter Body
-                ctx.beginPath();
-                ctx.moveTo(25, 0);
-                ctx.lineTo(12, 6);
-                ctx.lineTo(8, 18); // Wing
-                ctx.lineTo(-8, 15);
-                ctx.lineTo(-18, 8);
-                ctx.lineTo(-18, -8);
-                ctx.lineTo(-8, -15);
-                ctx.lineTo(8, -18);
-                ctx.lineTo(12, -6);
-                ctx.closePath();
-                ctx.fill();
-
-                // Elite Markings
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(5, -2, 8, 4);
-                ctx.strokeStyle = '#00ffcc';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                break;
-
-            case 'juggernaut': // JUGGERNAUT - Ultimate Tank
-                // Orange/Bronze Heavy
-                const juggernautGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, 25);
-                juggernautGrad.addColorStop(0, '#ff9900');
-                juggernautGrad.addColorStop(0.7, '#cc6600');
-                juggernautGrad.addColorStop(1, '#663300');
-                ctx.fillStyle = juggernautGrad;
-
-                // Massive Fortress Body
-                ctx.beginPath();
-                ctx.moveTo(20, 0); // Blunt armored nose
-                ctx.lineTo(10, 10);
-                ctx.lineTo(5, 20); // Heavy wing
-                ctx.lineTo(-5, 22);
-                ctx.lineTo(-15, 18);
-                ctx.lineTo(-22, 10);
-                ctx.lineTo(-22, -10);
-                ctx.lineTo(-15, -18);
-                ctx.lineTo(-5, -22);
-                ctx.lineTo(5, -20);
-                ctx.lineTo(10, -10);
-                ctx.closePath();
-                ctx.fill();
-
-                // Heavy Armor Plating
-                ctx.fillStyle = 'rgba(255,255,255,0.2)';
-                ctx.fillRect(-8, -8, 16, 16);
-                ctx.strokeStyle = '#ff9900';
-                ctx.lineWidth = 3;
-                ctx.strokeRect(-8, -8, 16, 16);
-                break;
-
-            case 'void': // VOID STALKER - Triple Needle Stealth
-                const voidGrad = ctx.createLinearGradient(-20, 0, 40, 0);
-                voidGrad.addColorStop(0, '#000033');
-                voidGrad.addColorStop(0.5, '#4400ff');
-                voidGrad.addColorStop(1, '#000033');
-                ctx.fillStyle = voidGrad;
-
-                // Main Central Needle
-                ctx.beginPath();
-                ctx.moveTo(40, 0);
-                ctx.lineTo(10, 4);
-                ctx.lineTo(-30, 0);
-                ctx.lineTo(10, -4);
-                ctx.closePath();
-                ctx.fill();
-
-                // Side Needles (Outriggers)
-                ctx.fillStyle = '#8800ff';
-                ctx.beginPath();
-                ctx.moveTo(25, 12);
-                ctx.lineTo(5, 14);
-                ctx.lineTo(-20, 12);
-                ctx.lineTo(5, 10);
-                ctx.closePath();
-                ctx.fill();
-
-                ctx.beginPath();
-                ctx.moveTo(25, -12);
-                ctx.lineTo(5, -14);
-                ctx.lineTo(-20, -12);
-                ctx.lineTo(5, -10);
-                ctx.closePath();
-                ctx.fill();
-
-                // Connecting Rails
-                ctx.strokeStyle = '#4400ff';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(10, 4); ctx.lineTo(10, 12);
-                ctx.moveTo(10, -4); ctx.lineTo(10, -12);
-                ctx.moveTo(-10, 2); ctx.lineTo(-10, 11);
-                ctx.moveTo(-10, -2); ctx.lineTo(-10, -11);
-                ctx.stroke();
-                break;
-
-            case 'pulse': // NEON PULSE - Wingless Twin Core
-                const pulseGrad = ctx.createLinearGradient(-25, 0, 25, 0);
-                pulseGrad.addColorStop(0, '#00ffff');
-                pulseGrad.addColorStop(0.5, '#004444');
-                pulseGrad.addColorStop(1, '#00ffff');
-                ctx.fillStyle = pulseGrad;
-
-                // Two parallel sleek hulls
-                ctx.fillRect(-20, 6, 40, 6);
-                ctx.fillRect(-20, -12, 40, 6);
-
-                // Connecting bridge
                 ctx.fillStyle = '#00ffff';
-                ctx.fillRect(-5, -8, 10, 16);
-
-                // Front emitters
-                ctx.fillStyle = '#fff';
                 ctx.beginPath();
-                ctx.arc(22, 9, 3, 0, Math.PI * 2);
-                ctx.arc(22, -9, 3, 0, Math.PI * 2);
+                ctx.moveTo(10, -5);
+                ctx.lineTo(14, 0);
+                ctx.lineTo(10, 5);
+                ctx.lineTo(6, 0);
+                ctx.closePath();
                 ctx.fill();
-
-                // Vertical Stabilizers (Small)
-                ctx.fillStyle = 'rgba(0, 255, 255, 0.5)';
-                ctx.fillRect(-15, 12, 10, 4);
-                ctx.fillRect(-15, -16, 10, 4);
                 break;
 
-            case 'guardian': // GALAXY GUARDIAN - Massive Hex Fortress
-                const guardGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, 30);
-                guardGrad.addColorStop(0, '#ffffff');
-                guardGrad.addColorStop(0.4, '#888888');
-                guardGrad.addColorStop(1, '#222222');
-                ctx.fillStyle = guardGrad;
+            case 'scout': // RAZORBACK - Sharp Dart
+                const scoutGrad = ctx.createLinearGradient(0, -15, 0, 15);
+                scoutGrad.addColorStop(0, '#ffff00');
+                scoutGrad.addColorStop(0.5, '#ffcc00');
+                scoutGrad.addColorStop(1, '#ff9900');
+                ctx.fillStyle = scoutGrad;
+                ctx.beginPath();
+                ctx.moveTo(36, 0);
+                ctx.lineTo(0, 8);
+                ctx.lineTo(-10, 16);
+                ctx.lineTo(-8, 0);
+                ctx.lineTo(-10, -16);
+                ctx.lineTo(0, -8);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.beginPath();
+                ctx.moveTo(-8, -2);
+                ctx.lineTo(6, -2);
+                ctx.lineTo(6, 2);
+                ctx.lineTo(-8, 2);
+                ctx.closePath();
+                ctx.fill();
+                break;
 
-                // Large Central Hexagon
+            case 'phantom': // PHANTOM - Hexagon Stealth
+                const phantomGrad = ctx.createLinearGradient(-25, -10, 25, 10);
+                phantomGrad.addColorStop(0, '#6600ff');
+                phantomGrad.addColorStop(0.5, '#aa44ff');
+                phantomGrad.addColorStop(1, '#330066');
+                ctx.fillStyle = phantomGrad;
                 ctx.beginPath();
                 for (let i = 0; i < 6; i++) {
-                    const angle = (i * Math.PI) / 3;
-                    const rx = Math.cos(angle) * 28;
-                    const ry = Math.sin(angle) * 28;
-                    if (i === 0) ctx.moveTo(rx, ry);
-                    else ctx.lineTo(rx, ry);
+                    const angle = i * Math.PI / 3;
+                    const x = Math.cos(angle) * 22;
+                    const y = Math.sin(angle) * 22;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
                 }
                 ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
-
-                // Outer Shield Plates
-                ctx.fillStyle = '#444';
-                ctx.fillRect(-32, 15, 15, 10);
-                ctx.fillRect(-32, -25, 15, 10);
-
-                // Central Focus Core
-                ctx.fillStyle = '#00f3ff';
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = '#00f3ff';
+                ctx.fillStyle = '#9966ff';
                 ctx.beginPath();
-                ctx.arc(0, 0, 12, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.shadowBlur = 0;
-                break;
-
-            case 'solar': // SOLAR FLARE - Panel Radiator
-                const solarGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, 20);
-                solarGrad.addColorStop(0, '#ffff00');
-                solarGrad.addColorStop(1, '#ff6600');
-                ctx.fillStyle = solarGrad;
-
-                // Spherical Core
-                ctx.beginPath();
-                ctx.arc(0, 0, 15, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Large Solar Panels (4 Wings)
-                ctx.fillStyle = '#ffaa00';
                 for (let i = 0; i < 4; i++) {
-                    ctx.save();
-                    ctx.rotate(i * Math.PI / 2 + Math.PI / 4);
-                    // Rectangular panel
-                    ctx.fillRect(8, -18, 20, 36);
-                    // Grid lines on panels
-                    ctx.strokeStyle = '#000';
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(8, -18, 20, 36);
-                    ctx.restore();
+                    const angle = i * Math.PI / 2;
+                    const x = Math.cos(angle) * 4;
+                    const y = Math.sin(angle) * 4;
+                    if (i === 0) ctx.moveTo(x, y + 2);
+                    else ctx.lineTo(x, y + 2);
                 }
-
-                // Central Glowing Rod
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(5, -2, 25, 4);
+                ctx.closePath();
+                ctx.fill();
                 break;
 
-            case 'eclipse': // COSMIC SERAPH - Halo Spear
-                const eclipseGrad = ctx.createLinearGradient(-20, 0, 30, 0);
-                eclipseGrad.addColorStop(0, '#1a2a3a');
-                eclipseGrad.addColorStop(0.5, '#66ccff');
-                eclipseGrad.addColorStop(1, '#e6f7ff');
-                ctx.fillStyle = eclipseGrad;
-
-                // Spear body
+            case 'rapid': // STORM BRINGER - Star Burst
+                const rapidGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, 28);
+                rapidGrad.addColorStop(0, '#ff00ff');
+                rapidGrad.addColorStop(0.5, '#aa00ff');
+                rapidGrad.addColorStop(1, '#220044');
+                ctx.fillStyle = rapidGrad;
                 ctx.beginPath();
-                ctx.moveTo(34, 0);
-                ctx.lineTo(10, 6);
-                ctx.lineTo(-18, 4);
-                ctx.lineTo(-26, 0);
-                ctx.lineTo(-18, -4);
-                ctx.lineTo(10, -6);
+                for (let i = 0; i < 8; i++) {
+                    const angle = i * Math.PI / 4;
+                    const x = Math.cos(angle) * 28;
+                    const y = Math.sin(angle) * 28;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
                 ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.moveTo(0, -6);
+                ctx.lineTo(3, -2);
+                ctx.lineTo(6, 0);
+                ctx.lineTo(3, 2);
+                ctx.lineTo(0, 6);
+                ctx.lineTo(-3, 2);
+                ctx.lineTo(-6, 0);
+                ctx.lineTo(-3, -2);
+                ctx.closePath();
+                ctx.fill();
+                break;
 
-                // Halo ring
-                ctx.strokeStyle = '#aaddff';
+            case 'fighter': // CRIMSON FURY - Delta Wing
+                const fighterGrad = ctx.createLinearGradient(-20, 0, 35, 0);
+                fighterGrad.addColorStop(0, '#660000');
+                fighterGrad.addColorStop(0.5, '#ff3333');
+                fighterGrad.addColorStop(1, '#ffaaaa');
+                ctx.fillStyle = fighterGrad;
+                ctx.beginPath();
+                ctx.moveTo(36, 0);
+                ctx.lineTo(0, 20);
+                ctx.lineTo(-20, 0);
+                ctx.lineTo(0, -20);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.moveTo(-2, -3);
+                ctx.lineTo(8, -1);
+                ctx.lineTo(8, 1);
+                ctx.lineTo(-2, 3);
+                ctx.closePath();
+                ctx.fill();
+                break;
+
+            case 'pulse': // NEON PULSE - Hourglass
+                const pulseGrad = ctx.createLinearGradient(-20, -20, 20, 20);
+                pulseGrad.addColorStop(0, '#00ffff');
+                pulseGrad.addColorStop(0.5, '#00aaff');
+                pulseGrad.addColorStop(1, '#0044aa');
+                ctx.fillStyle = pulseGrad;
+                ctx.beginPath();
+                ctx.moveTo(20, -18);
+                ctx.lineTo(8, 0);
+                ctx.lineTo(20, 18);
+                ctx.lineTo(-8, 18);
+                ctx.lineTo(0, 0);
+                ctx.lineTo(-8, -18);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#00ffff';
+                ctx.beginPath();
+                ctx.moveTo(-2, -3);
+                ctx.lineTo(2, -3);
+                ctx.lineTo(2, 3);
+                ctx.lineTo(-2, 3);
+                ctx.closePath();
+                ctx.fill();
+                break;
+
+            case 'quantum': // QUANTUM GHOST - Rotating Star
+                const quantumGrad = ctx.createRadialGradient(0, 0, 3, 0, 0, 26);
+                quantumGrad.addColorStop(0, '#00ff99');
+                quantumGrad.addColorStop(0.5, '#00ff44');
+                quantumGrad.addColorStop(1, '#003300');
+                ctx.fillStyle = quantumGrad;
+                ctx.beginPath();
+                for (let i = 0; i < 12; i++) {
+                    const angle = i * Math.PI / 6;
+                    const r = (i % 2 === 0) ? 26 : 14;
+                    const x = Math.cos(angle) * r;
+                    const y = Math.sin(angle) * r;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#00ffff';
+                ctx.beginPath();
+                ctx.moveTo(0, -8);
+                ctx.lineTo(4, -4);
+                ctx.lineTo(8, 0);
+                ctx.lineTo(4, 4);
+                ctx.lineTo(0, 8);
+                ctx.lineTo(-4, 4);
+                ctx.lineTo(-8, 0);
+                ctx.lineTo(-4, -4);
+                ctx.closePath();
+                ctx.fill();
+                break;
+
+            case 'void': // VOID STALKER - Plus/Cross
+                const voidGrad = ctx.createLinearGradient(-30, -10, 30, 10);
+                voidGrad.addColorStop(0, '#0000ff');
+                voidGrad.addColorStop(0.5, '#4400ff');
+                voidGrad.addColorStop(1, '#000044');
+                ctx.fillStyle = voidGrad;
+                ctx.beginPath();
+                ctx.moveTo(-6, -28);
+                ctx.lineTo(6, -28);
+                ctx.lineTo(6, -10);
+                ctx.lineTo(28, -10);
+                ctx.lineTo(28, 10);
+                ctx.lineTo(6, 10);
+                ctx.lineTo(6, 28);
+                ctx.lineTo(-6, 28);
+                ctx.lineTo(-6, 10);
+                ctx.lineTo(-28, 10);
+                ctx.lineTo(-28, -10);
+                ctx.lineTo(-6, -10);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#ff00ff';
+                ctx.beginPath();
+                ctx.moveTo(0, -4);
+                ctx.lineTo(4, 0);
+                ctx.lineTo(0, 4);
+                ctx.lineTo(-4, 0);
+                ctx.closePath();
+                ctx.fill();
+                break;
+
+            case 'solar': // SOLAR FLARE - Sunburst
+                const solarGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, 24);
+                solarGrad.addColorStop(0, '#ffff00');
+                solarGrad.addColorStop(0.6, '#ff8800');
+                solarGrad.addColorStop(1, '#ff0000');
+                ctx.fillStyle = solarGrad;
+                ctx.beginPath();
+                for (let i = 0; i < 16; i++) {
+                    const angle = i * Math.PI / 8;
+                    const r = (i % 2 === 0) ? 24 : 12;
+                    const x = Math.cos(angle) * r;
+                    const y = Math.sin(angle) * r;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.moveTo(0, -10);
+                ctx.lineTo(6, -6);
+                ctx.lineTo(10, 0);
+                ctx.lineTo(6, 6);
+                ctx.lineTo(0, 10);
+                ctx.lineTo(-6, 6);
+                ctx.lineTo(-10, 0);
+                ctx.lineTo(-6, -6);
+                ctx.closePath();
+                ctx.fill();
+                break;
+
+            case 'bomber': // DOOMSDAY - Heavy Pentagon
+                const bomberGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, 26);
+                bomberGrad.addColorStop(0, '#ff6600');
+                bomberGrad.addColorStop(0.5, '#ff4400');
+                bomberGrad.addColorStop(1, '#660000');
+                ctx.fillStyle = bomberGrad;
+                ctx.beginPath();
+                for (let i = 0; i < 5; i++) {
+                    const angle = i * 2 * Math.PI / 5 - Math.PI / 2;
+                    const x = Math.cos(angle) * 26;
+                    const y = Math.sin(angle) * 26;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = 'rgba(0,0,0,0.4)';
+                ctx.beginPath();
+                for (let i = 0; i < 5; i++) {
+                    const angle = i * 2 * Math.PI / 5 - Math.PI / 2;
+                    const x = Math.cos(angle) * 8;
+                    const y = Math.sin(angle) * 8;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                break;
+
+            case 'tank': // V.G. TITAN - Heavy Diamond
+                const tankGrad = ctx.createLinearGradient(-20, -15, 20, 15);
+                tankGrad.addColorStop(0, '#00ff44');
+                tankGrad.addColorStop(0.5, '#00cc33');
+                tankGrad.addColorStop(1, '#004400');
+                ctx.fillStyle = tankGrad;
+                ctx.beginPath();
+                ctx.moveTo(20, 0);
+                ctx.lineTo(0, 20);
+                ctx.lineTo(-20, 0);
+                ctx.lineTo(0, -20);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                ctx.beginPath();
+                ctx.moveTo(10, 0);
+                ctx.lineTo(0, 10);
+                ctx.lineTo(-10, 0);
+                ctx.lineTo(0, -10);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#00ff44';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.moveTo(-2, -3);
+                ctx.lineTo(2, -3);
+                ctx.lineTo(2, 3);
+                ctx.lineTo(-2, 3);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.moveTo(-8, -3);
+                ctx.lineTo(-4, -3);
+                ctx.lineTo(-4, 3);
+                ctx.lineTo(-8, 3);
+                ctx.closePath();
+                ctx.fill();
+                break;
+
+            case 'wraith': // COSMIC WRAITH - Double Teardrop
+                const wraithGrad = ctx.createRadialGradient(-10, 0, 3, 10, 0, 20);
+                wraithGrad.addColorStop(0, '#9966ff');
+                wraithGrad.addColorStop(0.5, '#6633ff');
+                wraithGrad.addColorStop(1, '#220066');
+                ctx.fillStyle = wraithGrad;
+                ctx.beginPath();
+                ctx.moveTo(-10, -22);
+                ctx.quadraticCurveTo(-18, -10, -16, 0);
+                ctx.quadraticCurveTo(-18, 10, -10, 22);
+                ctx.lineTo(-2, 10);
+                ctx.lineTo(-2, -10);
+                ctx.closePath();
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(10, -22);
+                ctx.quadraticCurveTo(18, -10, 16, 0);
+                ctx.quadraticCurveTo(18, 10, 10, 22);
+                ctx.lineTo(2, 10);
+                ctx.lineTo(2, -10);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#ff00ff';
+                ctx.beginPath();
+                ctx.moveTo(0, -5);
+                ctx.lineTo(3, 0);
+                ctx.lineTo(0, 5);
+                ctx.lineTo(-3, 0);
+                ctx.closePath();
+                ctx.fill();
+                break;
+
+            case 'vanguard': // VANGUARD - Pointed Triangle
+                const vanguardGrad = ctx.createLinearGradient(-25, 0, 30, 0);
+                vanguardGrad.addColorStop(0, '#00ffcc');
+                vanguardGrad.addColorStop(0.5, '#00ffaa');
+                vanguardGrad.addColorStop(1, '#006666');
+                ctx.fillStyle = vanguardGrad;
+                ctx.beginPath();
+                ctx.moveTo(32, 0);
+                ctx.lineTo(-8, 22);
+                ctx.lineTo(-4, 0);
+                ctx.lineTo(-8, -22);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.moveTo(-2, -5);
+                ctx.lineTo(4, -3);
+                ctx.lineTo(4, 3);
+                ctx.lineTo(-2, 5);
+                ctx.closePath();
+                ctx.fill();
+                break;
+
+            case 'eclipse': // ECLIPSE SERAPH - Spear
+                const eclipseGrad = ctx.createLinearGradient(-10, -20, 10, 20);
+                eclipseGrad.addColorStop(0, '#66ccff');
+                eclipseGrad.addColorStop(0.5, '#3388ff');
+                eclipseGrad.addColorStop(1, '#0033ff');
+                ctx.fillStyle = eclipseGrad;
+                ctx.beginPath();
+                ctx.moveTo(0, -20);
+                ctx.lineTo(8, -8);
+                ctx.lineTo(14, 0);
+                ctx.lineTo(8, 8);
+                ctx.lineTo(0, 20);
+                ctx.lineTo(-8, 8);
+                ctx.lineTo(-14, 0);
+                ctx.lineTo(-8, -8);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.moveTo(0, -12);
+                ctx.lineTo(4, -8);
+                ctx.lineTo(4, -4);
+                ctx.lineTo(0, 0);
+                ctx.lineTo(-4, -4);
+                ctx.lineTo(-4, -8);
+                ctx.closePath();
+                ctx.fill();
+                break;
+
+            case 'guardian': // GALAXY GUARDIAN - Octagon
+                const guardGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, 28);
+                guardGrad.addColorStop(0, '#ffffff');
+                guardGrad.addColorStop(0.5, '#cccccc');
+                guardGrad.addColorStop(1, '#666666');
+                ctx.fillStyle = guardGrad;
+                ctx.beginPath();
+                for (let i = 0; i < 8; i++) {
+                    const angle = i * Math.PI / 4;
+                    const x = Math.cos(angle) * 28;
+                    const y = Math.sin(angle) * 28;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.strokeStyle = '#00f3ff';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.ellipse(6, 0, 10, 6, 0, 0, Math.PI * 2);
-                ctx.stroke();
-
-                // Wing fins
-                ctx.fillStyle = '#66ccff';
-                ctx.beginPath();
-                ctx.moveTo(4, 8);
-                ctx.lineTo(-8, 18);
-                ctx.lineTo(-2, 6);
+                for (let i = 0; i < 8; i++) {
+                    const angle = i * Math.PI / 4;
+                    const x = Math.cos(angle) * 16;
+                    const y = Math.sin(angle) * 16;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
                 ctx.closePath();
-                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#00f3ff';
                 ctx.beginPath();
-                ctx.moveTo(4, -8);
-                ctx.lineTo(-8, -18);
-                ctx.lineTo(-2, -6);
+                ctx.moveTo(0, -8);
+                ctx.lineTo(4, -4);
+                ctx.lineTo(8, 0);
+                ctx.lineTo(4, 4);
+                ctx.lineTo(0, 8);
+                ctx.lineTo(-4, 4);
+                ctx.lineTo(-8, 0);
+                ctx.lineTo(-4, -4);
                 ctx.closePath();
                 ctx.fill();
                 break;
 
-            case 'obliterator': // MIDNIGHT OBLIVION - Siege Wedge
-                const obliteratorGrad = ctx.createLinearGradient(-25, 0, 25, 0);
-                obliteratorGrad.addColorStop(0, '#330015');
-                obliteratorGrad.addColorStop(0.5, '#ff3366');
-                obliteratorGrad.addColorStop(1, '#ffb3cc');
+            case 'obliterator': // OBLITERATOR PRIME - Wedge
+                const obliteratorGrad = ctx.createLinearGradient(-30, -10, 30, 10);
+                obliteratorGrad.addColorStop(0, '#ff3366');
+                obliteratorGrad.addColorStop(0.5, '#ff6699');
+                obliteratorGrad.addColorStop(1, '#990022');
                 ctx.fillStyle = obliteratorGrad;
+                ctx.beginPath();
+                ctx.moveTo(34, 0);
+                ctx.lineTo(0, 18);
+                ctx.lineTo(-20, 10);
+                ctx.lineTo(-18, 0);
+                ctx.lineTo(-20, -10);
+                ctx.lineTo(0, -18);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.moveTo(18, -4);
+                ctx.lineTo(24, -2);
+                ctx.lineTo(24, 2);
+                ctx.lineTo(18, 4);
+                ctx.closePath();
+                ctx.fill();
+                break;
 
-                // Armored wedge hull
+            case 'shadowblade': // SHADOWBLADE - Curved Blade
+                const shadowGrad = ctx.createRadialGradient(-15, 0, 3, 15, 0, 24);
+                shadowGrad.addColorStop(0, '#1a1a2e');
+                shadowGrad.addColorStop(0.5, '#16213e');
+                shadowGrad.addColorStop(1, '#0f3460');
+                ctx.fillStyle = shadowGrad;
+                ctx.beginPath();
+                ctx.moveTo(20, -16);
+                ctx.quadraticCurveTo(24, 0, 20, 16);
+                ctx.lineTo(-16, 16);
+                ctx.quadraticCurveTo(-20, 0, -16, -16);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.strokeStyle = '#555';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(16, -10);
+                ctx.quadraticCurveTo(20, 0, 16, 10);
+                ctx.stroke();
+                break;
+
+            case 'inferno': // INFERNO KING - Pointed Teardrop
+                const infernoGrad = ctx.createRadialGradient(0, -8, 5, 0, 8, 26);
+                infernoGrad.addColorStop(0, '#ffff00');
+                infernoGrad.addColorStop(0.5, '#ff6600');
+                infernoGrad.addColorStop(1, '#ff0000');
+                ctx.fillStyle = infernoGrad;
+                ctx.beginPath();
+                ctx.moveTo(0, -20);
+                ctx.lineTo(10, -6);
+                ctx.lineTo(12, 8);
+                ctx.lineTo(0, 26);
+                ctx.lineTo(-12, 8);
+                ctx.lineTo(-10, -6);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.moveTo(-4, 2);
+                ctx.lineTo(-6, 10);
+                ctx.lineTo(-2, 8);
+                ctx.closePath();
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(4, 2);
+                ctx.lineTo(6, 10);
+                ctx.lineTo(2, 8);
+                ctx.closePath();
+                ctx.fill();
+                break;
+
+            case 'juggernaut': // JUGGERNAUT - Heavy Shield
+                const juggernautGrad = ctx.createLinearGradient(-22, -22, 22, 22);
+                juggernautGrad.addColorStop(0, '#ff9900');
+                juggernautGrad.addColorStop(0.5, '#ff7700');
+                juggernautGrad.addColorStop(1, '#cc4400');
+                ctx.fillStyle = juggernautGrad;
+                ctx.beginPath();
+                ctx.moveTo(0, -24);
+                ctx.lineTo(24, 0);
+                ctx.lineTo(0, 24);
+                ctx.lineTo(-24, 0);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                ctx.beginPath();
+                ctx.moveTo(0, -16);
+                ctx.lineTo(16, 0);
+                ctx.lineTo(0, 16);
+                ctx.lineTo(-16, 0);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.beginPath();
+                ctx.moveTo(-6, -6);
+                ctx.lineTo(6, -6);
+                ctx.lineTo(6, 6);
+                ctx.lineTo(-6, 6);
+                ctx.closePath();
+                ctx.fill();
+                break;
+
+            case 'tempest': // TEMPEST LORD - Spiral Polygon
+                const tempestGrad = ctx.createRadialGradient(0, 0, 3, 0, 0, 28);
+                tempestGrad.addColorStop(0, '#00ffff');
+                tempestGrad.addColorStop(0.5, '#00aaff');
+                tempestGrad.addColorStop(1, '#0033ff');
+                ctx.fillStyle = tempestGrad;
+                ctx.beginPath();
+                for (let i = 0; i < 12; i++) {
+                    const angle = i * Math.PI / 6;
+                    const r = 24 - i * 1.5;
+                    const x = Math.cos(angle) * r;
+                    const y = Math.sin(angle) * r;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.strokeStyle = '#ffff00';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    const angle = i * Math.PI / 3;
+                    const x = Math.cos(angle) * 16;
+                    const y = Math.sin(angle) * 16;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.stroke();
+                break;
+
+            case 'reaper': // VOID REAPER - Curved Crescent
+                const reaperGrad = ctx.createRadialGradient(10, 0, 3, -10, 0, 24);
+                reaperGrad.addColorStop(0, '#1a1a1a');
+                reaperGrad.addColorStop(0.5, '#333333');
+                reaperGrad.addColorStop(1, '#000000');
+                ctx.fillStyle = reaperGrad;
+                ctx.beginPath();
+                ctx.moveTo(18, -18);
+                ctx.quadraticCurveTo(22, 0, 18, 18);
+                ctx.lineTo(-14, 12);
+                ctx.quadraticCurveTo(-18, 0, -14, -12);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.strokeStyle = '#666';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(14, -12);
+                ctx.quadraticCurveTo(18, 0, 14, 12);
+                ctx.stroke();
+                ctx.fillStyle = '#ff0000';
+                ctx.beginPath();
+                ctx.moveTo(-4, -2);
+                ctx.lineTo(-2, 0);
+                ctx.lineTo(-4, 2);
+                ctx.lineTo(-6, 0);
+                ctx.closePath();
+                ctx.fill();
+                break;
+
+            case 'crimson_emperor': // CRIMSON EMPEROR - Crown
+                const crimsonGrad = ctx.createRadialGradient(0, -5, 3, 0, 5, 28);
+                crimsonGrad.addColorStop(0, '#dc143c');
+                crimsonGrad.addColorStop(0.5, '#ff0000');
+                crimsonGrad.addColorStop(1, '#660000');
+                ctx.fillStyle = crimsonGrad;
+                ctx.beginPath();
+                for (let i = 0; i < 10; i++) {
+                    const angle = i * Math.PI / 5 - Math.PI / 2;
+                    const r = (i % 2 === 0) ? 28 : 14;
+                    const x = Math.cos(angle) * r;
+                    const y = Math.sin(angle) * r;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.moveTo(0, -14);
+                ctx.lineTo(3, -8);
+                ctx.lineTo(6, -12);
+                ctx.lineTo(3, -6);
+                ctx.lineTo(0, -10);
+                ctx.closePath();
+                ctx.fill();
+                break;
+
+            case 'phoenix': // CELESTIAL PHOENIX - Bird Shape
+                const phoenixGrad = ctx.createLinearGradient(-20, -10, 30, 10);
+                phoenixGrad.addColorStop(0, '#ffa500');
+                phoenixGrad.addColorStop(0.5, '#ff6600');
+                phoenixGrad.addColorStop(1, '#ff3300');
+                ctx.fillStyle = phoenixGrad;
                 ctx.beginPath();
                 ctx.moveTo(28, 0);
-                ctx.lineTo(12, 10);
-                ctx.lineTo(-18, 18);
+                ctx.lineTo(6, 6);
+                ctx.lineTo(0, 26);
+                ctx.lineTo(-12, 16);
+                ctx.lineTo(-20, 0);
+                ctx.lineTo(-12, -16);
+                ctx.lineTo(0, -26);
+                ctx.lineTo(6, -6);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.moveTo(20, -4);
+                ctx.lineTo(26, -2);
+                ctx.lineTo(26, 2);
+                ctx.lineTo(20, 4);
+                ctx.closePath();
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(0, 14);
+                ctx.lineTo(4, 20);
+                ctx.lineTo(-4, 20);
+                ctx.closePath();
+                ctx.fill();
+                break;
+
+            case 'starborn': // STARBORN TITAN - Trident
+                const starbornGrad = ctx.createLinearGradient(-20, -10, 30, 10);
+                starbornGrad.addColorStop(0, '#99ffcc');
+                starbornGrad.addColorStop(0.5, '#55ff99');
+                starbornGrad.addColorStop(1, '#00cc66');
+                ctx.fillStyle = starbornGrad;
+                ctx.beginPath();
+                ctx.moveTo(30, 0);
+                ctx.lineTo(8, 10);
+                ctx.lineTo(12, 24);
+                ctx.lineTo(0, 16);
+                ctx.lineTo(-12, 24);
+                ctx.lineTo(-8, 10);
+                ctx.lineTo(-20, 0);
+                ctx.lineTo(-8, -10);
+                ctx.lineTo(-12, -24);
+                ctx.lineTo(0, -16);
+                ctx.lineTo(12, -24);
+                ctx.lineTo(8, -10);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.moveTo(0, -8);
+                ctx.lineTo(4, -4);
+                ctx.lineTo(8, 0);
+                ctx.lineTo(4, 4);
+                ctx.lineTo(0, 8);
+                ctx.lineTo(-4, 4);
+                ctx.lineTo(-8, 0);
+                ctx.lineTo(-4, -4);
+                ctx.closePath();
+                ctx.fill();
+                break;
+
+            case 'leviathan': // LEVIATHAN ROX - Wave Pattern
+                const leviathanGrad = ctx.createLinearGradient(-30, -20, 30, 20);
+                leviathanGrad.addColorStop(0, '#003d82');
+                leviathanGrad.addColorStop(0.5, '#0066cc');
+                leviathanGrad.addColorStop(1, '#004400');
+                ctx.fillStyle = leviathanGrad;
+                ctx.beginPath();
+                ctx.moveTo(32, 0);
+                ctx.bezierCurveTo(20, 14, 0, 22, -20, 18);
                 ctx.lineTo(-26, 8);
                 ctx.lineTo(-20, 0);
                 ctx.lineTo(-26, -8);
-                ctx.lineTo(-18, -18);
-                ctx.lineTo(12, -10);
+                ctx.bezierCurveTo(0, -22, 20, -14, 32, 0);
                 ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
-
-                // Core vents
-                ctx.fillStyle = '#111';
-                ctx.fillRect(-12, -3, 10, 6);
-                ctx.fillStyle = '#ff88aa';
-                ctx.fillRect(-8, -2, 4, 4);
+                ctx.fillStyle = '#00ff88';
+                for (let i = 0; i < 4; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(-16 + i * 10, 18);
+                    ctx.lineTo(-14 + i * 10, 24);
+                    ctx.lineTo(-12 + i * 10, 18);
+                    ctx.closePath();
+                    ctx.fill();
+                }
                 break;
 
-            case 'starborn': // STARFALL TITAN - Trident Ark
-                const starbornGrad = ctx.createLinearGradient(-20, -10, 30, 10);
-                starbornGrad.addColorStop(0, '#0b2a1f');
-                starbornGrad.addColorStop(0.5, '#99ffcc');
-                starbornGrad.addColorStop(1, '#e6fff5');
-                ctx.fillStyle = starbornGrad;
-
-                // Tri-prong prow
+            case 'sentinel': // ETERNAL SENTINEL - Complex Star
+                const sentinelGrad = ctx.createRadialGradient(0, 0, 8, 0, 0, 32);
+                sentinelGrad.addColorStop(0, '#ffffff');
+                sentinelGrad.addColorStop(0.4, '#e8e8e8');
+                sentinelGrad.addColorStop(1, '#666666');
+                ctx.fillStyle = sentinelGrad;
                 ctx.beginPath();
-                ctx.moveTo(34, 0);
-                ctx.lineTo(16, 6);
-                ctx.lineTo(8, 16);
-                ctx.lineTo(4, 6);
-                ctx.lineTo(-18, 10);
-                ctx.lineTo(-26, 0);
-                ctx.lineTo(-18, -10);
-                ctx.lineTo(4, -6);
-                ctx.lineTo(8, -16);
-                ctx.lineTo(16, -6);
+                for (let i = 0; i < 12; i++) {
+                    const angle = i * Math.PI / 6;
+                    const r = (i % 2 === 0) ? 32 : 16;
+                    const x = Math.cos(angle) * r;
+                    const y = Math.sin(angle) * r;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
                 ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
-
-                // Central crystal
-                ctx.fillStyle = '#ccfff0';
+                ctx.fillStyle = '#00ff00';
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#00ff00';
                 ctx.beginPath();
-                ctx.moveTo(6, 0);
-                ctx.lineTo(0, 6);
-                ctx.lineTo(-6, 0);
-                ctx.lineTo(0, -6);
+                for (let i = 0; i < 8; i++) {
+                    const angle = i * Math.PI / 4;
+                    const x = Math.cos(angle) * 12;
+                    const y = Math.sin(angle) * 12;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
                 ctx.closePath();
                 ctx.fill();
-                break;
-
-            default: // INTERCEPTOR (Standard)
-                // Sci-Fi Chrome/Cyan
-                const bodyGrad = ctx.createLinearGradient(-15, 0, 25, 0);
-                bodyGrad.addColorStop(0, '#002233');
-                bodyGrad.addColorStop(0.4, '#00f3ff');
-                bodyGrad.addColorStop(1, '#ffffff');
-
-                ctx.fillStyle = bodyGrad;
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.moveTo(28, 0);  // Longer Nose
-                ctx.lineTo(15, 5);
-                ctx.lineTo(-10, 5);
-                ctx.lineTo(-20, 0);
-                ctx.lineTo(-10, -5);
-                ctx.lineTo(15, -5);
+                for (let i = 0; i < 8; i++) {
+                    const angle = i * Math.PI / 4;
+                    const x = Math.cos(angle) * 18;
+                    const y = Math.sin(angle) * 18;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
                 ctx.closePath();
-                ctx.fill();
-
-                // Wings with gradient
-                const wingGrad = ctx.createLinearGradient(0, 0, 0, 20);
-                wingGrad.addColorStop(0, '#00f3ff');
-                wingGrad.addColorStop(1, '#005577');
-                ctx.fillStyle = wingGrad;
-
-                // Right Wing
-                ctx.beginPath();
-                ctx.moveTo(8, 4);
-                ctx.lineTo(15, 18);
-                ctx.lineTo(5, 22);
-                ctx.lineTo(-8, 6);
-                ctx.closePath();
-                ctx.fill();
                 ctx.stroke();
-
-                // Left Wing
-                ctx.beginPath();
-                ctx.moveTo(8, -4);
-                ctx.lineTo(15, -18);
-                ctx.lineTo(5, -22);
-                ctx.lineTo(-8, -6);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-
-                // Cockpit Glass
-                ctx.fillStyle = '#ccffff';
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = '#00f3ff';
-                ctx.beginPath();
-                ctx.ellipse(5, 0, 8, 3, 0, 0, Math.PI * 2);
-                ctx.fill();
                 break;
         }
 
-        // Common Engine Glow (Enhanced)
+        // Common Engine Glow
         const engineColor = (this.isDashing) ? '#ffffaa' : '#ff8800';
         ctx.shadowBlur = 20;
         ctx.shadowColor = engineColor;
         ctx.fillStyle = engineColor;
+        const starterShips = ['default', 'scout', 'phantom', 'rapid', 'fighter'];
 
-        // Draw dual engines for some, single for others
         if (['scout', 'rapid'].includes(type || 'default')) {
-            // Single Engine
+            const leftX = starterShips.includes(type || 'default') ? -11 : -16;
+            const rightX = starterShips.includes(type || 'default') ? -15 : -20;
             ctx.beginPath();
-            ctx.arc(-18, 0, 4, 0, Math.PI * 2);
+            ctx.moveTo(leftX, -3);
+            ctx.lineTo(rightX, -3);
+            ctx.lineTo(rightX, 3);
+            ctx.lineTo(leftX, 3);
+            ctx.closePath();
             ctx.fill();
         } else {
-            // Dual Engines
+            const leftX = starterShips.includes(type || 'default') ? -10 : -14;
+            const rightX = starterShips.includes(type || 'default') ? -14 : -18;
             ctx.beginPath();
-            ctx.arc(-16, 4, 3, 0, Math.PI * 2);
-            ctx.arc(-16, -4, 3, 0, Math.PI * 2);
+            ctx.moveTo(leftX, 2);
+            ctx.lineTo(rightX, 2);
+            ctx.lineTo(rightX, 6);
+            ctx.lineTo(leftX, 6);
+            ctx.closePath();
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(leftX, -6);
+            ctx.lineTo(rightX, -6);
+            ctx.lineTo(rightX, -2);
+            ctx.lineTo(leftX, -2);
+            ctx.closePath();
             ctx.fill();
         }
         ctx.shadowBlur = 0;
