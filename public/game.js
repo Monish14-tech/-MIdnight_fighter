@@ -53,9 +53,9 @@ export const SHIP_DATA = {
     'pulse': { name: 'NEON PULSE', price: 12000, hp: 3, speed: 380, damage: 1, fireRate: 0.04, missileCooldown: 2.5, missileCount: 1, color: '#00ffff', bulletType: 'normal', desc: 'Hyper-frequency pulse.' },
     'guardian': { name: 'GALAXY GUARDIAN', price: 25000, hp: 12, speed: 260, damage: 2, fireRate: 0.2, missileCooldown: 4.0, missileCount: 2, color: '#ffffff', bulletType: 'normal', desc: 'Invincible protector.' },
     'solar': { name: 'SOLAR FLARE', price: 18000, hp: 4, speed: 310, damage: 2, fireRate: 0.25, missileCooldown: 3.5, missileCount: 1, color: '#ffcc00', bulletType: 'explosive', desc: 'Explosive solar rounds.' },
-    'eclipse': { name: 'ECLIPSE SERAPH', price: 45000, hp: 16, speed: 360, damage: 5, fireRate: 0.08, missileCooldown: 2.2, missileCount: 3, color: '#66ccff', bulletType: 'piercing', invincible: true, desc: 'Angel core. Invincible hull.' },
-    'obliterator': { name: 'OBLITERATOR PRIME', price: 75000, hp: 20, speed: 300, damage: 7, fireRate: 0.12, missileCooldown: 2.8, missileCount: 4, color: '#ff3366', bulletType: 'explosive', invincible: true, desc: 'Siege frame. Invincible core.' },
-    'starborn': { name: 'STARBORN TITAN', price: 120000, hp: 28, speed: 340, damage: 8, fireRate: 0.1, missileCooldown: 2.0, missileCount: 5, color: '#99ffcc', bulletType: 'railgun', invincible: true, desc: 'Mythic relic. Invincible.' }
+    'eclipse': { name: 'ECLIPSE SERAPH', price: 45000, hp: 6, speed: 360, damage: 5, fireRate: 0.08, missileCooldown: 2.2, missileCount: 3, color: '#66ccff', bulletType: 'piercing', invincible: true, desc: 'Angel core. Invincible hull.' },
+    'obliterator': { name: 'OBLITERATOR PRIME', price: 75000, hp: 7, speed: 300, damage: 7, fireRate: 0.12, missileCooldown: 2.8, missileCount: 4, color: '#ff3366', bulletType: 'explosive', invincible: true, desc: 'Siege frame. Invincible core.' },
+    'starborn': { name: 'STARBORN TITAN', price: 120000, hp: 10, speed: 340, damage: 8, fireRate: 0.1, missileCooldown: 2.0, missileCount: 5, color: '#99ffcc', bulletType: 'railgun', invincible: true, desc: 'Mythic relic. Invincible.' }
 };
 
 export class Game {
