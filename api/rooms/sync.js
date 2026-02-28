@@ -45,11 +45,36 @@ export default async function handler(req, res) {
 
         // Store incoming messages for this player
         if (messages && Array.isArray(messages) && messages.length > 0) {
+            // Extract state from state_update messages
+            let latestState = null;
+            for (const msg of messages) {
+                if (msg.type === 'state_update' && msg.state) {
+                    latestState = msg.state;
+                }
+            }
+
+            const updateFields = {
+                [`pollingState.${role}.messages`]: messages,
+                [`pollingState.${role}.lastSeen`]: new Date(),
+                updatedAt: new Date()
+            };
+
+            // Also store the latest state for peer to retrieve via state endpoint
+            if (latestState) {
+                updateFields[`pollingState.${role}.state`] = latestState;
+            }
+
+            await collection.updateOne(
+                { roomId },
+                { $set: updateFields },
+                { upsert: false }
+            );
+        } else {
+            // Just update lastSeen even if no messages
             await collection.updateOne(
                 { roomId },
                 {
                     $set: {
-                        [`pollingState.${role}.messages`]: messages,
                         [`pollingState.${role}.lastSeen`]: new Date(),
                         updatedAt: new Date()
                     }

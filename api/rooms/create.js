@@ -53,7 +53,23 @@ export default async function handler(req, res) {
                     updatedAt: now,
                     expiresAt: new Date(now.getTime() + ROOM_TTL_MS),
                     hostLastSeenAt: now,
-                    guestLastSeenAt: null
+                    guestLastSeenAt: null,
+                    pollingState: {
+                        host: {
+                            playerName: hostName,
+                            lastSeen: now,
+                            isPolling: false,
+                            state: {},
+                            messages: []
+                        },
+                        guest: {
+                            playerName: null,
+                            lastSeen: null,
+                            isPolling: false,
+                            state: {},
+                            messages: []
+                        }
+                    }
                 });
                 created = true;
             } catch (error) {

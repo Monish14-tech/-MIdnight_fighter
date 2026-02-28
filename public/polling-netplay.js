@@ -107,13 +107,14 @@ export class PollingNetplay {
     }
 
     async _syncLocalState() {
-        if (!this.isConnected || !this._messageQueue || this._messageQueue.length === 0) return;
+        if (!this.isConnected) return;
 
-        const messages = this._messageQueue;
+        const messages = this._messageQueue || [];
         this._messageQueue = [];
 
         try {
-            const response = await fetch(`${window.location.origin}/api/rooms/sync?roomId=${encodeURIComponent(this.roomId)}`, {
+            const url = `${window.location.origin}/api/rooms/sync?roomId=${encodeURIComponent(this.roomId)}`;
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ playerName: this.playerName, messages })
@@ -121,7 +122,9 @@ export class PollingNetplay {
 
             if (!response.ok) {
                 // Re-queue messages if sync failed
-                this._messageQueue = [...messages, ...this._messageQueue];
+                if (messages.length > 0) {
+                    this._messageQueue = [...messages, ...this._messageQueue];
+                }
                 return;
             }
 
@@ -144,7 +147,9 @@ export class PollingNetplay {
         } catch (error) {
             console.warn('[PollingNetplay] Sync error:', error.message);
             // Re-queue messages if sync failed
-            this._messageQueue = [...messages, ...this._messageQueue];
+            if (messages.length > 0) {
+                this._messageQueue = [...messages, ...this._messageQueue];
+            }
         }
     }
 

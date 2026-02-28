@@ -77,7 +77,8 @@ export default async function handler(req, res) {
                         shipType: shipType || 'default',
                         lastSeen: new Date(),
                         isPolling: true,
-                        state: {}
+                        state: {},
+                        messages: []
                     },
                     updatedAt: new Date()
                 }
