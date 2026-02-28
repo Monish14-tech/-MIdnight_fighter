@@ -883,9 +883,10 @@ export class Game {
         }
 
         try {
-            const response = await fetch(`${window.location.origin}/api/rooms/join?roomId=${encodeURIComponent(roomId)}&playerName=${encodeURIComponent(playerName)}`, {
+            const response = await fetch(`${window.location.origin}/api/rooms/${encodeURIComponent(roomId)}/join`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ playerName })
             });
 
             const data = await response.json();
@@ -910,7 +911,7 @@ export class Game {
         
         this.collabPollTimer = setInterval(async () => {
             try {
-                const response = await fetch(`${window.location.origin}/api/rooms/state?roomId=${encodeURIComponent(roomId)}`);
+                const response = await fetch(`${window.location.origin}/api/rooms/${encodeURIComponent(roomId)}/state`);
                 if (!response.ok) return;
                 
                 const data = await response.json();

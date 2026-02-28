@@ -21,30 +21,35 @@ export default async function handler(req, res) {
         const { roomId } = req.query;
         const playerName = req.query.playerName;
 
-        if (!roomId || !playerName) {
-            return res.status(400).json({ success: false, error: 'Room ID and player name required' });
+        if (!roomId) {
+            return res.status(400).json({ success: false, error: 'Room ID required' });
         }
 
         const collection = await getRoomsCollection();
         const room = await collection.findOne({ roomId });
 
         if (!room) {
-            return res.json({ success: false, peerState: null });
+            return res.status(404).json({ success: false, error: 'Room not found' });
         }
 
-        // Find peer's state from polling state
-        let peerState = null;
-        const pollingState = room.pollingState || {};
+        // If playerName provided, return peer state (for during gameplay)
+        if (playerName) {
+            let peerState = null;
+            const pollingState = room.pollingState || {};
 
-        if (room.hostName === playerName && pollingState.guest) {
-            // Host requesting guest's state
-            peerState = pollingState.guest.state || {};
-        } else if (room.guestName === playerName && pollingState.host) {
-            // Guest requesting host's state
-            peerState = pollingState.host.state || {};
+            if (room.hostName === playerName && pollingState.guest) {
+                // Host requesting guest's state
+                peerState = pollingState.guest.state || {};
+            } else if (room.guestName === playerName && pollingState.host) {
+                // Guest requesting host's state
+                peerState = pollingState.host.state || {};
+            }
+
+            return res.json({ success: true, peerState });
         }
 
-        return res.json({ success: true, peerState });
+        // Otherwise return full room status (for host waiting for guest)
+        return res.json({ success: true, room });
     } catch (error) {
         console.warn('State polling error:', error);
         return res.json({ success: false, peerState: null });

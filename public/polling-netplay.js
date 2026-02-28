@@ -53,9 +53,10 @@ export class PollingNetplay {
 
     async _joinRoom() {
         try {
-            const response = await fetch(`${window.location.origin}/api/rooms/join?roomId=${encodeURIComponent(this.roomId)}&playerName=${encodeURIComponent(this.playerName)}&shipType=${encodeURIComponent(this.shipType || 'default')}`, {
+            const response = await fetch(`${window.location.origin}/api/rooms/${encodeURIComponent(this.roomId)}/join`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ playerName: this.playerName, shipType: this.shipType || 'default' })
             });
 
             const data = await response.json();
@@ -79,7 +80,7 @@ export class PollingNetplay {
         if (!this.isConnected) return;
 
         try {
-            const url = `${window.location.origin}/api/rooms/state?roomId=${encodeURIComponent(this.roomId)}&playerName=${encodeURIComponent(this.playerName)}`;
+            const url = `${window.location.origin}/api/rooms/${encodeURIComponent(this.roomId)}/state?playerName=${encodeURIComponent(this.playerName)}`;
             const response = await fetch(url, {
                 method: 'GET'
             });
@@ -112,10 +113,10 @@ export class PollingNetplay {
         this._messageQueue = [];
 
         try {
-            const response = await fetch(`${window.location.origin}/api/rooms/sync?roomId=${encodeURIComponent(this.roomId)}&playerName=${encodeURIComponent(this.playerName)}`, {
+            const response = await fetch(`${window.location.origin}/api/rooms/${encodeURIComponent(this.roomId)}/sync`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages })
+                body: JSON.stringify({ playerName: this.playerName, messages })
             });
 
             if (!response.ok) {
