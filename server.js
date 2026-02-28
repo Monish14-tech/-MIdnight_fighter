@@ -5,7 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
-import { WebSocketServer } from 'ws';
+import { Server as SocketIOServer } from 'socket.io';
 
 console.log('🎮 MIDNIGHT FIGHTER - Starting server...');
 
@@ -503,115 +503,112 @@ function generateRoomId(length) {
 }
 
 function setupRealtimeServer(httpServer) {
-    const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+    const io = new SocketIOServer(httpServer, {
+        cors: {
+            origin: "*",
+            methods: ["GET", "POST"]
+        },
+        transports: ['websocket', 'polling'],
+        pingTimeout: 30000,
+        pingInterval: 10000
+    });
 
-    wss.on('connection', (ws) => {
-        console.log('[WebSocket] New client connected');
+    console.log('[Socket.IO] Server initialized');
+
+    io.on('connection', (socket) => {
+        console.log('[Socket.IO] New client connected:', socket.id);
         let context = {
             roomId: null,
             playerName: null,
             role: null
         };
 
-        const safeSend = (socket, payload) => {
-            if (socket.readyState === socket.OPEN) {
-                socket.send(JSON.stringify(payload));
-            }
-        };
-
-        ws.on('message', async (raw) => {
-            let message;
-            try {
-                message = JSON.parse(raw.toString());
-            } catch {
-                console.error('[WebSocket] Failed to parse message');
+        socket.on('join_room', async ({ roomId, playerName, shipType }) => {
+            console.log(`[Socket.IO] Player "${playerName}" joining room "${roomId}"`);
+            
+            if (!roomId || !playerName) {
+                console.error('[Socket.IO] Missing roomId or playerName');
+                socket.emit('error', { error: 'roomId and playerName are required' });
                 return;
             }
 
-            if (message.type === 'join_room') {
-                const { roomId, playerName, shipType } = message;
-                console.log(`[WebSocket] Player "${playerName}" joining room "${roomId}"`);
-                
-                if (!roomId || !playerName) {
-                    console.error('[WebSocket] Missing roomId or playerName');
-                    safeSend(ws, { type: 'error', error: 'roomId and playerName are required' });
-                    return;
-                }
-
-                const room = await roomsCollection.findOne({ roomId });
-                if (!room || room.status === 'closed' || room.status === 'expired') {
-                    console.error(`[WebSocket] Room unavailable: ${roomId}`);
-                    safeSend(ws, { type: 'error', error: 'Room unavailable' });
-                    return;
-                }
-
-                if (room.expiresAt && new Date(room.expiresAt).getTime() < Date.now()) {
-                    console.error(`[WebSocket] Room expired: ${roomId}`);
-                    safeSend(ws, { type: 'error', error: 'Room expired' });
-                    return;
-                }
-
-                let role = null;
-                if (room.hostName === playerName) role = 'host';
-                else if (room.guestName === playerName) role = 'guest';
-
-                if (!role) {
-                    console.error(`[WebSocket] Player not in room: ${playerName} in ${roomId}`);
-                    safeSend(ws, { type: 'error', error: 'Player is not part of this room' });
-                    return;
-                }
-
-                if (!liveRooms.has(roomId)) {
-                    liveRooms.set(roomId, {
-                        clients: new Map(),
-                        state: {
-                            players: {}
-                        }
-                    });
-                }
-
-                const liveRoom = liveRooms.get(roomId);
-                liveRoom.clients.set(role, {
-                    ws,
-                    playerName,
-                    shipType: shipType || 'default',
-                    lastSeen: Date.now()
-                });
-
-                context = { roomId, playerName, role };
-
-                await roomsCollection.updateOne(
-                    { roomId },
-                    {
-                        $set: {
-                            updatedAt: new Date(),
-                            expiresAt: new Date(Date.now() + ROOM_TTL_MS),
-                            [role === 'host' ? 'hostLastSeenAt' : 'guestLastSeenAt']: new Date()
-                        }
-                    }
-                );
-
-                safeSend(ws, {
-                    type: 'joined_room',
-                    role,
-                    roomId,
-                    hostName: room.hostName,
-                    guestName: room.guestName,
-                    players: liveRoom.state.players
-                });
-
-                console.log(`[WebSocket] Player "${playerName}" (${role}) joined room "${roomId}"`);
-                console.log(`[WebSocket] Room "${roomId}" now has ${liveRoom.clients.size} clients`);
-
-                for (const [peerRole, peer] of liveRoom.clients.entries()) {
-                    if (peerRole !== role) {
-                        safeSend(peer.ws, { type: 'peer_joined', role, playerName, shipType: shipType || 'default' });
-                        console.log(`[WebSocket] Notified peer (${peerRole}) about new player (${role})`);
-                    }
-                }
+            const room = await roomsCollection.findOne({ roomId });
+            if (!room || room.status === 'closed' || room.status === 'expired') {
+                console.error(`[Socket.IO] Room unavailable: ${roomId}`);
+                socket.emit('error', { error: 'Room unavailable' });
                 return;
             }
 
+            if (room.expiresAt && new Date(room.expiresAt).getTime() < Date.now()) {
+                console.error(`[Socket.IO] Room expired: ${roomId}`);
+                socket.emit('error', { error: 'Room expired' });
+                return;
+            }
+
+            let role = null;
+            if (room.hostName === playerName) role = 'host';
+            else if (room.guestName === playerName) role = 'guest';
+
+            if (!role) {
+                console.error(`[Socket.IO] Player not in room: ${playerName} in ${roomId}`);
+                socket.emit('error', { error: 'Player is not part of this room' });
+                return;
+            }
+
+            if (!liveRooms.has(roomId)) {
+                liveRooms.set(roomId, {
+                    clients: new Map(),
+                    state: {
+                        players: {}
+                    }
+                });
+            }
+
+            const liveRoom = liveRooms.get(roomId);
+            liveRoom.clients.set(role, {
+                socket,
+                playerName,
+                shipType: shipType || 'default',
+                lastSeen: Date.now()
+            });
+
+            context = { roomId, playerName, role };
+
+            // Join Socket.IO room for easier broadcasting
+            socket.join(roomId);
+
+            await roomsCollection.updateOne(
+                { roomId },
+                {
+                    $set: {
+                        updatedAt: new Date(),
+                        expiresAt: new Date(Date.now() + ROOM_TTL_MS),
+                        [role === 'host' ? 'hostLastSeenAt' : 'guestLastSeenAt']: new Date()
+                    }
+                }
+            );
+
+            socket.emit('joined_room', {
+                role,
+                roomId,
+                hostName: room.hostName,
+                guestName: room.guestName,
+                players: liveRoom.state.players
+            });
+
+            console.log(`[Socket.IO] Player "${playerName}" (${role}) joined room "${roomId}"`);
+            console.log(`[Socket.IO] Room "${roomId}" now has ${liveRoom.clients.size} clients`);
+
+            // Notify peers
+            for (const [peerRole, peer] of liveRoom.clients.entries()) {
+                if (peerRole !== role) {
+                    peer.socket.emit('peer_joined', { role, playerName, shipType: shipType || 'default' });
+                    console.log(`[Socket.IO] Notified peer (${peerRole}) about new player (${role})`);
+                }
+            }
+        });
+
+        socket.on('heartbeat', async () => {
             if (!context.roomId || !context.role) return;
 
             const liveRoom = liveRooms.get(context.roomId);
@@ -621,75 +618,93 @@ function setupRealtimeServer(httpServer) {
 
             client.lastSeen = Date.now();
 
-            if (message.type === 'heartbeat') {
-                await roomsCollection.updateOne(
-                    { roomId: context.roomId },
-                    {
-                        $set: {
-                            updatedAt: new Date(),
-                            expiresAt: new Date(Date.now() + ROOM_TTL_MS),
-                            [context.role === 'host' ? 'hostLastSeenAt' : 'guestLastSeenAt']: new Date()
-                        }
-                    }
-                );
-                return;
-            }
-
-            if (message.type === 'state_update') {
-                liveRoom.state.players[context.role] = {
-                    ...(message.state || {}),
-                    playerName: context.playerName,
-                    updatedAt: Date.now()
-                };
-
-                for (const [peerRole, peer] of liveRoom.clients.entries()) {
-                    if (peerRole !== context.role) {
-                        safeSend(peer.ws, {
-                            type: 'peer_state',
-                            from: context.role,
-                            state: liveRoom.state.players[context.role]
-                        });
+            await roomsCollection.updateOne(
+                { roomId: context.roomId },
+                {
+                    $set: {
+                        updatedAt: new Date(),
+                        expiresAt: new Date(Date.now() + ROOM_TTL_MS),
+                        [context.role === 'host' ? 'hostLastSeenAt' : 'guestLastSeenAt']: new Date()
                     }
                 }
-                return;
-            }
+            );
+        });
 
-            if (message.type === 'input_update') {
-                for (const [peerRole, peer] of liveRoom.clients.entries()) {
-                    if (peerRole !== context.role) {
-                        safeSend(peer.ws, {
-                            type: 'peer_input',
-                            from: context.role,
-                            input: message.input || {}
-                        });
-                    }
-                }
-                return;
-            }
+        socket.on('state_update', async ({ state }) => {
+            if (!context.roomId || !context.role) return;
 
-            if (message.type === 'player_died') {
-                for (const [, peer] of liveRoom.clients.entries()) {
-                    safeSend(peer.ws, {
-                        type: 'force_game_over',
-                        reason: 'shared_death'
+            const liveRoom = liveRooms.get(context.roomId);
+            if (!liveRoom) return;
+            const client = liveRoom.clients.get(context.role);
+            if (!client) return;
+
+            client.lastSeen = Date.now();
+
+            liveRoom.state.players[context.role] = {
+                ...(state || {}),
+                playerName: context.playerName,
+                updatedAt: Date.now()
+            };
+
+            // Broadcast to other players in the room
+            for (const [peerRole, peer] of liveRoom.clients.entries()) {
+                if (peerRole !== context.role) {
+                    peer.socket.emit('peer_state', {
+                        from: context.role,
+                        state: liveRoom.state.players[context.role]
                     });
                 }
-                return;
-            }
-
-            if (message.type === 'leave_room') {
-                await closeRoomForEveryone(context.roomId, 'left');
             }
         });
 
-        ws.on('close', async () => {
-            console.log(`[WebSocket] Client disconnected (room: ${context.roomId}, role: ${context.role})`);
+        socket.on('input_update', async ({ input }) => {
+            if (!context.roomId || !context.role) return;
+
+            const liveRoom = liveRooms.get(context.roomId);
+            if (!liveRoom) return;
+            const client = liveRoom.clients.get(context.role);
+            if (!client) return;
+
+            client.lastSeen = Date.now();
+
+            // Broadcast to other players in the room
+            for (const [peerRole, peer] of liveRoom.clients.entries()) {
+                if (peerRole !== context.role) {
+                    peer.socket.emit('peer_input', {
+                        from: context.role,
+                        input: input || {}
+                    });
+                }
+            }
+        });
+
+        socket.on('player_died', async () => {
+            if (!context.roomId) return;
+
+            const liveRoom = liveRooms.get(context.roomId);
+            if (!liveRoom) return;
+
+            // Notify all players in the room
+            for (const [, peer] of liveRoom.clients.entries()) {
+                peer.socket.emit('force_game_over', {
+                    reason: 'shared_death'
+                });
+            }
+        });
+
+        socket.on('leave_room', async () => {
+            if (!context.roomId) return;
+            await closeRoomForEveryone(context.roomId, 'left');
+        });
+
+        socket.on('disconnect', async () => {
+            console.log(`[Socket.IO] Client disconnected: ${socket.id} (room: ${context.roomId}, role: ${context.role})`);
             if (!context.roomId || !context.role) return;
             await closeRoomForEveryone(context.roomId, 'disconnected');
         });
 
-        ws.on('error', (error) => {
-            console.error(`[WebSocket] Error on connection:`, error.message);
+        socket.on('error', (error) => {
+            console.error(`[Socket.IO] Error on connection:`, error.message);
         });
     });
 }
@@ -699,14 +714,14 @@ async function closeRoomForEveryone(roomId, reason = 'closed') {
     if (liveRoom) {
         for (const [, client] of liveRoom.clients.entries()) {
             try {
-                client.ws.send(JSON.stringify({ type: 'room_closed', roomId, reason }));
-            } catch {
-                // ignore ws errors
+                client.socket.emit('room_closed', { roomId, reason });
+            } catch (err) {
+                console.error('[Socket.IO] Error sending room_closed:', err.message);
             }
             try {
-                client.ws.close();
-            } catch {
-                // ignore ws errors
+                client.socket.disconnect(true);
+            } catch (err) {
+                console.error('[Socket.IO] Error disconnecting socket:', err.message);
             }
         }
         liveRooms.delete(roomId);
@@ -798,7 +813,7 @@ async function startServer() {
         console.log('========================================');
         console.log(`🌐 Game URL: http://localhost:${PORT}`);
         console.log(`📊 API: http://localhost:${PORT}/api/leaderboard`);
-        console.log(`🔌 WS: ws://localhost:${PORT}/ws`);
+        console.log(`🔌 Socket.IO ready on port ${PORT}`);
         console.log('========================================');
     });
 }
