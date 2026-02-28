@@ -1,6 +1,7 @@
 import { MongoClient } from 'mongodb';
 
-const MONGO_URI = process.env.MONGO_URI;
+const MONGO_URI = process.env.MONGO_URI;          // Room database
+const MONGO_URI1 = process.env.MONGO_URI1;        // Leaderboard database
 const DB_NAME = 'midnight_fighter';
 const COLLECTION_NAME = 'leaderboard';
 const ROOMS_COLLECTION_NAME = 'rooms';
@@ -9,17 +10,29 @@ if (!MONGO_URI) {
     throw new Error('MONGO_URI is not set.');
 }
 
-let clientPromise;
-
-if (!global._mongoClientPromise) {
-    const client = new MongoClient(MONGO_URI);
-    global._mongoClientPromise = client.connect();
+if (!MONGO_URI1) {
+    throw new Error('MONGO_URI1 is not set.');
 }
 
-clientPromise = global._mongoClientPromise;
+let roomsClientPromise;
+let leaderboardClientPromise;
+
+// Connect to rooms database
+if (!global._roomsClientPromise) {
+    const client = new MongoClient(MONGO_URI);
+    global._roomsClientPromise = client.connect();
+}
+roomsClientPromise = global._roomsClientPromise;
+
+// Connect to leaderboard database
+if (!global._leaderboardClientPromise) {
+    const client = new MongoClient(MONGO_URI1);
+    global._leaderboardClientPromise = client.connect();
+}
+leaderboardClientPromise = global._leaderboardClientPromise;
 
 export async function getLeaderboardCollection() {
-    const client = await clientPromise;
+    const client = await leaderboardClientPromise;
     const db = client.db(DB_NAME);
     const collection = db.collection(COLLECTION_NAME);
 
@@ -32,7 +45,7 @@ export async function getLeaderboardCollection() {
 }
 
 export async function getRoomsCollection() {
-    const client = await clientPromise;
+    const client = await roomsClientPromise;
     const db = client.db(DB_NAME);
     const collection = db.collection(ROOMS_COLLECTION_NAME);
 

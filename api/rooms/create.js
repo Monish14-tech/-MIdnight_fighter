@@ -24,63 +24,11 @@ export default async function handler(req, res) {
         return res.status(200).end();
     }
 
-    if (req.method !== 'POST') {
-        return res.status(405).json({ success: false, error: 'Method not allowed' });
-    }
-
-    try {
-        const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
-        const hostName = typeof body.hostName === 'string' ? body.hostName.trim() : '';
-        if (!hostName) {
-            return res.status(400).json({ success: false, error: 'Host name is required' });
-        }
-
-        const collection = await getRoomsCollection();
-
-        let roomId = null;
-        let created = false;
-
-        while (!created) {
-            roomId = generateRoomId(8);
-            try {
-                const now = new Date();
-                await collection.insertOne({
-                    roomId,
-                    hostName,
-                    guestName: null,
-                    status: 'waiting',
-                    createdAt: now,
-                    updatedAt: now,
-                    expiresAt: new Date(now.getTime() + ROOM_TTL_MS),
-                    hostLastSeenAt: now,
-                    guestLastSeenAt: null,
-                    pollingState: {
-                        host: {
-                            playerName: hostName,
-                            lastSeen: now,
-                            isPolling: false,
-                            state: {},
-                            messages: []
-                        },
-                        guest: {
-                            playerName: null,
-                            lastSeen: null,
-                            isPolling: false,
-                            state: {},
-                            messages: []
-                        }
-                    }
-                });
-                created = true;
-            } catch (error) {
-                if (error.code !== 11000) {
-                    throw error;
-                }
-            }
-        }
-
-        return res.status(200).json({ success: true, roomId });
-    } catch (error) {
-        return res.status(500).json({ success: false, error: 'Failed to create room' });
-    }
+    // ⏳ Coming Soon: Collaborate Feature
+    return res.status(503).json({
+        success: false,
+        coming_soon: true,
+        message: '🎮 Co-op Collaborate Feature Coming Soon!',
+        error: 'This feature is under development and will be available soon.'
+    });
 }

@@ -13,6 +13,14 @@ export default async function handler(req, res) {
         return res.status(200).end();
     }
 
+    // ⏳ Coming Soon: Collaborate Feature
+    return res.status(503).json({
+        success: false,
+        coming_soon: true,
+        message: '🎮 Co-op Collaborate Feature Coming Soon!',
+        error: 'This feature is under development and will be available soon.'
+    });
+
     if (req.method !== 'GET') {
         return res.status(405).json({ success: false, error: 'Method not allowed' });
     }

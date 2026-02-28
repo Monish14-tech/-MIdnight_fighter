@@ -68,6 +68,18 @@ export const SHIP_DATA = {
     'sentinel': { name: 'ETERNAL SENTINEL', price: 300000, hp: 15, speed: 360, damage: 15, fireRate: 0.13, missileCooldown: 2.1, missileCount: 8, color: '#e8e8e8', bulletType: 'railgun', invincible: true, desc: 'Ultimate guardian. Infinite power.', requiresPrevious: true }
 };
 
+const STARTING_SHIP_PRICE = 15000;
+const SHIP_PRICE_STEP = 20000;
+const shipOrder = Object.keys(SHIP_DATA);
+shipOrder.forEach((shipKey, index) => {
+    if (shipKey === 'default') {
+        SHIP_DATA[shipKey].price = 0;
+        return;
+    }
+    const progressionIndex = index - 1;
+    SHIP_DATA[shipKey].price = STARTING_SHIP_PRICE + (SHIP_PRICE_STEP * progressionIndex);
+});
+
 export class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');

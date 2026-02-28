@@ -19,8 +19,9 @@ const PORT = 8000;
 const ROOM_TTL_MS = 15 * 60 * 1000;
 const ROOM_CLIENT_TIMEOUT_MS = 45 * 1000;
 
-// MongoDB Connection String
-const MONGO_URI = process.env.MONGO_URI;
+// MongoDB Connection Strings
+const MONGO_URI = process.env.MONGO_URI;           // Room database
+const MONGO_URI1 = process.env.MONGO_URI1;         // Leaderboard database
 const DB_NAME = 'midnight_fighter';
 const COLLECTION_NAME = 'leaderboard';
 const ROOMS_COLLECTION_NAME = 'rooms';
@@ -31,9 +32,20 @@ if (!MONGO_URI) {
     process.exit(1);
 }
 
-let db;
+if (!MONGO_URI1) {
+    console.error('❌ MONGO_URI1 environment variable is not set!');
+    console.error('Please check your .env file');
+    process.exit(1);
+}
+
+let leaderboardDb;
 let leaderboardCollection;
+let leaderboardClient;
+
+let roomsDb;
 let roomsCollection;
+let roomsClient;
+
 const liveRooms = new Map();
 
 // Middleware
@@ -44,26 +56,38 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Connect to MongoDB
 async function connectDB() {
     try {
-        console.log('🔄 Connecting to MongoDB Atlas...');
-        const client = await MongoClient.connect(MONGO_URI, {
+        console.log('🔄 Connecting to MongoDB Atlas (Leaderboard)...');
+        leaderboardClient = await MongoClient.connect(MONGO_URI1, {
             tls: true,
             tlsAllowInvalidCertificates: false,
             serverSelectionTimeoutMS: 10000,
             socketTimeoutMS: 45000,
         });
         
-        db = client.db(DB_NAME);
-        leaderboardCollection = db.collection(COLLECTION_NAME);
-        roomsCollection = db.collection(ROOMS_COLLECTION_NAME);
+        leaderboardDb = leaderboardClient.db(DB_NAME);
+        leaderboardCollection = leaderboardDb.collection(COLLECTION_NAME);
         
         // Create index on score for efficient sorting
         await leaderboardCollection.createIndex({ score: -1 });
+        console.log('✅ Connected to Leaderboard Database successfully!');
+
+        console.log('🔄 Connecting to MongoDB Atlas (Rooms)...');
+        roomsClient = await MongoClient.connect(MONGO_URI, {
+            tls: true,
+            tlsAllowInvalidCertificates: false,
+            serverSelectionTimeoutMS: 10000,
+            socketTimeoutMS: 45000,
+        });
+        
+        roomsDb = roomsClient.db(DB_NAME);
+        roomsCollection = roomsDb.collection(ROOMS_COLLECTION_NAME);
 
         // Unique room id index for co-op rooms
         await roomsCollection.createIndex({ roomId: 1 }, { unique: true });
         await roomsCollection.createIndex({ expiresAt: 1 });
+        console.log('✅ Connected to Rooms Database successfully!');
         
-        console.log('✅ Connected to MongoDB Atlas successfully!');
+        console.log('✅ Connected to all MongoDB Atlas databases!');
     } catch (error) {
         console.error('❌ MongoDB Connection Error:', error);
         process.exit(1);
@@ -182,6 +206,16 @@ app.post('/api/score', async (req, res) => {
             error: 'Failed to submit score'
         });
     }
+});
+
+// ⏳ Coming Soon: Co-op Rooms (Collaborate Feature) Middleware
+app.use('/api/rooms', (req, res) => {
+    return res.status(503).json({
+        success: false,
+        coming_soon: true,
+        message: '🎮 Co-op Collaborate Feature Coming Soon!',
+        error: 'This feature is under development and will be available soon.'
+    });
 });
 
 // POST: Create a co-op room
