@@ -676,8 +676,8 @@ h1 {
 }
 
 #hud-left {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(5, auto);
     gap: 8px;
     flex: 0 0 auto;
 }
@@ -694,7 +694,7 @@ h1 {
     
     #hud-left {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
         column-gap: 6px;
         row-gap: 4px;
         width: 100%;
