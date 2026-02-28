@@ -9,6 +9,10 @@ function setCors(res) {
 export default async function handler(req, res) {
     setCors(res);
 
+    // DEBUG: Log incoming request
+    console.log("[STATE] METHOD:", req.method);
+    console.log("[STATE] QUERY:", req.query);
+
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
