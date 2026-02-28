@@ -1298,9 +1298,9 @@ export class Game {
                             currentHealth: this.player.currentHealth,
                             maxHealth: this.player.maxHealth,
                             shipType: this.player.shipType,
+                            gameOver: this.gameOver,
                             score: this.score,
-                            level: this.currentLevel,
-                            gameOver: this.gameOver
+                            level: this.currentLevel
                         }
                     });
                 }

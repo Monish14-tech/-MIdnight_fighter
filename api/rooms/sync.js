@@ -9,11 +9,6 @@ function setCors(res) {
 export default async function handler(req, res) {
     setCors(res);
 
-    // DEBUG: Log incoming request
-    console.log("[SYNC] METHOD:", req.method);
-    console.log("[SYNC] BODY:", req.body);
-    console.log("[SYNC] QUERY:", req.query);
-
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
@@ -48,25 +43,13 @@ export default async function handler(req, res) {
             return res.status(409).json({ success: false, error: 'Player not in room' });
         }
 
-        // Merge messages into player state
+        // Store incoming messages for this player
         if (messages && Array.isArray(messages) && messages.length > 0) {
-            // Create or merge state object
-            const stateUpdate = {};
-            
-            for (const msg of messages) {
-                // Handle different message types
-                if (msg.type === 'player_move') {
-                    stateUpdate.position = msg.position;
-                    stateUpdate.velocity = msg.velocity;
-                }
-            }
-
-            // Update player state in MongoDB
             await collection.updateOne(
                 { roomId },
                 {
                     $set: {
-                        [`pollingState.${role}.state`]: stateUpdate,
+                        [`pollingState.${role}.messages`]: messages,
                         [`pollingState.${role}.lastSeen`]: new Date(),
                         updatedAt: new Date()
                     }
@@ -75,7 +58,28 @@ export default async function handler(req, res) {
             );
         }
 
-        return res.json({ success: true, synced: messages?.length || 0 });
+        // Get peer's messages to return
+        const peerRole = role === 'host' ? 'guest' : 'host';
+        const peerMessages = room.pollingState?.[peerRole]?.messages || [];
+
+        // Clear peer messages after retrieval to prevent re-sending
+        if (peerMessages.length > 0) {
+            await collection.updateOne(
+                { roomId },
+                {
+                    $set: {
+                        [`pollingState.${peerRole}.messages`]: [],
+                        updatedAt: new Date()
+                    }
+                }
+            );
+        }
+
+        return res.json({ 
+            success: true, 
+            synced: messages?.length || 0,
+            peerMessages: peerMessages
+        });
     } catch (error) {
         console.error('Sync error:', error);
         return res.status(500).json({ success: false, error: 'Failed to sync state' });

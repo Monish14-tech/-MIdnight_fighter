@@ -122,6 +122,24 @@ export class PollingNetplay {
             if (!response.ok) {
                 // Re-queue messages if sync failed
                 this._messageQueue = [...messages, ...this._messageQueue];
+                return;
+            }
+
+            const data = await response.json();
+            
+            // Process peer messages if any
+            if (data.peerMessages && Array.isArray(data.peerMessages)) {
+                for (const msg of data.peerMessages) {
+                    // Convert outgoing message types to incoming handler types
+                    let eventType = msg.type;
+                    if (msg.type === 'input_update') eventType = 'peer_input';
+                    if (msg.type === 'state_update') eventType = 'peer_state';
+                    
+                    const handler = this.handlers[eventType];
+                    if (handler) {
+                        handler(msg);
+                    }
+                }
             }
         } catch (error) {
             console.warn('[PollingNetplay] Sync error:', error.message);
