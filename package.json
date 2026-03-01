@@ -2,8 +2,11 @@
   "name": "midnight-fighter-server",
   "version": "1.0.0",
   "description": "Midnight Fighter Game Server with MongoDB Leaderboard",
-  "main": "api/leaderboard.js",
+  "main": "server.js",
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "start": "node server.js",
     "dev": "vercel dev"
