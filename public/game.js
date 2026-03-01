@@ -803,6 +803,9 @@ export class Game {
             const bossHud = document.getElementById('boss-hud');
             if (bossHud) bossHud.classList.add('active');
 
+            const enemyCounter = document.getElementById('enemy-counter');
+            if (enemyCounter) enemyCounter.style.display = 'none';
+
             const names = [
                 'ANOMALY: V-STRIKE',
                 'ANOMALY: THE FORTRESS',
@@ -1953,6 +1956,9 @@ export class Game {
 
         const bossHud = document.getElementById('boss-hud');
         if (bossHud) bossHud.classList.remove('active');
+
+        const enemyCounter = document.getElementById('enemy-counter');
+        if (enemyCounter) enemyCounter.style.display = 'block';
 
         // Cinematic Finisher - Show Reward
         const rewardText = document.createElement('div');

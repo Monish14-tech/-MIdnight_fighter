@@ -13,10 +13,10 @@ export class Boss {
         this.modelIndex = modelIndex !== null ? modelIndex : Math.floor(Math.random() * 5);
 
         // Stats scale with level
-        const levelScale = Math.max(1, level / 5);
+        const levelScale = 1 + (level - 1) * 0.2; // Scale from 1.0 at level 1 to 1.8 at level 5, 3.8 at level 20
         this.maxHealth = Math.floor(180 * levelScale); // Slightly increased
         this.health = this.maxHealth;
-        this.points = 1500 * levelScale;
+        this.points = Math.floor(1500 * levelScale);
         this.coinReward = Math.floor(250 * levelScale);
 
         // Initial Position logic
@@ -48,6 +48,7 @@ export class Boss {
         this.state = 'entering';
         this.stateTimer = 0;
         this.phase = 1;
+        this.repositioningRetried = false; // Track if we've already retried positioning
         this.currentAttack = null;
 
         // Attack Patterns
@@ -57,12 +58,17 @@ export class Boss {
         // Visuals
         this.tilt = 0;
         this.hasFiredSingleMissile = false;
+        
+        // Firing system
+        this.fireTimer = 0;
+        this.fireRate = 0.3; // Fire every 0.3 seconds
     }
 
     update(deltaTime) {
         if (this.game.gameOver) return;
 
         this.stateTimer += deltaTime;
+        this.fireTimer += deltaTime;
 
         // Phase Transition
         if (this.phase === 1 && this.health < this.maxHealth * 0.5) {
@@ -73,21 +79,17 @@ export class Boss {
             this.color = '#ff0000'; // Enrage color
         }
 
-        if (this.level >= 20 && !this.hasFiredSingleMissile && this.state !== 'entering' && this.game.player) {
-            const dx = this.game.player.x - this.x;
-            const dy = this.game.player.y - this.y;
-            // Deterministic accuracy offset
-            const seed = (this.remoteId || 0) + 1000;
-            const accuracyOffset = (Math.sin(seed) * 0.5) * 0.15;
-            const missileAngle = Math.atan2(dy, dx) + accuracyOffset;
-            this.fireProjectile(this.x, this.y, missileAngle, 'missile');
-            this.hasFiredSingleMissile = true;
-        }
-
         switch (this.state) {
             case 'entering': this.handleEntering(deltaTime); break;
             case 'idle': this.handleIdle(deltaTime); break;
-            case 'attacking': this.handleAttacking(deltaTime); break;
+            case 'attacking': 
+                this.handleAttacking(deltaTime);
+                // Simple reliable firing
+                if (this.fireTimer > this.fireRate && this.game.player) {
+                    this.fireSimple();
+                    this.fireTimer = 0;
+                }
+                break;
             case 'repositioning': this.handleRepositioning(deltaTime); break;
             case 'dashing': this.handleDashing(deltaTime); break;
         }
@@ -114,7 +116,18 @@ export class Boss {
         const dy = this.targetPoint.y - this.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist < 5) {
+        // CRITICAL: Timeout to prevent stuck entrance
+        if (this.stateTimer > 6.0) {
+            this.state = 'idle';
+            this.stateTimer = 0;
+            this.velocity = { x: 0, y: 0 };
+            // Force position to safe center
+            this.x = this.game.width / 2;
+            this.y = this.game.height / 3;
+            return;
+        }
+
+        if (dist < 30) {  // Generous tolerance
             this.state = 'idle';
             this.stateTimer = 0;
             this.velocity = { x: 0, y: 0 };
@@ -122,6 +135,14 @@ export class Boss {
             this.x += (dx / dist) * this.speed * deltaTime;
             this.y += (dy / dist) * this.speed * deltaTime;
         }
+        
+        // Soft boundary: allow brief overshooting but gently push back
+        const hardMargin = 80;
+        const softMargin = 100;
+        if (this.x < hardMargin) this.x = hardMargin + 5;
+        if (this.x > this.game.width - hardMargin) this.x = this.game.width - hardMargin - 5;
+        if (this.y < hardMargin) this.y = hardMargin + 5;
+        if (this.y > this.game.height - hardMargin) this.y = this.game.height - hardMargin - 5;
     }
 
     handleIdle(deltaTime) {
@@ -130,31 +151,20 @@ export class Boss {
 
         // Visual wobble
         this.tilt = Math.sin(this.stateTimer * 2) * 0.1;
+        
+        // Keep boss on screen while hovering
+        const margin = 70;
+        this.y = Math.max(margin, Math.min(this.game.height - margin, this.y));
 
         if (this.stateTimer > 1.5) { // Idle duration
             this.state = 'attacking';
             this.stateTimer = 0;
-            // Pick deterministic attack
-            const seed = (this.remoteId || 0) + this.game.currentLevel + Math.floor(this.game.lastTime / 5000);
-            const attackIdx = Math.floor(Math.abs(Math.sin(seed)) * this.patterns.length);
-            this.currentAttack = this.patterns[attackIdx];
-            // Lower chance for dash (deterministic)
-            if (this.currentAttack === 'dash' && Math.abs(Math.cos(seed)) > 0.4) this.currentAttack = 'spread';
+            this.fireTimer = 0; // Reset fire timer when attacking starts
+            this.currentAttack = 'spread'; // Always use spread fire
         }
     }
 
     handleAttacking(deltaTime) {
-        switch (this.currentAttack) {
-            case 'spiral': this.spiralShoot(deltaTime); break;
-            case 'spread': this.spreadShoot(deltaTime); break;
-            case 'rapid': this.rapidShoot(deltaTime); break;
-            case 'missiles': this.missileBarrage(deltaTime); break;
-            case 'dash':
-                this.state = 'dashing';
-                this.prepareDash();
-                return; // Switch state immediately
-        }
-
         // End attack after duration
         const attackDuration = this.currentAttack === 'spiral' ? 3.0 : 2.0;
         if (this.stateTimer > attackDuration) {
@@ -164,12 +174,48 @@ export class Boss {
         }
     }
 
+    fireSimple() {
+        // Simple spread fire - always works
+        const count = this.phase === 2 ? 7 : 5;
+        const spread = 0.8;
+        const baseAngle = this.angle;
+        
+        for (let i = 0; i < count; i++) {
+            const angle = baseAngle - spread / 2 + (spread / (count - 1)) * i;
+            this.fireProjectile(this.x, this.y, angle, 'bullet');
+        }
+    }
+
     pickNewPosition() {
-        const margin = 100;
-        const seed = (this.remoteId || 0) + this.game.lastTime;
+        // Ensure safe zone away from corners (minimum 150px margin from edges)
+        const safeMargin = 150;
+        const maxX = this.game.width - safeMargin;
+        const maxY = this.game.height - safeMargin;
+        const minX = safeMargin;
+        const minY = safeMargin;
+        
+        // Rotate through several predefined safe positions to avoid getting stuck
+        const positionIndex = Math.floor(this.stateTimer * 0.5) % 5;
+        const positions = [
+            { x: this.game.width * 0.25, y: this.game.height * 0.25 },
+            { x: this.game.width * 0.75, y: this.game.height * 0.25 },
+            { x: this.game.width * 0.5, y: this.game.height * 0.3 },
+            { x: this.game.width * 0.3, y: this.game.height * 0.35 },
+            { x: this.game.width * 0.7, y: this.game.height * 0.35 }
+        ];
+        
+        let targetPos = positions[positionIndex];
+        
+        // Add some deterministic variation to avoid too predictable patterns
+        const seed = (this.remoteId || 0) + this.level;
+        const variation = (Math.sin(seed) * 30 + Math.cos(seed * 1.5) * 30);
+        targetPos.x += variation;
+        targetPos.y += variation * 0.5;
+        
+        // Clamp to safe zone
         this.targetPoint = {
-            x: margin + Math.abs(Math.sin(seed)) * (this.game.width - margin * 2),
-            y: margin + Math.abs(Math.cos(seed)) * (this.game.height * 0.5) // Top half
+            x: Math.max(minX, Math.min(maxX, targetPos.x)),
+            y: Math.max(minY, Math.min(maxY, targetPos.y))
         };
     }
 
@@ -178,17 +224,53 @@ export class Boss {
         const dy = this.targetPoint.y - this.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        // Bank into turn
-        this.tilt = (dx / dist) * 0.3;
-
-        if (dist < 10) {
+        // First, try to reach the target
+        if (dist < 40) {  // Reached target - go back to idle to attack
             this.state = 'idle';
             this.stateTimer = 0;
             this.tilt = 0;
-        } else {
-            const moveSpeed = this.speed * 1.5;
+            this.repositioningRetried = false; // Reset for next repositioning
+            return;
+        }
+
+        // If stuck for too long and haven't retried yet, pick a new position ONCE
+        if (this.stateTimer > 4.5 && !this.repositioningRetried) {
+            this.repositioningRetried = true;
+            this.pickNewPosition();
+            // Force movement toward new target
+        }
+
+        // Move toward target
+        if (dist > 0) {
+            const moveSpeed = this.speed * 1.2;
             this.x += (dx / dist) * moveSpeed * deltaTime;
             this.y += (dy / dist) * moveSpeed * deltaTime;
+        }
+        
+        // Force escape from corners with strong push-back
+        const hardMargin = 120;
+        if (this.x < hardMargin) {
+            this.x = hardMargin + 20;
+            this.targetPoint.x = Math.max(hardMargin + 100, this.targetPoint.x);
+        }
+        if (this.x > this.game.width - hardMargin) {
+            this.x = this.game.width - hardMargin - 20;
+            this.targetPoint.x = Math.min(this.game.width - hardMargin - 100, this.targetPoint.x);
+        }
+        if (this.y < hardMargin) {
+            this.y = hardMargin + 20;
+            this.targetPoint.y = Math.max(hardMargin + 100, this.targetPoint.y);
+        }
+        if (this.y > this.game.height - hardMargin) {
+            this.y = this.game.height - hardMargin - 20;
+            this.targetPoint.y = Math.min(this.game.height - hardMargin - 100, this.targetPoint.y);
+        }
+
+        // Ultimate safety: if STILL stuck after 8 seconds, just go idle
+        if (this.stateTimer > 8.0) {
+            this.state = 'idle';
+            this.stateTimer = 0;
+            this.repositioningRetried = false;
         }
     }
 
@@ -206,9 +288,14 @@ export class Boss {
         // > 1.2s: Cooldown / Exit
 
         if (this.stateTimer < 0.6) {
-            // Shake
-            this.x += (Math.random() - 0.5) * 8;
-            this.y += (Math.random() - 0.5) * 8;
+            // Shake (limited to prevent going off-screen)
+            this.x += (Math.random() - 0.5) * 4;
+            this.y += (Math.random() - 0.5) * 4;
+            
+            // Keep boss on screen during charge
+            const margin = 50;
+            this.x = Math.max(margin, Math.min(this.game.width - margin, this.x));
+            this.y = Math.max(margin, Math.min(this.game.height - margin, this.y));
 
             // Lock angle
             const dx = this.dashTarget.x - this.x;
@@ -219,6 +306,11 @@ export class Boss {
             const dashSpeed = 900;
             this.x += Math.cos(this.angle) * dashSpeed * deltaTime;
             this.y += Math.sin(this.angle) * dashSpeed * deltaTime;
+
+            // Keep boss on screen during dash
+            const margin = 80;
+            this.x = Math.max(margin, Math.min(this.game.width - margin, this.x));
+            this.y = Math.max(margin, Math.min(this.game.height - margin, this.y));
 
             // Trail
             if (Math.random() < 0.5) {
