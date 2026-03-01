@@ -1028,7 +1028,7 @@ export class Game {
         this.playerTwo.x = typeof state.x === 'number' ? state.x : this.playerTwo.x;
         this.playerTwo.y = typeof state.y === 'number' ? state.y : this.playerTwo.y;
         this.playerTwo.angle = typeof state.angle === 'number' ? state.angle : this.playerTwo.angle;
-        if (typeof state.currentHealth === 'number') this.playerTwo.currentHealth = state.currentHealth;
+        if (typeof state.health === 'number') this.playerTwo.currentHealth = state.health;
         if (typeof state.maxHealth === 'number') this.playerTwo.maxHealth = state.maxHealth;
 
         if (state.shipType && state.shipType !== this.remoteShipType) {
@@ -2384,7 +2384,12 @@ export class Game {
 
     spawnRemotePlayer(name, shipType) {
         if (this.playerTwo) return;
-        this.playerTwo = new Player(this, shipType || 'default', { playerId: 'player2' });
+
+        // If I am host (player1), the remote player must be player2
+        // If I am guest (player2), the remote player must be player1
+        const remotePlayerId = (this.onlineRole === 'guest') ? 'player1' : 'player2';
+
+        this.playerTwo = new Player(this, shipType || 'default', { playerId: remotePlayerId });
         this.playerTwo.playerName = name;
         this.updatePlayerHudInfo();
     }
