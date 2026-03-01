@@ -76,7 +76,9 @@ export class Boss {
         if (this.level >= 20 && !this.hasFiredSingleMissile && this.state !== 'entering' && this.game.player) {
             const dx = this.game.player.x - this.x;
             const dy = this.game.player.y - this.y;
-            const accuracyOffset = (Math.random() - 0.5) * 0.15; // Slight inaccuracy
+            // Deterministic accuracy offset
+            const seed = (this.remoteId || 0) + 1000;
+            const accuracyOffset = (Math.sin(seed) * 0.5) * 0.15;
             const missileAngle = Math.atan2(dy, dx) + accuracyOffset;
             this.fireProjectile(this.x, this.y, missileAngle, 'missile');
             this.hasFiredSingleMissile = true;
@@ -132,10 +134,12 @@ export class Boss {
         if (this.stateTimer > 1.5) { // Idle duration
             this.state = 'attacking';
             this.stateTimer = 0;
-            // Pick random attack
-            this.currentAttack = this.patterns[Math.floor(Math.random() * this.patterns.length)];
-            // Lower chance for dash
-            if (this.currentAttack === 'dash' && Math.random() > 0.4) this.currentAttack = 'spread';
+            // Pick deterministic attack
+            const seed = (this.remoteId || 0) + this.game.currentLevel + Math.floor(this.game.lastTime / 5000);
+            const attackIdx = Math.floor(Math.abs(Math.sin(seed)) * this.patterns.length);
+            this.currentAttack = this.patterns[attackIdx];
+            // Lower chance for dash (deterministic)
+            if (this.currentAttack === 'dash' && Math.abs(Math.cos(seed)) > 0.4) this.currentAttack = 'spread';
         }
     }
 
@@ -162,9 +166,10 @@ export class Boss {
 
     pickNewPosition() {
         const margin = 100;
+        const seed = (this.remoteId || 0) + this.game.lastTime;
         this.targetPoint = {
-            x: margin + Math.random() * (this.game.width - margin * 2),
-            y: margin + Math.random() * (this.game.height * 0.5) // Top half
+            x: margin + Math.abs(Math.sin(seed)) * (this.game.width - margin * 2),
+            y: margin + Math.abs(Math.cos(seed)) * (this.game.height * 0.5) // Top half
         };
     }
 

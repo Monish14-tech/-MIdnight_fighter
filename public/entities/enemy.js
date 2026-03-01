@@ -231,9 +231,10 @@ export class Enemy {
             this.x += Math.cos(moveAngle) * effectiveSpeed * deltaTime;
             this.y += Math.sin(moveAngle) * effectiveSpeed * deltaTime;
         } else if (this.type === 'interceptor') {
-            // Fast aggressive pursuit with occasional dashes
+            // Fast aggressive pursuit with occasional dashes - Deterministic
             this.dashTimer -= deltaTime;
-            if (this.dashTimer <= 0 && Math.random() < 0.3) {
+            const pseudoRandom = Math.abs(Math.sin((this.remoteId || 0) + this.game.lastTime * 0.005));
+            if (this.dashTimer <= 0 && pseudoRandom < 0.3) {
                 this.dashTimer = this.dashCooldown;
                 effectiveSpeed *= 2.5; // Boost speed for dash
             }
@@ -306,7 +307,8 @@ export class Enemy {
                         this.hasFiredSingleMissile = true;
                     }
                 } else {
-                    const spread = (Math.random() - 0.5) * 0.5 * spreadMultiplier;
+                    const seed = (this.remoteId || 0) + this.game.lastTime;
+                    const spread = (Math.sin(seed * 1.5) * 0.5) * spreadMultiplier;
                     this.game.projectiles.push(new Projectile(this.game, this.x, this.y, this.angle + spread, 'bullet', 'enemy'));
                 }
             }
@@ -326,7 +328,8 @@ export class Enemy {
                         this.hasFiredSingleMissile = true;
                     }
                 } else {
-                    const spread = (Math.random() - 0.5) * 0.2 * spreadMultiplier;
+                    const seed = (this.remoteId || 0) + this.game.lastTime;
+                    const spread = (Math.sin(seed * 2.1) * 0.2) * spreadMultiplier;
                     const shot = new Projectile(this.game, this.x, this.y, this.angle + spread, 'bullet', 'enemy');
                     shot.speed = 700;
                     shot.damage = 2;
@@ -351,7 +354,8 @@ export class Enemy {
                         this.hasFiredSingleMissile = true;
                     }
                 } else {
-                    const spread = (Math.random() - 0.5) * 0.3 * spreadMultiplier;
+                    const seed = (this.remoteId || 0) + this.game.lastTime;
+                    const spread = (Math.sin(seed * 0.8) * 0.3) * spreadMultiplier;
                     const bullet = new Projectile(this.game, this.x, this.y, this.angle + spread, 'bullet', 'enemy');
                     bullet.speed = 350;
                     bullet.damage = 2;

@@ -713,39 +713,40 @@ function setupRealtimeServer(httpServer) {
             }
         });
 
-        // Relay Spawn Events (from Host to Guest)
-        socket.on('spawn_enemy', (data) => {
-            if (context.role !== 'host' || !context.roomId) return;
+        // Mutual Optimistic Combat: Accept destruction events from ANY player and relay to peers
+        socket.on('destroy_enemy', (data) => {
+            if (!context.roomId) return;
             const liveRoom = liveRooms.get(context.roomId);
             if (!liveRoom) return;
             for (const [peerRole, peer] of liveRoom.clients.entries()) {
                 if (peerRole !== context.role) {
-                    peer.socket.emit('spawn_enemy', data);
+                    peer.socket.emit('destroy_enemy', data);
                 }
             }
         });
 
-        socket.on('spawn_boss', (data) => {
-            if (context.role !== 'host' || !context.roomId) return;
+        socket.on('destroy_boss', (data) => {
+            if (!context.roomId) return;
             const liveRoom = liveRooms.get(context.roomId);
             if (!liveRoom) return;
             for (const [peerRole, peer] of liveRoom.clients.entries()) {
                 if (peerRole !== context.role) {
-                    peer.socket.emit('spawn_boss', data);
+                    peer.socket.emit('destroy_boss', data);
                 }
             }
         });
 
-        socket.on('spawn_powerup', (data) => {
-            if (context.role !== 'host' || !context.roomId) return;
+        socket.on('destroy_powerup', (data) => {
+            if (!context.roomId) return;
             const liveRoom = liveRooms.get(context.roomId);
             if (!liveRoom) return;
             for (const [peerRole, peer] of liveRoom.clients.entries()) {
                 if (peerRole !== context.role) {
-                    peer.socket.emit('spawn_powerup', data);
+                    peer.socket.emit('destroy_powerup', data);
                 }
             }
         });
+
 
         socket.on('player_died', async () => {
             if (!context.roomId) return;

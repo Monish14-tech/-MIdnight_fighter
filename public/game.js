@@ -491,14 +491,80 @@ export class Game {
             }
         });
 
-        this.netplay.on('spawn_boss', (data) => {
+        this.netplay.on('destroy_enemy', (data) => {
             if (this.onlineRole === 'guest') {
+                const index = this.enemies.findIndex(e => e.remoteId === data.id);
+                if (index !== -1) {
+                    const enemy = this.enemies[index];
+                    if (!enemy.markedForDeletion) {
+                        enemy.markedForDeletion = true;
+                        this.addScore(enemy.points, data.useCombo);
+                        this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
+                    }
+                }
+            }
+        });
+
+        this.netplay.on('spawn_boss', (data) => {
+            if (this.onlineRole === 'guest' && !this.boss) {
+                this.spawnBoss(data.type);
+                if (this.boss) {
+                    this.boss.remoteId = data.id;
+                    this.boss.x = data.x;
+                    this.boss.y = data.y;
+                }
+            }
+        });
+
+        this.netplay.on('destroy_boss', (data) => {
+            if (this.onlineRole === 'guest' && this.boss && this.boss.remoteId === data.id) {
+                this.handleBossDefeat();
+            }
+        });
+
+        this.netplay.on('spawn_powerup', (data) => {
+            if (this.onlineRole === 'guest') {
+                const pu = new PowerUp(this, data.type, data.x, data.y);
+                pu.remoteId = data.id;
+                this.powerups.push(pu);
+            }
+        });
+
+        this.netplay.on('destroy_powerup', (data) => {
+            if (this.onlineRole === 'guest') {
+                const index = this.powerups.findIndex(p => p.remoteId === data.id);
+                if (index !== -1) {
+                    this.powerups[index].markedForDeletion = true;
+                }
+            }
+        });
+
+        this.netplay.on('level_up', (data) => {
+            if (this.onlineRole === 'guest') {
+                this.currentLevel = data.level;
+                this.enemiesForLevel = data.enemiesForLevel;
+                this.enemiesSpawned = 0;
+                this.score = data.score;
+                this.difficultyMultiplier = data.difficultyMultiplier;
+                this.enemyInterval = data.enemyInterval;
+
+                this.showLevelUpText(this.currentLevel);
+                if (this.audio) this.audio.dash();
+            }
+        });
+
+        this.netplay.on('spawn_boss', (data) => {
+            if (this.onlineRole === 'guest' && !this.boss) {
                 import('./entities/boss.js?v=4').then(m => {
-                    this.boss = new m.Boss(this, data.level, data.side, data.modelIndex);
-                    const bossHud = document.getElementById('boss-hud');
-                    if (bossHud) bossHud.classList.add('active');
-                    const bossName = document.getElementById('boss-name');
-                    if (bossName) bossName.innerText = data.name;
+                    const BossClass = m.default || m.Boss;
+                    if (BossClass) {
+                        this.boss = new BossClass(this, data.level, data.side, data.modelIndex);
+                        this.boss.remoteId = data.id;
+                        const bossHud = document.getElementById('boss-hud');
+                        if (bossHud) bossHud.classList.add('active');
+                        const bossName = document.getElementById('boss-name');
+                        if (bossName) bossName.innerText = data.name || "UNIDENTIFIED THREAT";
+                    }
                 });
             }
         });
@@ -512,9 +578,27 @@ export class Game {
         });
     }
 
+    initRandom(seedStr) {
+        let hash = 0;
+        for (let i = 0; i < seedStr.length; i++) {
+            hash = Math.imul(31, hash) + seedStr.charCodeAt(i) | 0;
+        }
+        this.randomSeed = hash;
+    }
+
+    random() {
+        if (this.randomSeed === undefined) {
+            return Math.random();
+        }
+        let x = Math.sin(this.randomSeed++) * 10000;
+        return x - Math.floor(x);
+    }
+
     init() {
         this.resize();
         this.drawBackground();
+
+        this.entityCounter = 0;
 
         // Load Ships
         // this.assets.load('interceptor', 'assets/ships/interceptor.png');
@@ -608,10 +692,8 @@ export class Game {
     }
 
     checkLevelUp() {
-        // Wave Completion Logic
-        // 1. All enemies for the level must have spawned
-        // 2. All enemies must be defeated (enemies array empty)
-        // 3. Boss must not be active
+        // Wave Completion Logic - Symmetric (Both clients independently calculate)
+
         if (this.enemiesSpawned >= this.enemiesForLevel &&
             this.enemies.length === 0 &&
             !this.boss) {
@@ -626,37 +708,44 @@ export class Game {
             }
             this.enemiesSpawned = 0;
 
+            this.difficultyMultiplier = Math.min(5.0, 1 + (this.currentLevel - 1) * 0.15);
+            this.enemyInterval = Math.max(0.3, 2.0 / this.difficultyMultiplier);
+
+            // Removing 'level_up' netplay event because progression is strictly symmetric
+
             // Trigger Boss Warp every 5 levels
             if (this.currentLevel % 5 === 0) {
                 this.triggerWarp();
             } else {
                 this.levelScore = this.score; // Keep for records
-                this.difficultyMultiplier = Math.min(5.0, 1 + (this.currentLevel - 1) * 0.15);
-                this.enemyInterval = Math.max(0.3, 2.0 / this.difficultyMultiplier);
 
                 // Level Up Visuals
                 this.screenShake.trigger(30, 0.3);
                 if (this.audio) this.audio.dash();
 
                 // Show Level Up Text
-                const hud = document.getElementById('hud');
-                if (hud) {
-                    const levelText = document.createElement('div');
-                    levelText.innerText = `LEVEL ${this.currentLevel}`;
-                    levelText.style.position = 'absolute';
-                    levelText.style.top = '40%';
-                    levelText.style.left = '50%';
-                    levelText.style.transform = 'translate(-50%, -50%)';
-                    levelText.style.color = '#fff';
-                    levelText.style.fontSize = '4rem';
-                    levelText.style.fontWeight = 'bold';
-                    levelText.style.textShadow = '0 0 20px #00f3ff';
-                    levelText.style.zIndex = '20';
-                    levelText.style.animation = 'fadeOut 2s forwards';
-                    document.body.appendChild(levelText);
-                    setTimeout(() => levelText.remove(), 2000);
-                }
+                this.showLevelUpText(this.currentLevel);
             }
+        }
+    }
+
+    showLevelUpText(level) {
+        const hud = document.getElementById('hud');
+        if (hud) {
+            const levelText = document.createElement('div');
+            levelText.innerText = `LEVEL ${level}`;
+            levelText.style.position = 'absolute';
+            levelText.style.top = '40%';
+            levelText.style.left = '50%';
+            levelText.style.transform = 'translate(-50%, -50%)';
+            levelText.style.color = '#fff';
+            levelText.style.fontSize = '4rem';
+            levelText.style.fontWeight = 'bold';
+            levelText.style.textShadow = '0 0 20px #00f3ff';
+            levelText.style.zIndex = '20';
+            levelText.style.animation = 'fadeOut 2s forwards';
+            document.body.appendChild(levelText);
+            setTimeout(() => levelText.remove(), 2000);
         }
     }
 
@@ -705,9 +794,11 @@ export class Game {
 
         import('./entities/boss.js?v=4').then(m => {
             const sides = ['top', 'left', 'right'];
-            const side = sides[Math.floor(Math.random() * sides.length)];
-            const modelIndex = Math.floor(Math.random() * 5);
-            this.boss = new m.Boss(this, this.currentLevel, side, modelIndex);
+            const side = sides[Math.floor(this.random() * sides.length)];
+            const modelIndex = Math.floor(this.random() * 5);
+
+            const BossClass = m.default || m.Boss;
+            this.boss = new BossClass(this, this.currentLevel, side, modelIndex);
 
             const bossHud = document.getElementById('boss-hud');
             if (bossHud) bossHud.classList.add('active');
@@ -724,15 +815,8 @@ export class Game {
             const bossName = document.getElementById('boss-name');
             if (bossName) bossName.innerText = name;
 
-            // Broadcast boss spawn if host
-            if (this.onlineCoop && this.onlineRole === 'host') {
-                this.netplay.emit('spawn_boss', {
-                    level: this.currentLevel,
-                    side: side,
-                    modelIndex: modelIndex,
-                    name: name
-                });
-            }
+            // Symmetric spawning - both clients assign same ID
+            this.boss.remoteId = 'boss_' + (this.entityCounter++);
         });
     }
 
@@ -743,6 +827,9 @@ export class Game {
     }
 
     startGame() {
+        if (!this.onlineCoop || !this.randomSeed) {
+            this.initRandom(Date.now().toString()); // Single player fallback
+        }
         this.isRunning = true;
         this.gameOver = false;
         this.isPaused = false;
@@ -1382,6 +1469,15 @@ export class Game {
 
     handleEnemyDefeat(enemy, useCombo = true) {
         if (!enemy || enemy.markedForDeletion) return;
+
+        // Mutual Optimistic Combat: Broadcast destruction if enemy has remoteId
+        if (this.onlineCoop && enemy.remoteId) {
+            this.netplay.emit('destroy_enemy', {
+                id: enemy.remoteId,
+                useCombo: useCombo
+            });
+        }
+
         enemy.markedForDeletion = true;
         this.addScore(enemy.points, useCombo);
         this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
@@ -1390,19 +1486,22 @@ export class Game {
         if (enemy.splitOnDeath) {
             for (let i = 0; i < enemy.splitCount; i++) {
                 const child = new Enemy(this, enemy.splitType || 'swarm');
-                child.x = enemy.x + (Math.random() - 0.5) * 20;
-                child.y = enemy.y + (Math.random() - 0.5) * 20;
+                child.x = enemy.x + (this.random() - 0.5) * 20;
+                child.y = enemy.y + (this.random() - 0.5) * 20;
+
+                // Symmetric ID assignment
+                child.remoteId = 'enemy_' + (this.entityCounter++);
                 this.enemies.push(child);
             }
         }
 
-        if (this.powerups.length < 3 && Math.random() < this.enemyDropChance) {
+        if (this.powerups.length < 3 && this.random() < this.enemyDropChance) {
             this.spawnPowerUpAt(enemy.x, enemy.y);
         }
     }
 
     spawnEnemy() {
-        const typeRand = Math.random();
+        const typeRand = this.random();
         const level = this.currentLevel || 1;
         let type = 'chaser';
 
@@ -1411,10 +1510,10 @@ export class Game {
         if (this.bossJustDefeated) {
             const uniqueTypes = availableTypes.filter(t => !this.spawnedEnemyTypes.has(t));
             if (uniqueTypes.length > 0) {
-                type = uniqueTypes[Math.floor(Math.random() * uniqueTypes.length)];
+                type = uniqueTypes[Math.floor(this.random() * uniqueTypes.length)];
             } else {
                 this.bossJustDefeated = false;
-                type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+                type = availableTypes[Math.floor(this.random() * availableTypes.length)];
             }
         } else {
             type = this.selectEnemyTypeByProbability(typeRand, level, availableTypes);
@@ -1423,17 +1522,11 @@ export class Game {
         this.spawnedEnemyTypes.add(type);
 
         const enemy = new Enemy(this, type);
-        this.enemies.push(enemy);
 
-        // Broadcast spawn if host
-        if (this.onlineCoop && this.onlineRole === 'host') {
-            this.netplay.emit('spawn_enemy', {
-                type: type,
-                x: enemy.x,
-                y: enemy.y,
-                id: Date.now() + Math.random()
-            });
-        }
+        // Assign symmetric network ID
+        enemy.remoteId = 'enemy_' + (this.entityCounter++);
+
+        this.enemies.push(enemy);
     }
 
     getAvailableEnemyTypes(level) {
@@ -1655,25 +1748,24 @@ export class Game {
 
     spawnPowerUp() {
         const types = ['speed', 'slowmo', 'invulnerability', 'health_recover', 'health_boost', 'shield', 'double_damage', 'rapid_fire'];
-        const type = types[Math.floor(Math.random() * types.length)];
+        const type = types[Math.floor(this.random() * types.length)];
         const pu = new PowerUp(this, type);
-        this.powerups.push(pu);
 
-        // Broadcast powerup spawn if host
-        if (this.onlineCoop && this.onlineRole === 'host') {
-            this.netplay.emit('spawn_powerup', {
-                type: type,
-                x: pu.x,
-                y: pu.y,
-                id: Date.now() + Math.random()
-            });
-        }
+        // Assign symmetric network ID
+        pu.remoteId = 'pu_' + (this.entityCounter++);
+
+        this.powerups.push(pu);
     }
 
     spawnPowerUpAt(x, y) {
         const types = ['speed', 'slowmo', 'invulnerability', 'health_recover', 'shield', 'double_damage', 'rapid_fire'];
-        const type = types[Math.floor(Math.random() * types.length)];
-        this.powerups.push(new PowerUp(this, type, x, y));
+        const type = types[Math.floor(this.random() * types.length)];
+        const pu = new PowerUp(this, type, x, y);
+
+        // Assign symmetric network ID
+        pu.remoteId = 'pu_' + (this.entityCounter++);
+
+        this.powerups.push(pu);
     }
 
     checkCollisions() {
@@ -1844,6 +1936,11 @@ export class Game {
     handleBossDefeat() {
         if (!this.boss) return;
 
+        // Mutual Optimistic Combat: Broadcast destruction from either client
+        if (this.onlineCoop && this.boss.remoteId) {
+            this.netplay.emit('destroy_boss', { id: this.boss.remoteId });
+        }
+
         const loot = this.boss.coinReward || 500;
         this.score += this.boss.points;
         this.coins += loot;
@@ -1892,6 +1989,11 @@ export class Game {
                 const distance = Math.sqrt(dx * dx + dy * dy);
 
                 if (distance < p.radius + player.radius) {
+                    // Mutual Optimistic Combat: Whoever grabs it claims it
+                    if (this.onlineCoop && p.remoteId) {
+                        this.netplay.emit('destroy_powerup', { id: p.remoteId });
+                    }
+
                     player.applyPowerUp(p.type);
                     p.markedForDeletion = true;
                     this.screenShake.trigger(10, 0.1);
@@ -2276,6 +2378,7 @@ export class Game {
             if (data.success) {
                 const roomId = data.roomId;
                 this.collabRoomId = roomId;
+                this.initRandom(roomId); // Initialize deterministic PRNG
 
                 await this.netplay.connect({
                     roomId,
@@ -2350,6 +2453,7 @@ export class Game {
 
             if (data.success) {
                 this.collabRoomId = roomId;
+                this.initRandom(roomId); // Initialize deterministic PRNG
 
                 await this.netplay.connect({
                     roomId,
