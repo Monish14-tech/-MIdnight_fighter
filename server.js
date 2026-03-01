@@ -713,6 +713,40 @@ function setupRealtimeServer(httpServer) {
             }
         });
 
+        // Relay Spawn Events (from Host to Guest)
+        socket.on('spawn_enemy', (data) => {
+            if (context.role !== 'host' || !context.roomId) return;
+            const liveRoom = liveRooms.get(context.roomId);
+            if (!liveRoom) return;
+            for (const [peerRole, peer] of liveRoom.clients.entries()) {
+                if (peerRole !== context.role) {
+                    peer.socket.emit('spawn_enemy', data);
+                }
+            }
+        });
+
+        socket.on('spawn_boss', (data) => {
+            if (context.role !== 'host' || !context.roomId) return;
+            const liveRoom = liveRooms.get(context.roomId);
+            if (!liveRoom) return;
+            for (const [peerRole, peer] of liveRoom.clients.entries()) {
+                if (peerRole !== context.role) {
+                    peer.socket.emit('spawn_boss', data);
+                }
+            }
+        });
+
+        socket.on('spawn_powerup', (data) => {
+            if (context.role !== 'host' || !context.roomId) return;
+            const liveRoom = liveRooms.get(context.roomId);
+            if (!liveRoom) return;
+            for (const [peerRole, peer] of liveRoom.clients.entries()) {
+                if (peerRole !== context.role) {
+                    peer.socket.emit('spawn_powerup', data);
+                }
+            }
+        });
+
         socket.on('player_died', async () => {
             if (!context.roomId) return;
 

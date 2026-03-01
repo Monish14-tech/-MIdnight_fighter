@@ -757,15 +757,17 @@ export class Game {
         this.difficultyMultiplier = 1.0; // Retained from original
         this.lastTime = 0; // Retained from original
 
-        // Level System Init
-        this.enemiesForLevel = 5 + (this.currentLevel * 3);
-        this.enemiesSpawned = 0;
-
-        this.enemies = [];
-        this.particles = [];
-        this.projectiles = [];
-        this.afterburners = [];
-        this.powerups = [];
+        // Only reset entities if we're not a guest joining a room
+        // Guests receive their initial entities via netplay
+        if (!this.onlineCoop || this.onlineRole === 'host') {
+            this.enemies = [];
+            this.particles = [];
+            this.projectiles = [];
+            this.afterburners = [];
+            this.powerups = [];
+            this.enemiesSpawned = 0;
+            this.enemiesForLevel = 5 + (this.currentLevel * 3);
+        }
 
         this.enemyTimer = 0;
         this.enemyInterval = 2.0;
@@ -1002,7 +1004,7 @@ export class Game {
     }
 
     applyPeerInput(message) {
-        if (!this.onlineCoop || this.onlineRole !== 'host') return;
+        if (!this.onlineCoop) return;
         if (!message || !message.input) return;
         // Reset all keys to false first, then apply incoming input
         // This prevents sticky keys (auto-shooting bug)
@@ -2301,6 +2303,7 @@ export class Game {
                 document.getElementById('collab-join-btn').disabled = true;
 
                 statusEl.innerText = "Room created. Waiting for partner...";
+                this.isRunning = true;
                 this.onlineRole = 'host';
                 this.onlineCoop = true;
                 this.coopMode = true;
@@ -2355,6 +2358,7 @@ export class Game {
                 });
 
                 statusEl.innerText = "Connected to room: " + roomId;
+                this.isRunning = true;
                 this.onlineRole = 'guest';
                 this.onlineCoop = true;
                 this.coopMode = true;
