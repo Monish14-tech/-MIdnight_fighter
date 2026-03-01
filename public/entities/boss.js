@@ -62,6 +62,7 @@ export class Boss {
         // Firing system
         this.fireTimer = 0;
         this.fireRate = 0.3; // Fire every 0.3 seconds
+        this.fireDelay = 5.0; // Wait 5 seconds before starting to fire
     }
 
     update(deltaTime) {
@@ -84,8 +85,10 @@ export class Boss {
             case 'idle': this.handleIdle(deltaTime); break;
             case 'attacking': 
                 this.handleAttacking(deltaTime);
-                // Simple reliable firing
-                if (this.fireTimer > this.fireRate && this.game.player) {
+                // Always move around screen while attacking
+                this.moveAroundScreen(deltaTime);
+                // Start firing only after 5 second delay
+                if (this.stateTimer > this.fireDelay && this.fireTimer > this.fireRate && this.game.player) {
                     this.fireSimple();
                     this.fireTimer = 0;
                 }
@@ -136,13 +139,13 @@ export class Boss {
             this.y += (dy / dist) * this.speed * deltaTime;
         }
         
-        // Soft boundary: allow brief overshooting but gently push back
-        const hardMargin = 80;
-        const softMargin = 100;
-        if (this.x < hardMargin) this.x = hardMargin + 5;
-        if (this.x > this.game.width - hardMargin) this.x = this.game.width - hardMargin - 5;
-        if (this.y < hardMargin) this.y = hardMargin + 5;
-        if (this.y > this.game.height - hardMargin) this.y = this.game.height - hardMargin - 5;
+        // Allow boss to move smoothly from off-screen positions
+        // Only prevent going too far past the visible area
+        const screenBuffer = 150;
+        if (this.x < -screenBuffer) this.x = -screenBuffer;
+        if (this.x > this.game.width + screenBuffer) this.x = this.game.width + screenBuffer;
+        if (this.y < -screenBuffer) this.y = -screenBuffer;
+        if (this.y > this.game.height + screenBuffer) this.y = this.game.height + screenBuffer;
     }
 
     handleIdle(deltaTime) {
@@ -165,8 +168,8 @@ export class Boss {
     }
 
     handleAttacking(deltaTime) {
-        // End attack after duration
-        const attackDuration = this.currentAttack === 'spiral' ? 3.0 : 2.0;
+        // Extended attack duration to allow for 5 second delay + firing time
+        const attackDuration = 10.0; // 10 seconds: 5 second delay + 5 second firing
         if (this.stateTimer > attackDuration) {
             this.state = 'repositioning';
             this.stateTimer = 0;
@@ -174,15 +177,42 @@ export class Boss {
         }
     }
 
+    moveAroundScreen(deltaTime) {
+        // Move in a circular pattern around the screen while attacking
+        const centerX = this.game.width / 2;
+        const centerY = this.game.height / 3;
+        const radius = 200;
+        const orbitSpeed = 1.5; // Rad/sec
+        
+        // Circular orbit around center point
+        const angle = this.stateTimer * orbitSpeed;
+        this.x = centerX + Math.cos(angle) * radius;
+        this.y = centerY + Math.sin(angle) * radius * 0.6;
+        
+        // Clamp to screen bounds
+        const margin = 80;
+        this.x = Math.max(margin, Math.min(this.game.width - margin, this.x));
+        this.y = Math.max(margin, Math.min(this.game.height - margin, this.y));
+    }
+
     fireSimple() {
-        // Simple spread fire - always works
-        const count = this.phase === 2 ? 7 : 5;
-        const spread = 0.8;
+        // Mix of bullets and missiles - improved accuracy
+        const count = this.phase === 2 ? 6 : 4;
+        const spread = 0.35; // Tighter spread for better accuracy
         const baseAngle = this.angle;
         
+        // Bullets - more accurate spread
         for (let i = 0; i < count; i++) {
             const angle = baseAngle - spread / 2 + (spread / (count - 1)) * i;
             this.fireProjectile(this.x, this.y, angle, 'bullet');
+        }
+        
+        // Missiles - fire 2 missiles at player with improved accuracy
+        if (this.game.player) {
+            const missileSpread = 0.15; // Very tight spread for missile accuracy
+            const missileAngle = Math.atan2(this.game.player.y - this.y, this.game.player.x - this.x);
+            this.fireProjectile(this.x, this.y, missileAngle - missileSpread / 2, 'boss_missile');
+            this.fireProjectile(this.x, this.y, missileAngle + missileSpread / 2, 'boss_missile');
         }
     }
 
@@ -389,15 +419,15 @@ export class Boss {
         p.source = 'boss';
 
         if (type === 'boss_missile') {
-            // Updated: Reduced damage, non-homing
-            p.speed = 250;
-            p.maxSpeed = 600;
-            p.acceleration = 300;
-            p.damage = this.level >= 15 ? 2.5 : 1.8; // Reduced from 4/3
-            p.lifetime = 5.0;
+            // Minimum damage, non-homing straight missiles
+            p.speed = 300;
+            p.maxSpeed = 500;
+            p.acceleration = 0; // No acceleration - straight line
+            p.damage = 0.5; // Minimum damage
+            p.lifetime = 6.0;
             p.isHoming = false; // Explicitly non-homing
             p.color = '#ff0000';
-            p.radius = 12;
+            p.radius = 10;
         } else if (type === 'missile') {
             p.speed = 160;
             p.maxSpeed = 420;
