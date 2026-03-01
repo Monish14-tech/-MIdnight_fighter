@@ -15,7 +15,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
-const PORT = 8000;
+const PORT = process.env.PORT || 8000;
 const ROOM_TTL_MS = 15 * 60 * 1000;
 const ROOM_CLIENT_TIMEOUT_MS = 45 * 1000;
 
