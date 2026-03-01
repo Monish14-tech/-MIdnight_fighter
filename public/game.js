@@ -853,8 +853,6 @@ export class Game {
         this.isPaused = false;
         this.gameOver = false;
 
-        this.stopCollabPolling();
-        this.resetCoop();
 
         document.getElementById('pause-menu').classList.remove('active');
         document.getElementById('settings-menu').classList.remove('active');
