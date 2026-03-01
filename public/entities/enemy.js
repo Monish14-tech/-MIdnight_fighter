@@ -1,5 +1,5 @@
-import { Projectile } from './projectile.js';
-import { Explosion } from './particle.js';
+import { Projectile } from './projectile.js?v=4';
+import { Explosion } from './particle.js?v=4';
 
 export class Enemy {
     constructor(game, type = 'chaser') {
@@ -243,7 +243,7 @@ export class Enemy {
             // Move toward player and apply pull force
             this.x += Math.cos(this.angle) * effectiveSpeed * deltaTime;
             this.y += Math.sin(this.angle) * effectiveSpeed * deltaTime;
-            
+
             // Apply pull force to player if in range
             const dist = Math.hypot(dx, dy);
             if (dist < this.tractorRange) {
@@ -255,7 +255,7 @@ export class Enemy {
             // Aggressive fast movement with slashing
             this.x += Math.cos(this.angle) * effectiveSpeed * deltaTime;
             this.y += Math.sin(this.angle) * effectiveSpeed * deltaTime;
-            
+
             // Update slash timer
             this.slashTimer -= deltaTime;
         } else if (this.type === 'mirror') {
@@ -267,7 +267,7 @@ export class Enemy {
             // Move toward player and pulse
             this.x += Math.cos(this.angle) * effectiveSpeed * deltaTime;
             this.y += Math.sin(this.angle) * effectiveSpeed * deltaTime;
-            
+
             // Update pulse timer
             this.pulseTimer -= deltaTime;
         } else if (this.type === 'launcher') {
@@ -420,518 +420,880 @@ export class Enemy {
         } else {
             // Existing Vector Rendering Logic
             if (this.type === 'chaser') {
-                // Manta Blade - wide predator sweep
-                const grad = ctx.createLinearGradient(20, 0, -20, 0);
+                // Predator Scout Jet - sleek and aggressive
+                const grad = ctx.createLinearGradient(15, 0, -15, 0);
                 grad.addColorStop(0, '#ffffff');
                 grad.addColorStop(0.5, this.color);
-                grad.addColorStop(1, '#220000');
+                grad.addColorStop(1, '#330000');
                 ctx.fillStyle = grad;
 
+                // Fuselage
                 ctx.beginPath();
-                ctx.moveTo(22, 0);
-                ctx.lineTo(8, 6);
-                ctx.lineTo(-12, 12);
-                ctx.lineTo(-20, 6);
-                ctx.lineTo(-16, 0);
-                ctx.lineTo(-20, -6);
-                ctx.lineTo(-12, -12);
-                ctx.lineTo(8, -6);
+                ctx.moveTo(25, 0);       // Nose
+                ctx.lineTo(5, 4);        // Mid
+                ctx.lineTo(-12, 4);      // Rear
+                ctx.lineTo(-15, 0);      // Exhaust
+                ctx.lineTo(-12, -4);
+                ctx.lineTo(5, -4);
                 ctx.closePath();
                 ctx.fill();
-                ctx.strokeStyle = 'rgba(255,80,80,0.6)';
-                ctx.lineWidth = 1;
                 ctx.stroke();
 
-                // Eye slit
-                ctx.fillStyle = '#fff';
+                // Swept Wings
                 ctx.beginPath();
-                ctx.ellipse(10, 0, 5, 1.8, 0, 0, Math.PI * 2);
+                ctx.moveTo(5, 4);        // Wing root
+                ctx.lineTo(-8, 14);      // Wing tip
+                ctx.lineTo(-14, 14);     // Wing tip rear
+                ctx.lineTo(-6, 4);       // Wing root rear
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(5, -4);
+                ctx.lineTo(-8, -14);
+                ctx.lineTo(-14, -14);
+                ctx.lineTo(-6, -4);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Tail Fins
+                ctx.beginPath();
+                ctx.moveTo(-6, 3);
+                ctx.lineTo(-14, 8);
+                ctx.lineTo(-16, 8);
+                ctx.lineTo(-12, 3);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(-6, -3);
+                ctx.lineTo(-14, -8);
+                ctx.lineTo(-16, -8);
+                ctx.lineTo(-12, -3);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Cockpit
+                ctx.fillStyle = '#ff0000';
+                ctx.beginPath();
+                ctx.ellipse(8, 0, 5, 2, 0, 0, Math.PI * 2);
                 ctx.fill();
 
             } else if (this.type === 'heavy') {
-                // Fortress Hex - armored core
-                const heavyGrad = ctx.createRadialGradient(0, 0, 6, 0, 0, 26);
+                // Flying Fortress Bomber - massive and armored
+                const heavyGrad = ctx.createRadialGradient(0, 0, 10, 0, 0, 35);
                 heavyGrad.addColorStop(0, this.color);
-                heavyGrad.addColorStop(1, '#3a1400');
+                heavyGrad.addColorStop(1, '#331100');
                 ctx.fillStyle = heavyGrad;
 
+                // Main Wing / Body (Flying Wing design)
                 ctx.beginPath();
-                for (let i = 0; i < 6; i++) {
-                    const angle = (i * Math.PI) / 3;
-                    const rx = Math.cos(angle) * 22;
-                    const ry = Math.sin(angle) * 22;
-                    if (i === 0) ctx.moveTo(rx, ry);
-                    else ctx.lineTo(rx, ry);
-                }
+                ctx.moveTo(35, 0);       // Nose
+                ctx.lineTo(10, 30);      // Leading edge left
+                ctx.lineTo(-20, 35);     // Rear tip left
+                ctx.lineTo(-25, 15);     // Rear notch left
+                ctx.lineTo(-22, 0);      // Center rear (Engine bay)
+                ctx.lineTo(-25, -15);    // Rear notch right
+                ctx.lineTo(-20, -35);    // Rear tip right
+                ctx.lineTo(10, -30);     // Leading edge right
                 ctx.closePath();
                 ctx.fill();
-                ctx.strokeStyle = '#ffaa00';
-                ctx.lineWidth = 2;
                 ctx.stroke();
 
-                // Side armor fins
-                ctx.fillStyle = '#662200';
-                ctx.fillRect(-28, 10, 10, 6);
-                ctx.fillRect(-28, -16, 10, 6);
-                // Core hatch
-                ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                ctx.fillRect(-6, -4, 12, 8);
+                // Structural Ribs / Armor
+                ctx.strokeStyle = 'rgba(255, 170, 0, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(10, 20); ctx.lineTo(-15, 25);
+                ctx.moveTo(10, -20); ctx.lineTo(-15, -25);
+                ctx.stroke();
+
+                // Engine Exhausts (Multiple)
+                ctx.fillStyle = '#ff3300';
+                ctx.beginPath();
+                ctx.arc(-22, 10, 4, 0, Math.PI * 2);
+                ctx.arc(-22, -10, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Cockpit (Large command deck)
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.beginPath();
+                ctx.rect(5, -8, 12, 16);
+                ctx.fill();
+                ctx.stroke();
 
             } else if (this.type === 'shooter') {
-                // Tri-wing Striker
-                const shooterGrad = ctx.createLinearGradient(-10, 0, 20, 0);
+                // Heavy Interceptor - twin engine with weapon pods
+                const shooterGrad = ctx.createLinearGradient(-15, 0, 25, 0);
                 shooterGrad.addColorStop(0, '#330033');
                 shooterGrad.addColorStop(0.5, this.color);
                 shooterGrad.addColorStop(1, '#ffccff');
                 ctx.fillStyle = shooterGrad;
 
+                // Main Fuselage (Wide)
                 ctx.beginPath();
-                ctx.moveTo(20, 0);
-                ctx.lineTo(6, 6);
-                ctx.lineTo(-12, 4);
-                ctx.lineTo(-16, 0);
-                ctx.lineTo(-12, -4);
-                ctx.lineTo(6, -6);
-                ctx.closePath();
-                ctx.fill();
-
-                // Upper and lower wings
-                ctx.beginPath();
-                ctx.moveTo(4, 6);
-                ctx.lineTo(10, 18);
-                ctx.lineTo(0, 16);
-                ctx.closePath();
-                ctx.fill();
-                ctx.beginPath();
-                ctx.moveTo(4, -6);
-                ctx.lineTo(10, -18);
-                ctx.lineTo(0, -16);
-                ctx.closePath();
-                ctx.fill();
-
-                // Cockpit node
-                ctx.fillStyle = '#fff';
-                ctx.beginPath();
-                ctx.arc(12, 0, 3, 0, Math.PI * 2);
-                ctx.fill();
-
-            } else if (this.type === 'swarm') {
-                // Needle Drone
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.moveTo(18, 0);
-                ctx.lineTo(6, 3);
-                ctx.lineTo(-12, 0);
-                ctx.lineTo(6, -3);
-                ctx.closePath();
-                ctx.fill();
-
-                ctx.fillStyle = '#fff';
-                ctx.beginPath();
-                ctx.arc(10, 0, 1.8, 0, Math.PI * 2);
-                ctx.fill();
-
-            } else if (this.type === 'sniper') {
-                // Rail Lance
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.moveTo(26, 0);
-                ctx.lineTo(8, 5);
-                ctx.lineTo(-14, 3);
-                ctx.lineTo(-20, 0);
-                ctx.lineTo(-14, -3);
-                ctx.lineTo(8, -5);
-                ctx.closePath();
-                ctx.fill();
-
-                // Barrel rail
-                ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(16, 0);
-                ctx.lineTo(-10, 0);
-                ctx.stroke();
-
-            } else if (this.type === 'splitter') {
-                // Crystal Splitter
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.moveTo(16, 0);
-                ctx.lineTo(6, 10);
-                ctx.lineTo(-10, 6);
-                ctx.lineTo(-16, 0);
-                ctx.lineTo(-10, -6);
-                ctx.lineTo(6, -10);
-                ctx.closePath();
-                ctx.fill();
-
-                ctx.fillStyle = 'rgba(255,255,255,0.5)';
-                ctx.beginPath();
-                ctx.arc(2, 0, 3, 0, Math.PI * 2);
-                ctx.fill();
-
-            } else if (this.type === 'phantom') {
-                // Phasing specter - translucent with shimmer
-                ctx.globalAlpha = 0.6;
-                const phantomGrad = ctx.createLinearGradient(-15, -10, 20, 10);
-                phantomGrad.addColorStop(0, 'rgba(150,50,200,0.8)');
-                phantomGrad.addColorStop(0.5, this.color);
-                phantomGrad.addColorStop(1, 'rgba(100,0,150,0.6)');
-                ctx.fillStyle = phantomGrad;
-
-                ctx.beginPath();
-                ctx.moveTo(24, 0);
-                ctx.lineTo(8, 8);
-                ctx.lineTo(-10, 6);
-                ctx.lineTo(-18, 0);
-                ctx.lineTo(-10, -6);
+                ctx.moveTo(30, 0);       // Nose
+                ctx.lineTo(8, 8);        // Cockpit area
+                ctx.lineTo(-15, 10);     // Rear
+                ctx.lineTo(-20, 6);      // Left Engine
+                ctx.lineTo(-20, -6);     // Right Engine
+                ctx.lineTo(-15, -10);
                 ctx.lineTo(8, -8);
                 ctx.closePath();
                 ctx.fill();
+                ctx.stroke();
 
-                // Phase shimmer lines
-                ctx.strokeStyle = 'rgba(200,150,255,0.8)';
-                ctx.lineWidth = 1.5;
+                // Wings with Weapon Pods
                 ctx.beginPath();
-                ctx.moveTo(0, -12);
-                ctx.lineTo(0, 12);
+                ctx.moveTo(0, 8);        // Wing root
+                ctx.lineTo(-10, 24);     // Wing mid
+                ctx.lineTo(-18, 24);     // Wing mid rear
+                ctx.lineTo(-12, 8);      // Wing root rear
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, -8);
+                ctx.lineTo(-10, -24);
+                ctx.lineTo(-18, -24);
+                ctx.lineTo(-12, -8);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Weapon Pods at tips
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(-18, 20, 12, 6);
+                ctx.fillRect(-18, -26, 12, 6);
+
+                // Cockpit
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.beginPath();
+                ctx.ellipse(10, 0, 6, 3, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+            } else if (this.type === 'swarm') {
+                // Nano Dart Drone - tiny and fast
+                const swarmGrad = ctx.createLinearGradient(12, 0, -12, 0);
+                swarmGrad.addColorStop(0, '#ffffff');
+                swarmGrad.addColorStop(0.5, this.color);
+                swarmGrad.addColorStop(1, '#550000');
+                ctx.fillStyle = swarmGrad;
+
+                // Tiny sharp body
+                ctx.beginPath();
+                ctx.moveTo(16, 0);   // Nose
+                ctx.lineTo(4, 3);    // Mid
+                ctx.lineTo(-10, 3);  // Rear
+                ctx.lineTo(-12, 0);  // Exhaust
+                ctx.lineTo(-10, -3);
+                ctx.lineTo(4, -3);
+                ctx.closePath();
+                ctx.fill();
+
+                // Micro wings
+                ctx.beginPath();
+                ctx.moveTo(0, 3);
+                ctx.lineTo(-6, 9);
+                ctx.lineTo(-10, 9);
+                ctx.lineTo(-8, 3);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(0, -3);
+                ctx.lineTo(-6, -9);
+                ctx.lineTo(-10, -9);
+                ctx.lineTo(-8, -3);
+                ctx.closePath();
+                ctx.fill();
+
+                // Cockpit dot
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(6, 0, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+
+            } else if (this.type === 'sniper') {
+                // Long-Range Rail Jet - needle-nosed precision fighter
+                const sniperGrad = ctx.createLinearGradient(20, 0, -20, 0);
+                sniperGrad.addColorStop(0, '#ffffff');
+                sniperGrad.addColorStop(0.4, this.color);
+                sniperGrad.addColorStop(1, '#003344');
+                ctx.fillStyle = sniperGrad;
+
+                // Ultra-long fuselage
+                ctx.beginPath();
+                ctx.moveTo(30, 0);       // Nose
+                ctx.lineTo(10, 3);
+                ctx.lineTo(-22, 3);
+                ctx.lineTo(-26, 0);
+                ctx.lineTo(-22, -3);
+                ctx.lineTo(10, -3);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Small rear delta wings
+                ctx.beginPath();
+                ctx.moveTo(-8, 3);
+                ctx.lineTo(-18, 14);
+                ctx.lineTo(-22, 14);
+                ctx.lineTo(-16, 3);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(-8, -3);
+                ctx.lineTo(-18, -14);
+                ctx.lineTo(-22, -14);
+                ctx.lineTo(-16, -3);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Sight reticle
+                ctx.strokeStyle = 'rgba(100, 200, 255, 0.8)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(20, 0, 3, 0, Math.PI * 2);
+                ctx.stroke();
+
+            } else if (this.type === 'splitter') {
+                // Split-wing Fighter - delta wing with crack pattern
+                const splitGrad = ctx.createRadialGradient(0, 0, 3, 0, 0, 18);
+                splitGrad.addColorStop(0, '#ffffff');
+                splitGrad.addColorStop(0.5, this.color);
+                splitGrad.addColorStop(1, '#220044');
+                ctx.fillStyle = splitGrad;
+
+                // Fuselage
+                ctx.beginPath();
+                ctx.moveTo(22, 0);
+                ctx.lineTo(6, 4);
+                ctx.lineTo(-14, 4);
+                ctx.lineTo(-16, 0);
+                ctx.lineTo(-14, -4);
+                ctx.lineTo(6, -4);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Delta Wings
+                ctx.beginPath();
+                ctx.moveTo(4, 4);
+                ctx.lineTo(-10, 18);
+                ctx.lineTo(-16, 18);
+                ctx.lineTo(-10, 4);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(4, -4);
+                ctx.lineTo(-10, -18);
+                ctx.lineTo(-16, -18);
+                ctx.lineTo(-10, -4);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Fracture lines
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(-2, -6); ctx.lineTo(4, 0); ctx.lineTo(-2, 6);
+                ctx.stroke();
+
+            } else if (this.type === 'phantom') {
+                // Stealth flying wing - nearly invisible
+                ctx.globalAlpha = 0.55;
+                const phantomGrad = ctx.createLinearGradient(-15, -10, 22, 10);
+                phantomGrad.addColorStop(0, 'rgba(80,0,160,0.5)');
+                phantomGrad.addColorStop(0.5, this.color);
+                phantomGrad.addColorStop(1, 'rgba(50,0,100,0.3)');
+                ctx.fillStyle = phantomGrad;
+
+                // Stealth flying-wing silhouette
+                ctx.beginPath();
+                ctx.moveTo(28, 0);
+                ctx.lineTo(2, 15);
+                ctx.lineTo(-16, 18);
+                ctx.lineTo(-14, 8);
+                ctx.lineTo(-20, 0);
+                ctx.lineTo(-14, -8);
+                ctx.lineTo(-16, -18);
+                ctx.lineTo(2, -15);
+                ctx.closePath();
+                ctx.fill();
+
+                // Phase engine shimmer
+                ctx.strokeStyle = 'rgba(200,150,255,0.6)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(-5, -10); ctx.lineTo(-5, 10);
                 ctx.stroke();
 
             } else if (this.type === 'titan') {
-                // Armored colossus - heavy angular design
-                const titanGrad = ctx.createRadialGradient(0, 0, 8, 0, 0, 28);
+                // Armored strategic bomber - massive flying wing
+                const titanGrad = ctx.createRadialGradient(0, 0, 8, 0, 0, 32);
                 titanGrad.addColorStop(0, this.color);
-                titanGrad.addColorStop(1, '#4a2100');
+                titanGrad.addColorStop(1, '#3a1a00');
                 ctx.fillStyle = titanGrad;
 
-                // Main body - large hexagon
+                // Massive delta flying-wing body
                 ctx.beginPath();
-                for (let i = 0; i < 6; i++) {
-                    const angle = (i * Math.PI) / 3 + Math.PI / 6;
-                    const rx = Math.cos(angle) * 26;
-                    const ry = Math.sin(angle) * 26;
-                    if (i === 0) ctx.moveTo(rx, ry);
-                    else ctx.lineTo(rx, ry);
-                }
+                ctx.moveTo(32, 0);
+                ctx.lineTo(5, 28);
+                ctx.lineTo(-20, 32);
+                ctx.lineTo(-24, 16);
+                ctx.lineTo(-24, -16);
+                ctx.lineTo(-20, -32);
+                ctx.lineTo(5, -28);
                 ctx.closePath();
                 ctx.fill();
                 ctx.strokeStyle = '#ffaa00';
-                ctx.lineWidth = 2.5;
+                ctx.lineWidth = 2;
                 ctx.stroke();
 
-                // Heavy armor plating
-                ctx.fillStyle = '#662200';
-                ctx.fillRect(-26, -8, 10, 16);
-                ctx.fillRect(16, -8, 10, 16);
-                // Central reactor glow
-                ctx.fillStyle = 'rgba(255,100,0,0.7)';
+                // Armor plating ribs
+                ctx.strokeStyle = 'rgba(255,150,0,0.4)';
+                ctx.lineWidth = 1.5;
                 ctx.beginPath();
-                ctx.arc(0, 0, 6, 0, Math.PI * 2);
+                ctx.moveTo(5, 20); ctx.lineTo(-15, 24);
+                ctx.moveTo(5, -20); ctx.lineTo(-15, -24);
+                ctx.stroke();
+
+                // Reactor glow
+                ctx.fillStyle = 'rgba(255,100,0,0.8)';
+                ctx.beginPath();
+                ctx.arc(-20, 8, 4, 0, Math.PI * 2);
+                ctx.arc(-20, -8, 4, 0, Math.PI * 2);
                 ctx.fill();
 
-            } else if (this.type === 'wraith') {
-                // Reality-bending specter - ethereal outline
-                ctx.globalAlpha = 0.7;
-                ctx.strokeStyle = this.color;
-                ctx.lineWidth = 2;
-                ctx.fillStyle = 'rgba(100,50,150,0.3)';
+                // Cockpit tower
+                ctx.fillStyle = 'rgba(255, 200, 0, 0.7)';
+                ctx.fillRect(0, -8, 14, 16);
 
-                // Spiky ethereal form
+            } else if (this.type === 'wraith') {
+                // Ethereal Stealth Jet - ghostly fighter
+                ctx.globalAlpha = 0.65;
+                const wraithGrad = ctx.createLinearGradient(-14, 0, 24, 0);
+                wraithGrad.addColorStop(0, 'rgba(80,0,100,0.4)');
+                wraithGrad.addColorStop(0.5, this.color);
+                wraithGrad.addColorStop(1, 'rgba(180,80,220,0.8)');
+                ctx.fillStyle = wraithGrad;
+
+                // Fighter fuselage
                 ctx.beginPath();
-                ctx.moveTo(26, 0);
-                ctx.lineTo(12, 8);
-                ctx.lineTo(6, 14);
-                ctx.lineTo(-8, 10);
+                ctx.moveTo(28, 0);
+                ctx.lineTo(8, 5);
+                ctx.lineTo(-15, 5);
                 ctx.lineTo(-18, 0);
-                ctx.lineTo(-8, -10);
-                ctx.lineTo(6, -14);
-                ctx.lineTo(12, -8);
+                ctx.lineTo(-15, -5);
+                ctx.lineTo(8, -5);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Swept phantom wings
+                ctx.beginPath();
+                ctx.moveTo(5, 5);
+                ctx.lineTo(-10, 16);
+                ctx.lineTo(-18, 14);
+                ctx.lineTo(-10, 5);
                 ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
 
-                // Ghost wisps
+                ctx.beginPath();
+                ctx.moveTo(5, -5);
+                ctx.lineTo(-10, -16);
+                ctx.lineTo(-18, -14);
+                ctx.lineTo(-10, -5);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Ghost emitters
                 ctx.strokeStyle = 'rgba(150,100,200,0.5)';
                 ctx.lineWidth = 1;
                 for (let i = -1; i <= 1; i++) {
                     ctx.beginPath();
-                    ctx.arc(-10 + i * 6, 0, 4, 0, Math.PI * 2);
+                    ctx.arc(-14 + i * 4, 0, 3, 0, Math.PI * 2);
                     ctx.stroke();
                 }
 
             } else if (this.type === 'vortex') {
-                // Spinning void - concentric circles
+                // Spinning Void Bomber - radial turbine fighter
                 ctx.fillStyle = this.color;
+
+                const spinAngle = (Date.now() * 0.003) % (Math.PI * 2);
+                // 4 rotating swept blades
+                for (let i = 0; i < 4; i++) {
+                    const a = spinAngle + i * Math.PI / 2;
+                    ctx.save();
+                    ctx.rotate(a);
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(20, 4);
+                    ctx.lineTo(22, 0);
+                    ctx.lineTo(20, -4);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+                }
+
+                // Center hub
+                ctx.fillStyle = '#000';
                 ctx.beginPath();
-                ctx.arc(0, 0, 20, 0, Math.PI * 2);
+                ctx.arc(0, 0, 6, 0, Math.PI * 2);
                 ctx.fill();
-
-                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillStyle = 'rgba(100, 0, 255, 0.7)';
                 ctx.beginPath();
-                ctx.arc(0, 0, 14, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Spinning rings
-                ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-                ctx.lineWidth = 1;
-                const spinAngle = (Date.now() * 0.005) % (Math.PI * 2);
-                ctx.beginPath();
-                ctx.arc(0, 0, 10, spinAngle, spinAngle + Math.PI / 2);
-                ctx.stroke();
-
-                // Inner void
-                ctx.fillStyle = 'rgba(0,0,0,0.7)';
-                ctx.beginPath();
-                ctx.arc(0, 0, 5, 0, Math.PI * 2);
+                ctx.arc(0, 0, 4, 0, Math.PI * 2);
                 ctx.fill();
 
             } else if (this.type === 'bomber') {
-                // Heavy explosive platform - bulky angular design
-                const bomberGrad = ctx.createLinearGradient(-20, -15, 20, 15);
-                bomberGrad.addColorStop(0, 'rgba(255,200,0,0.9)');
+                // Heavy Carpet Bomber - wide wing platform with payload
+                const bomberGrad = ctx.createLinearGradient(-20, -14, 20, 14);
+                bomberGrad.addColorStop(0, 'rgba(255,180,0,0.9)');
                 bomberGrad.addColorStop(0.5, this.color);
                 bomberGrad.addColorStop(1, '#663300');
                 ctx.fillStyle = bomberGrad;
 
+                // Full flying wing design
                 ctx.beginPath();
-                ctx.moveTo(18, 0);
-                ctx.lineTo(10, 10);
-                ctx.lineTo(-8, 12);
-                ctx.lineTo(-16, 6);
-                ctx.lineTo(-16, -6);
-                ctx.lineTo(-8, -12);
-                ctx.lineTo(10, -10);
+                ctx.moveTo(25, 0);
+                ctx.lineTo(5, 28);
+                ctx.lineTo(-18, 32);
+                ctx.lineTo(-20, 16);
+                ctx.lineTo(-22, 0);
+                ctx.lineTo(-20, -16);
+                ctx.lineTo(-18, -32);
+                ctx.lineTo(5, -28);
                 ctx.closePath();
                 ctx.fill();
+                ctx.stroke();
 
-                // Payload bays
+                // Bomb bays
                 ctx.fillStyle = '#333';
                 ctx.fillRect(-10, -4, 6, 8);
                 ctx.fillRect(-2, -4, 6, 8);
                 ctx.fillRect(6, -4, 6, 8);
 
             } else if (this.type === 'interceptor') {
-                // Swift kinetic hunter - sleek and pointed
-                const interceptGrad = ctx.createLinearGradient(-15, 0, 25, 0);
-                interceptGrad.addColorStop(0, '#003300');
-                interceptGrad.addColorStop(0.5, this.color);
+                // High-speed needle jet - fastest attacker
+                const interceptGrad = ctx.createLinearGradient(-12, 0, 24, 0);
+                interceptGrad.addColorStop(0, '#001100');
+                interceptGrad.addColorStop(0.4, this.color);
                 interceptGrad.addColorStop(1, '#ffffff');
                 ctx.fillStyle = interceptGrad;
 
+                // Hot rod fuselage
                 ctx.beginPath();
-                ctx.moveTo(24, 0);
-                ctx.lineTo(10, 6);
-                ctx.lineTo(-8, 4);
+                ctx.moveTo(26, 0);       // Very sharp nose
+                ctx.lineTo(8, 4);
+                ctx.lineTo(-10, 4);
                 ctx.lineTo(-14, 0);
-                ctx.lineTo(-8, -4);
-                ctx.lineTo(10, -6);
+                ctx.lineTo(-10, -4);
+                ctx.lineTo(8, -4);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Wing-less – uses canards only (speed design)
+                ctx.beginPath();
+                ctx.moveTo(8, 4);
+                ctx.lineTo(2, 12);
+                ctx.lineTo(-4, 12);
+                ctx.lineTo(-2, 4);
                 ctx.closePath();
                 ctx.fill();
 
-                // Speed lines
-                ctx.strokeStyle = 'rgba(0,255,0,0.6)';
-                ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.moveTo(14, 0);
-                ctx.lineTo(20, 0);
+                ctx.moveTo(8, -4);
+                ctx.lineTo(2, -12);
+                ctx.lineTo(-4, -12);
+                ctx.lineTo(-2, -4);
+                ctx.closePath();
+                ctx.fill();
+
+                // Speed afterburner trail
+                ctx.strokeStyle = 'rgba(0,255,100,0.7)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(-14, 0); ctx.lineTo(-22, 0);
                 ctx.stroke();
 
             } else if (this.type === 'decoy') {
-                // Holographic clone - translucent shimmering
-                ctx.globalAlpha = 0.5;
+                // Holographic clone fighter - glowing ghost jet
+                ctx.globalAlpha = 0.45;
+                const decoyGrad = ctx.createLinearGradient(14, 0, -14, 0);
+                decoyGrad.addColorStop(0, '#ffffff');
+                decoyGrad.addColorStop(0.5, this.color);
+                decoyGrad.addColorStop(1, 'rgba(255,255,0,0.2)');
+                ctx.fillStyle = decoyGrad;
                 ctx.strokeStyle = this.color;
-                ctx.lineWidth = 2;
-                ctx.fillStyle = 'rgba(200,200,255,0.3)';
+                ctx.lineWidth = 1.5;
 
+                // Same shape as a scout, but translucent
                 ctx.beginPath();
-                ctx.moveTo(20, 0);
-                ctx.lineTo(8, 7);
-                ctx.lineTo(-10, 5);
+                ctx.moveTo(22, 0);
+                ctx.lineTo(6, 3);
+                ctx.lineTo(-12, 3);
                 ctx.lineTo(-16, 0);
-                ctx.lineTo(-10, -5);
-                ctx.lineTo(8, -7);
+                ctx.lineTo(-12, -3);
+                ctx.lineTo(6, -3);
                 ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
 
-                // Hologram flicker
-                ctx.globalAlpha = 0.8;
-                ctx.strokeStyle = 'rgba(150,150,255,1)';
+                // Wing
+                ctx.beginPath();
+                ctx.moveTo(2, 3);
+                ctx.lineTo(-8, 12);
+                ctx.lineTo(-12, 12);
+                ctx.lineTo(-6, 3);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(2, -3);
+                ctx.lineTo(-8, -12);
+                ctx.lineTo(-12, -12);
+                ctx.lineTo(-6, -3);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Hologram scan line
+                ctx.globalAlpha = 0.7;
+                ctx.strokeStyle = 'rgba(200,200,255,0.9)';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.moveTo(0, -10);
-                ctx.lineTo(0, 10);
+                ctx.moveTo(-4, -8); ctx.lineTo(-4, 8);
                 ctx.stroke();
 
             } else if (this.type === 'launcher') {
-                // Missile platform - boxy with visible weapon pods
-                const launcherGrad = ctx.createLinearGradient(-18, -12, 18, 12);
-                launcherGrad.addColorStop(0, '#220033');
+                // Missile Platform Jet - heavy with external weapon pods
+                const launcherGrad = ctx.createLinearGradient(-18, -10, 18, 10);
+                launcherGrad.addColorStop(0, '#1a0028');
                 launcherGrad.addColorStop(0.5, this.color);
                 launcherGrad.addColorStop(1, '#ff99ff');
                 ctx.fillStyle = launcherGrad;
 
+                // Wide fuselage
                 ctx.beginPath();
-                ctx.moveTo(16, 0);
-                ctx.lineTo(8, 10);
-                ctx.lineTo(-12, 8);
-                ctx.lineTo(-18, 0);
-                ctx.lineTo(-12, -8);
-                ctx.lineTo(8, -10);
+                ctx.moveTo(22, 0);
+                ctx.lineTo(5, 10);
+                ctx.lineTo(-15, 10);
+                ctx.lineTo(-20, 0);
+                ctx.lineTo(-15, -10);
+                ctx.lineTo(5, -10);
                 ctx.closePath();
                 ctx.fill();
+                ctx.stroke();
+
+                // Missile pod wings
+                ctx.beginPath();
+                ctx.moveTo(0, 10);
+                ctx.lineTo(-12, 22);
+                ctx.lineTo(-20, 22);
+                ctx.lineTo(-14, 10);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, -10);
+                ctx.lineTo(-12, -22);
+                ctx.lineTo(-20, -22);
+                ctx.lineTo(-14, -10);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
 
                 // Missile pods
                 ctx.fillStyle = '#ff00ff';
-                ctx.fillRect(-6, 10, 4, 6);
-                ctx.fillRect(2, 10, 4, 6);
-                ctx.fillRect(-6, -16, 4, 6);
-                ctx.fillRect(2, -16, 4, 6);
+                ctx.fillRect(-18, 18, 10, 5);
+                ctx.fillRect(-18, -23, 10, 5);
 
             } else if (this.type === 'shielder') {
-                // Protected barrier - hexagon with shield glow
-                ctx.fillStyle = this.color;
+                // Shielded Gunship - armored fuselage with visible shield dome
+                const shielderGrad = ctx.createLinearGradient(14, 0, -14, 0);
+                shielderGrad.addColorStop(0, '#005588');
+                shielderGrad.addColorStop(0.5, this.color);
+                shielderGrad.addColorStop(1, '#003355');
+                ctx.fillStyle = shielderGrad;
+
+                // Armored body
                 ctx.beginPath();
-                for (let i = 0; i < 6; i++) {
-                    const angle = (i * Math.PI) / 3;
-                    const rx = Math.cos(angle) * 20;
-                    const ry = Math.sin(angle) * 20;
-                    if (i === 0) ctx.moveTo(rx, ry);
-                    else ctx.lineTo(rx, ry);
-                }
+                ctx.moveTo(24, 0);
+                ctx.lineTo(6, 12);
+                ctx.lineTo(-14, 12);
+                ctx.lineTo(-20, 0);
+                ctx.lineTo(-14, -12);
+                ctx.lineTo(6, -12);
                 ctx.closePath();
                 ctx.fill();
-
-                // Shield barrier visualization
-                ctx.strokeStyle = 'rgba(0,255,255,0.8)';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(0, 0, 22, 0, Math.PI * 2);
                 ctx.stroke();
 
-                // Center core
-                ctx.fillStyle = '#00ffff';
+                // Wings
+                ctx.beginPath();
+                ctx.moveTo(6, 12);
+                ctx.lineTo(-8, 24);
+                ctx.lineTo(-16, 20);
+                ctx.lineTo(-10, 12);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(6, -12);
+                ctx.lineTo(-8, -24);
+                ctx.lineTo(-16, -20);
+                ctx.lineTo(-10, -12);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Shield barrier visualization
+                ctx.strokeStyle = 'rgba(0,255,255,0.7)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, 26, 0, Math.PI * 2);
+                ctx.stroke();
+
+            } else if (this.type === 'pulsar') {
+                // Energy Pulse Jet - propelled by wave burst rings
+                const pulsarGrad = ctx.createLinearGradient(14, 0, -14, 0);
+                pulsarGrad.addColorStop(0, '#ffffff');
+                pulsarGrad.addColorStop(0.5, this.color);
+                pulsarGrad.addColorStop(1, '#440044');
+                ctx.fillStyle = pulsarGrad;
+
+                // Compact fuselage
+                ctx.beginPath();
+                ctx.moveTo(20, 0);
+                ctx.lineTo(5, 6);
+                ctx.lineTo(-12, 6);
+                ctx.lineTo(-16, 0);
+                ctx.lineTo(-12, -6);
+                ctx.lineTo(5, -6);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Short swept wings
+                ctx.beginPath();
+                ctx.moveTo(2, 6);
+                ctx.lineTo(-8, 16);
+                ctx.lineTo(-14, 16);
+                ctx.lineTo(-6, 6);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(2, -6);
+                ctx.lineTo(-8, -16);
+                ctx.lineTo(-14, -16);
+                ctx.lineTo(-6, -6);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Pulsing emission rings
+                const pulsePhase = (Date.now() * 0.002) % (Math.PI * 2);
+                ctx.strokeStyle = 'rgba(255,0,255,' + (0.4 + Math.sin(pulsePhase) * 0.3) + ')';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(-8, 0, 8 + Math.sin(pulsePhase) * 2, 0, Math.PI * 2);
+                ctx.stroke();
+
+            } else if (this.type === 'blade') {
+                // Razor-Blade Jet - ultra-thin melee interceptor
+                const bladeGrad = ctx.createLinearGradient(-16, -4, 22, 4);
+                bladeGrad.addColorStop(0, '#220000');
+                bladeGrad.addColorStop(0.5, this.color);
+                bladeGrad.addColorStop(1, '#ffffff');
+                ctx.fillStyle = bladeGrad;
+
+                // Paper-thin razor fuselage
+                ctx.beginPath();
+                ctx.moveTo(28, 0);       // Blade tip
+                ctx.lineTo(5, 3);
+                ctx.lineTo(-16, 3);
+                ctx.lineTo(-20, 0);
+                ctx.lineTo(-16, -3);
+                ctx.lineTo(5, -3);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Slashing fin edges (large angled wings)
+                ctx.beginPath();
+                ctx.moveTo(-2, 3);
+                ctx.lineTo(-12, 14);
+                ctx.lineTo(-20, 10);
+                ctx.lineTo(-12, 3);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(-2, -3);
+                ctx.lineTo(-12, -14);
+                ctx.lineTo(-20, -10);
+                ctx.lineTo(-12, -3);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Edge highlight
+                ctx.strokeStyle = 'rgba(255,180,180,0.8)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(22, -1); ctx.lineTo(-14, -1);
+                ctx.stroke();
+
+            } else if (this.type === 'tractor') {
+                // Gravity Well Gunship - heavy platform with tractor emitters
+                const tractorGrad = ctx.createLinearGradient(-20, 0, 20, 0);
+                tractorGrad.addColorStop(0, '#110022');
+                tractorGrad.addColorStop(0.5, this.color);
+                tractorGrad.addColorStop(1, '#7700ff');
+                ctx.fillStyle = tractorGrad;
+
+                // Wide heavy body
+                ctx.beginPath();
+                ctx.moveTo(28, 0);
+                ctx.lineTo(5, 16);
+                ctx.lineTo(-20, 16);
+                ctx.lineTo(-25, 0);
+                ctx.lineTo(-20, -16);
+                ctx.lineTo(5, -16);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Tractor emitter arrays
+                ctx.strokeStyle = 'rgba(150,0,255,0.5)';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 18 + i * 5, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
+                // Central gravity eye
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(0, 0, 7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'rgba(100, 0, 255, 0.5)';
                 ctx.beginPath();
                 ctx.arc(0, 0, 4, 0, Math.PI * 2);
                 ctx.fill();
 
-            } else if (this.type === 'pulsar') {
-                // Energy wave generator - pulsing sphere with rings
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(0, 0, 18, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Pulsing rings
-                const pulsePhase = (Date.now() * 0.002) % (Math.PI * 2);
-                ctx.strokeStyle = 'rgba(255,0,255,' + (0.5 + Math.sin(pulsePhase) * 0.3) + ')';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(0, 0, 12 + Math.sin(pulsePhase) * 3, 0, Math.PI * 2);
-                ctx.stroke();
-
-                // Central charge core
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath();
-                ctx.arc(0, 0, 3, 0, Math.PI * 2);
-                ctx.fill();
-
-            } else if (this.type === 'blade') {
-                // Melee slashing fighter - thin blade shape
-                const bladeGrad = ctx.createLinearGradient(-18, -8, 20, 8);
-                bladeGrad.addColorStop(0, '#330000');
-                bladeGrad.addColorStop(0.5, this.color);
-                bladeGrad.addColorStop(1, '#ffcccc');
-                ctx.fillStyle = bladeGrad;
-
-                ctx.beginPath();
-                ctx.moveTo(26, 0);
-                ctx.lineTo(8, 5);
-                ctx.lineTo(-14, 2);
-                ctx.lineTo(-20, 0);
-                ctx.lineTo(-14, -2);
-                ctx.lineTo(8, -5);
-                ctx.closePath();
-                ctx.fill();
-
-                // Cutting edge highlight
-                ctx.strokeStyle = 'rgba(255,200,200,0.8)';
-                ctx.lineWidth = 1.5;
-                ctx.beginPath();
-                ctx.moveTo(20, -1);
-                ctx.lineTo(-14, -1);
-                ctx.stroke();
-
-            } else if (this.type === 'tractor') {
-                // Gravity puller - heavy rounded form
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(0, 0, 22, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Tractor field visualization
-                ctx.strokeStyle = 'rgba(200,0,255,0.6)';
-                ctx.lineWidth = 1;
-                for (let i = 0; i < 3; i++) {
-                    ctx.beginPath();
-                    ctx.arc(0, 0, 14 + i * 4, 0, Math.PI * 2);
-                    ctx.stroke();
-                }
-
-                // Central gravity well
-                ctx.fillStyle = '#000';
-                ctx.beginPath();
-                ctx.arc(0, 0, 5, 0, Math.PI * 2);
-                ctx.fill();
-
             } else if (this.type === 'mirror') {
-                // Reflective angular design - geometric pattern
-                ctx.fillStyle = this.color;
+                // Reflective Interceptor - angled mirror-panel jet
+                const mirrorGrad = ctx.createLinearGradient(-15, -10, 15, 10);
+                mirrorGrad.addColorStop(0, '#555577');
+                mirrorGrad.addColorStop(0.5, this.color);
+                mirrorGrad.addColorStop(1, '#aaaaee');
+                ctx.fillStyle = mirrorGrad;
+
+                // Flat edgy fuselage
                 ctx.beginPath();
-                ctx.moveTo(20, 0);
-                ctx.lineTo(8, 8);
-                ctx.lineTo(-10, 10);
-                ctx.lineTo(-16, 0);
-                ctx.lineTo(-10, -10);
-                ctx.lineTo(8, -8);
+                ctx.moveTo(22, 0);
+                ctx.lineTo(5, 10);
+                ctx.lineTo(-15, 10);
+                ctx.lineTo(-18, 0);
+                ctx.lineTo(-15, -10);
+                ctx.lineTo(5, -10);
                 ctx.closePath();
                 ctx.fill();
+                ctx.stroke();
 
-                // Reflective panels
-                ctx.strokeStyle = 'rgba(0,255,255,0.8)';
+                // Wings
+                ctx.beginPath();
+                ctx.moveTo(2, 10);
+                ctx.lineTo(-8, 20);
+                ctx.lineTo(-18, 18);
+                ctx.lineTo(-10, 10);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(2, -10);
+                ctx.lineTo(-8, -20);
+                ctx.lineTo(-18, -18);
+                ctx.lineTo(-10, -10);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Reflective panels - cross diagonal lines
+                ctx.strokeStyle = 'rgba(150,200,255,0.9)';
                 ctx.lineWidth = 1.5;
                 ctx.beginPath();
-                ctx.moveTo(10, -8);
-                ctx.lineTo(-10, 8);
+                ctx.moveTo(10, -8); ctx.lineTo(-10, 8);
+                ctx.moveTo(10, 8); ctx.lineTo(-10, -8);
                 ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(10, 8);
-                ctx.lineTo(-10, -8);
-                ctx.stroke();
-
-                // Central mirror panel
-                ctx.fillStyle = 'rgba(100,255,255,0.5)';
-                ctx.fillRect(-4, -4, 8, 8);
 
             } else if (this.type === 'swarmer') {
-                // Medium swarm fighter - compact and agile
-                const swarmerGrad = ctx.createLinearGradient(-12, -8, 18, 8);
+                // Medium Swarmer - compact multi-role fighter
+                const swarmerGrad = ctx.createLinearGradient(-10, -6, 18, 6);
                 swarmerGrad.addColorStop(0, '#664400');
                 swarmerGrad.addColorStop(0.5, this.color);
                 swarmerGrad.addColorStop(1, '#ffdd99');
                 ctx.fillStyle = swarmerGrad;
 
+                // Compact fighter fuselage
                 ctx.beginPath();
-                ctx.moveTo(18, 0);
-                ctx.lineTo(8, 6);
-                ctx.lineTo(-8, 4);
+                ctx.moveTo(20, 0);
+                ctx.lineTo(5, 5);
+                ctx.lineTo(-10, 5);
                 ctx.lineTo(-14, 0);
-                ctx.lineTo(-8, -4);
-                ctx.lineTo(8, -6);
+                ctx.lineTo(-10, -5);
+                ctx.lineTo(5, -5);
                 ctx.closePath();
                 ctx.fill();
+                ctx.stroke();
 
-                // Coordinated marker
+                // Compact wings
+                ctx.beginPath();
+                ctx.moveTo(3, 5);
+                ctx.lineTo(-5, 14);
+                ctx.lineTo(-12, 14);
+                ctx.lineTo(-6, 5);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(3, -5);
+                ctx.lineTo(-5, -14);
+                ctx.lineTo(-12, -14);
+                ctx.lineTo(-6, -5);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Targeting marker
                 ctx.fillStyle = '#ffff00';
                 ctx.beginPath();
                 ctx.arc(8, 0, 2, 0, Math.PI * 2);

@@ -1,23 +1,26 @@
-import { Projectile } from './projectile.js';
-import { Explosion } from './particle.js';
+import { Projectile } from './projectile.js?v=4';
+import { Explosion } from './particle.js?v=4';
 
 export class Boss {
-    constructor(game, level, side = 'top') {
+    constructor(game, level, side = 'top', modelIndex = null) {
         this.game = game;
         this.level = level;
         this.side = side;
         this.type = 'boss';
         this.markedForDeletion = false;
 
+        // Randomize model if not provided
+        this.modelIndex = modelIndex !== null ? modelIndex : Math.floor(Math.random() * 5);
+
         // Stats scale with level
         const levelScale = Math.max(1, level / 5);
-        this.maxHealth = Math.floor(150 * levelScale); // Reduced from 500
+        this.maxHealth = Math.floor(180 * levelScale); // Slightly increased
         this.health = this.maxHealth;
-        this.points = 1500 * levelScale; // Reduced from 5000
-        this.coinReward = Math.floor(200 * levelScale); // Reduced from 500
+        this.points = 1500 * levelScale;
+        this.coinReward = Math.floor(250 * levelScale);
 
         // Initial Position logic
-        this.targetPoint = { x: game.width / 2, y: 150 }; // Default fight pos
+        this.targetPoint = { x: game.width / 2, y: 150 };
 
         if (this.side === 'left') {
             this.x = -200;
@@ -33,7 +36,7 @@ export class Boss {
             this.targetPoint = { x: game.width / 2, y: 150 };
         }
 
-        this.radius = 65;
+        this.radius = 70;
         this.color = level % 10 === 0 ? '#ff00ff' : '#ff3300';
 
         this.angle = Math.PI / 2;
@@ -48,7 +51,7 @@ export class Boss {
         this.currentAttack = null;
 
         // Attack Patterns
-        this.patterns = ['spiral', 'spread', 'rapid'];
+        this.patterns = ['spiral', 'spread', 'rapid', 'missiles'];
         if (this.level >= 10) this.patterns.push('dash');
 
         // Visuals
@@ -73,7 +76,8 @@ export class Boss {
         if (this.level >= 20 && !this.hasFiredSingleMissile && this.state !== 'entering' && this.game.player) {
             const dx = this.game.player.x - this.x;
             const dy = this.game.player.y - this.y;
-            const missileAngle = Math.atan2(dy, dx);
+            const accuracyOffset = (Math.random() - 0.5) * 0.15; // Slight inaccuracy
+            const missileAngle = Math.atan2(dy, dx) + accuracyOffset;
             this.fireProjectile(this.x, this.y, missileAngle, 'missile');
             this.hasFiredSingleMissile = true;
         }
@@ -140,6 +144,7 @@ export class Boss {
             case 'spiral': this.spiralShoot(deltaTime); break;
             case 'spread': this.spreadShoot(deltaTime); break;
             case 'rapid': this.rapidShoot(deltaTime); break;
+            case 'missiles': this.missileBarrage(deltaTime); break;
             case 'dash':
                 this.state = 'dashing';
                 this.prepareDash();
@@ -266,16 +271,43 @@ export class Boss {
         }
     }
 
+    missileBarrage(deltaTime) {
+        const fireRate = 0.5;
+        const total = Math.floor(this.stateTimer / fireRate);
+        const prev = Math.floor((this.stateTimer - deltaTime) / fireRate);
+
+        if (total > prev && total < 5) { // Fire a burst of 4 missiles
+            const count = this.phase === 2 ? 3 : 2;
+            const spread = 0.6;
+            for (let i = 0; i < count; i++) {
+                const accuracyOffset = (Math.random() - 0.5) * 0.2; // Add random spread for lower accuracy
+                const angle = this.angle - spread / 2 + (spread / (count - 1)) * i + accuracyOffset;
+                this.fireProjectile(this.x, this.y, angle, 'boss_missile');
+            }
+        }
+    }
+
     fireProjectile(x, y, angle, type) {
-        const p = new Projectile(this.game, x, y, angle, type, 'enemy');
+        const p = new Projectile(this.game, x, y, angle, type === 'boss_missile' ? 'missile' : type, 'enemy');
         p.source = 'boss';
-        if (type === 'missile') {
-            // Drastically reduced missile stats for fairness
+
+        if (type === 'boss_missile') {
+            // Updated: Reduced damage, non-homing
+            p.speed = 250;
+            p.maxSpeed = 600;
+            p.acceleration = 300;
+            p.damage = this.level >= 15 ? 2.5 : 1.8; // Reduced from 4/3
+            p.lifetime = 5.0;
+            p.isHoming = false; // Explicitly non-homing
+            p.color = '#ff0000';
+            p.radius = 12;
+        } else if (type === 'missile') {
             p.speed = 160;
             p.maxSpeed = 420;
             p.acceleration = 180;
-            p.damage = this.level >= 20 ? 2 : 1;
+            p.damage = this.level >= 20 ? 1.5 : 1.0; // Reduced from 2/1
             p.lifetime = 4.0;
+            p.isHoming = false; // Explicitly non-homing
         } else {
             p.speed = 350 + (this.level * 5);
         }
@@ -328,9 +360,14 @@ export class Boss {
         // Add tilt effect
         ctx.rotate(this.tilt);
 
-        const levelGroup = Math.floor(this.level / 5);
-        if (levelGroup % 2 === 1) this.drawModelHeavy(ctx);
-        else this.drawModelSleek(ctx);
+        switch (this.modelIndex) {
+            case 0: this.drawModelSleek(ctx); break;
+            case 1: this.drawModelHeavy(ctx); break;
+            case 2: this.drawModelTriangle(ctx); break;
+            case 3: this.drawModelStealth(ctx); break;
+            case 4: this.drawModelCarrier(ctx); break;
+            default: this.drawModelSleek(ctx);
+        }
 
         // Cockpit
         ctx.fillStyle = '#000';
@@ -361,29 +398,63 @@ export class Boss {
         grad.addColorStop(1, '#fff');
         ctx.fillStyle = grad;
 
-        // Main Fuselage
+        // Long sharp swept fuselage
         ctx.beginPath();
-        ctx.moveTo(90, 0);   // Nose
-        ctx.lineTo(40, 30);  // Cockpit area
-        ctx.lineTo(-20, 40); // Wing joint
-        ctx.lineTo(-10, 110); // Wing tip
-        ctx.lineTo(-40, 40);  // Back wing
-        ctx.lineTo(-100, 30); // Tail fin
-        ctx.lineTo(-80, 0);   // Rear
-        ctx.lineTo(-100, -30);
-        ctx.lineTo(-40, -40);
-        ctx.lineTo(-10, -110);
-        ctx.lineTo(-20, -40);
-        ctx.lineTo(40, -30);
+        ctx.moveTo(100, 0);  // Nose tip
+        ctx.lineTo(55, 12);  // Forward fuselage
+        ctx.lineTo(-40, 16); // Rear body
+        ctx.lineTo(-80, 8);  // Engine nacelle
+        ctx.lineTo(-80, -8);
+        ctx.lineTo(-40, -16);
+        ctx.lineTo(55, -12);
         ctx.closePath();
         ctx.fill();
+        ctx.stroke();
+
+        // Main swept-delta wings
+        ctx.beginPath();
+        ctx.moveTo(30, 14);
+        ctx.lineTo(-40, 90);  // Leading tip
+        ctx.lineTo(-80, 90);  // Rear tip
+        ctx.lineTo(-60, 14);  // Wing root rear
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(30, -14);
+        ctx.lineTo(-40, -90);
+        ctx.lineTo(-80, -90);
+        ctx.lineTo(-60, -14);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Horizontal stabilizers
+        ctx.beginPath();
+        ctx.moveTo(-50, 14);
+        ctx.lineTo(-70, 38);
+        ctx.lineTo(-80, 38);
+        ctx.lineTo(-65, 14);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(-50, -14);
+        ctx.lineTo(-70, -38);
+        ctx.lineTo(-80, -38);
+        ctx.lineTo(-65, -14);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
 
         // Panel Lines
         ctx.strokeStyle = 'rgba(255,255,255,0.2)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(20, 25); ctx.lineTo(20, -25);
-        ctx.moveTo(-20, 35); ctx.lineTo(-20, -35);
+        ctx.moveTo(20, 12); ctx.lineTo(20, -12);
+        ctx.moveTo(-20, 15); ctx.lineTo(-20, -15);
         ctx.stroke();
     }
 
@@ -394,43 +465,183 @@ export class Boss {
         grad.addColorStop(1, '#ffffff');
         ctx.fillStyle = grad;
 
-        // Crowned siege prow
+        // Massive fortress fuselage (wide body)
         ctx.beginPath();
-        ctx.moveTo(110, 0);
-        ctx.lineTo(50, 30);
-        ctx.lineTo(20, 80);
-        ctx.lineTo(-10, 50);
-        ctx.lineTo(-70, 60);
-        ctx.lineTo(-130, 20);
-        ctx.lineTo(-100, 0);
-        ctx.lineTo(-130, -20);
-        ctx.lineTo(-70, -60);
-        ctx.lineTo(-10, -50);
-        ctx.lineTo(20, -80);
-        ctx.lineTo(50, -30);
+        ctx.moveTo(115, 0);
+        ctx.lineTo(70, 25);
+        ctx.lineTo(-50, 30);
+        ctx.lineTo(-120, 18);
+        ctx.lineTo(-120, -18);
+        ctx.lineTo(-50, -30);
+        ctx.lineTo(70, -25);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Weapon wings (four outer)
+        ctx.beginPath();
+        ctx.moveTo(30, 26);
+        ctx.lineTo(-20, 80);
+        ctx.lineTo(-60, 80);
+        ctx.lineTo(-30, 26);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(30, -26);
+        ctx.lineTo(-20, -80);
+        ctx.lineTo(-60, -80);
+        ctx.lineTo(-30, -26);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Inner wings (closer to body)
+        ctx.beginPath();
+        ctx.moveTo(60, 24);
+        ctx.lineTo(20, 55);
+        ctx.lineTo(-20, 55);
+        ctx.lineTo(0, 24);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(60, -24);
+        ctx.lineTo(20, -55);
+        ctx.lineTo(-20, -55);
+        ctx.lineTo(0, -24);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Quad engine exhausts
+        ctx.fillStyle = '#ff3300';
+        ctx.beginPath();
+        ctx.arc(-118, 10, 5, 0, Math.PI * 2);
+        ctx.arc(-118, -10, 5, 0, Math.PI * 2);
+        ctx.arc(-58, 28, 4, 0, Math.PI * 2);
+        ctx.arc(-58, -28, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Command fortress armor plates
+        ctx.fillStyle = 'rgba(255,255,255,0.10)';
+        ctx.fillRect(-40, -22, 70, 44);
+        ctx.strokeStyle = 'rgba(255,255,255,0.30)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-40, -22, 70, 44);
+
+        // Side fins / stabilizers
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.beginPath();
+        ctx.moveTo(-60, 28);
+        ctx.lineTo(-110, 70);
+        ctx.lineTo(-80, 55);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-60, -28);
+        ctx.lineTo(-110, -70);
+        ctx.lineTo(-80, -55);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    drawModelTriangle(ctx) {
+        const grad = ctx.createLinearGradient(-100, 0, 100, 0);
+        grad.addColorStop(0, '#111');
+        grad.addColorStop(0.5, this.color);
+        grad.addColorStop(1, '#eee');
+        ctx.fillStyle = grad;
+
+        // Sharp Triangle Body
+        ctx.beginPath();
+        ctx.moveTo(110, 0);     // Nose
+        ctx.lineTo(-80, 100);   // Left rear
+        ctx.lineTo(-60, 0);     // Engine notch
+        ctx.lineTo(-80, -100);  // Right rear
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Top fin
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.beginPath();
+        ctx.moveTo(40, 0);
+        ctx.lineTo(-40, 0);
+        ctx.lineTo(-60, -25);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Glowing panels
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = 0.5;
+        ctx.fillRect(-20, 20, 15, 30);
+        ctx.fillRect(-20, -50, 15, 30);
+        ctx.globalAlpha = 1.0;
+    }
+
+    drawModelStealth(ctx) {
+        ctx.fillStyle = '#0a0a0a'; // Ultra dark
+
+        // Stealth Diamond Body
+        ctx.beginPath();
+        ctx.moveTo(120, 0);    // Nose
+        ctx.lineTo(20, 45);    // Left mid
+        ctx.lineTo(-90, 110);  // Left wing tip (forward swept-ish)
+        ctx.lineTo(-60, 30);   // Left rear
+        ctx.lineTo(-100, 0);   // Tail
+        ctx.lineTo(-60, -30);  // Right rear
+        ctx.lineTo(-90, -110); // Right wing tip
+        ctx.lineTo(20, -45);   // Right mid
         ctx.closePath();
         ctx.fill();
 
-        // Spine armor
-        ctx.fillStyle = 'rgba(255,255,255,0.12)';
-        ctx.fillRect(-30, -35, 60, 70);
-        ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+        ctx.strokeStyle = this.color;
         ctx.lineWidth = 3;
-        ctx.strokeRect(-30, -35, 60, 70);
+        ctx.stroke();
 
-        // Side fins
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        // Internal glowing patterns (hex lines)
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(-20, 40);
-        ctx.lineTo(-60, 90);
-        ctx.lineTo(-10, 70);
+        ctx.moveTo(40, 20); ctx.lineTo(-40, 20);
+        ctx.moveTo(40, -20); ctx.lineTo(-40, -20);
+        ctx.stroke();
+    }
+
+    drawModelCarrier(ctx) {
+        const grad = ctx.createLinearGradient(-130, 0, 100, 0);
+        grad.addColorStop(0, '#222');
+        grad.addColorStop(0.5, this.color);
+        grad.addColorStop(1, '#999');
+        ctx.fillStyle = grad;
+
+        // Wide Blocky Body
+        ctx.beginPath();
+        ctx.moveTo(90, 35);
+        ctx.lineTo(90, -35);
+        ctx.lineTo(-130, -55);
+        ctx.lineTo(-130, 55);
         ctx.closePath();
         ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(-20, -40);
-        ctx.lineTo(-60, -90);
-        ctx.lineTo(-10, -70);
-        ctx.closePath();
-        ctx.fill();
+        ctx.stroke();
+
+        // Outrigger engines
+        ctx.fillRect(-100, 55, 60, 45);
+        ctx.fillRect(-100, -100, 60, 45);
+        ctx.strokeRect(-100, 55, 60, 45);
+        ctx.strokeRect(-100, -100, 60, 45);
+
+        // Landing bays / Hangar lights
+        ctx.fillStyle = '#00f3ff';
+        ctx.globalAlpha = 0.6;
+        for (let i = 0; i < 3; i++) {
+            ctx.fillRect(-80 + i * 25, 65, 10, 25);
+            ctx.fillRect(-80 + i * 25, -90, 10, 25);
+        }
+        ctx.globalAlpha = 1.0;
     }
 }

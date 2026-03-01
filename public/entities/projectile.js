@@ -24,7 +24,7 @@ export class Projectile {
             this.target = null;
         }
 
-        this.isHoming = false; // Can be overridden after creation
+        this.isHoming = (this.type === 'missile'); // Default homing for missiles
         this.piercing = false;
         this.explosive = false;
     }
@@ -43,7 +43,7 @@ export class Projectile {
             this.speed += this.acceleration * deltaTime;
         }
 
-        if (this.type === 'missile' || this.isHoming) {
+        if (this.isHoming) {
             // Homing Logic
             if (!this.target || this.target.markedForDeletion) {
                 this.findTarget();

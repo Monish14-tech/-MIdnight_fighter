@@ -51,7 +51,15 @@ const liveRooms = new Map();
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.js') || filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        }
+    }
+}));
 
 // Connect to MongoDB
 async function connectDB() {
@@ -63,10 +71,10 @@ async function connectDB() {
             serverSelectionTimeoutMS: 10000,
             socketTimeoutMS: 45000,
         });
-        
+
         leaderboardDb = leaderboardClient.db(DB_NAME);
         leaderboardCollection = leaderboardDb.collection(COLLECTION_NAME);
-        
+
         // Create index on score for efficient sorting
         await leaderboardCollection.createIndex({ score: -1 });
         console.log('✅ Connected to Leaderboard Database successfully!');
@@ -78,7 +86,7 @@ async function connectDB() {
             serverSelectionTimeoutMS: 10000,
             socketTimeoutMS: 45000,
         });
-        
+
         roomsDb = roomsClient.db(DB_NAME);
         roomsCollection = roomsDb.collection(ROOMS_COLLECTION_NAME);
 
@@ -86,7 +94,7 @@ async function connectDB() {
         await roomsCollection.createIndex({ roomId: 1 }, { unique: true });
         await roomsCollection.createIndex({ expiresAt: 1 });
         console.log('✅ Connected to Rooms Database successfully!');
-        
+
         console.log('✅ Connected to all MongoDB Atlas databases!');
     } catch (error) {
         console.error('❌ MongoDB Connection Error:', error);
@@ -105,7 +113,7 @@ app.get('/api/leaderboard', async (req, res) => {
             .sort({ score: -1 })
             .limit(limit)
             .toArray();
-        
+
         res.json({
             success: true,
             data: leaderboard
@@ -123,7 +131,7 @@ app.get('/api/leaderboard', async (req, res) => {
 app.post('/api/score', async (req, res) => {
     try {
         const { playerName, score, level, shipType, teamMembers } = req.body;
-        
+
         // Validation
         const isTeam = Array.isArray(teamMembers) && teamMembers.length === 2;
         const normalizedTeam = isTeam ? teamMembers.map((name) => String(name).trim()).filter(Boolean) : null;
@@ -136,12 +144,12 @@ app.post('/api/score', async (req, res) => {
                 error: 'Player name and score are required'
             });
         }
-        
+
         // Check if player exists
         const existingPlayer = teamKey
             ? await leaderboardCollection.findOne({ teamKey })
             : await leaderboardCollection.findOne({ playerName: displayName });
-        
+
         if (existingPlayer) {
             // Update only if new score is higher
             if (score > existingPlayer.score) {
@@ -158,10 +166,10 @@ app.post('/api/score', async (req, res) => {
                         }
                     }
                 );
-                
+
                 // Get player's new rank
                 const rank = await leaderboardCollection.countDocuments({ score: { $gt: score } }) + 1;
-                
+
                 res.json({
                     success: true,
                     message: 'New high score!',
@@ -189,9 +197,9 @@ app.post('/api/score', async (req, res) => {
                 createdAt: new Date(),
                 updatedAt: new Date()
             });
-            
+
             const rank = await leaderboardCollection.countDocuments({ score: { $gt: score } }) + 1;
-            
+
             res.json({
                 success: true,
                 message: 'Score submitted successfully!',
@@ -208,15 +216,8 @@ app.post('/api/score', async (req, res) => {
     }
 });
 
-// ⏳ Coming Soon: Co-op Rooms (Collaborate Feature) Middleware
-app.use('/api/rooms', (req, res) => {
-    return res.status(503).json({
-        success: false,
-        coming_soon: true,
-        message: '🎮 Co-op Collaborate Feature Coming Soon!',
-        error: 'This feature is under development and will be available soon.'
-    });
-});
+// Co-op Rooms (Collaborate Feature) 
+// Routes for creation and joining are below
 
 // POST: Create a co-op room
 app.post('/api/rooms/create', async (req, res) => {
@@ -559,7 +560,7 @@ function setupRealtimeServer(httpServer) {
 
         socket.on('join_room', async ({ roomId, playerName, shipType }) => {
             console.log(`[Socket.IO] Player "${playerName}" joining room "${roomId}"`);
-            
+
             if (!roomId || !playerName) {
                 console.error('[Socket.IO] Missing roomId or playerName');
                 socket.emit('error', { error: 'roomId and playerName are required' });
@@ -807,16 +808,16 @@ app.get('/api/player/:playerName', async (req, res) => {
     try {
         const { playerName } = req.params;
         const player = await leaderboardCollection.findOne({ playerName });
-        
+
         if (!player) {
             return res.status(404).json({
                 success: false,
                 error: 'Player not found'
             });
         }
-        
+
         const rank = await leaderboardCollection.countDocuments({ score: { $gt: player.score } }) + 1;
-        
+
         res.json({
             success: true,
             data: {

@@ -1,12 +1,12 @@
-import { InputHandler } from './input.js';
-import { Player } from './entities/player.js';
-import { Enemy } from './entities/enemy.js';
-import { Explosion } from './entities/particle.js';
-import { AudioController } from './audio.js';
-import { ScreenShake, Nebula, CosmicDust, Planet, Asteroid } from './utils.js';
-import { PowerUp } from './entities/powerup.js';
-import { LeaderboardManager } from './leaderboard.js';
-import { PollingNetplay } from './polling-netplay.js';
+import { InputHandler } from './input.js?v=4';
+import { Player } from './entities/player.js?v=4';
+import { Enemy } from './entities/enemy.js?v=4';
+import { Explosion } from './entities/particle.js?v=4';
+import { AudioController } from './audio.js?v=4';
+import { ScreenShake, Nebula, CosmicDust, Planet, Asteroid } from './utils.js?v=4';
+import { PowerUp } from './entities/powerup.js?v=4';
+import { LeaderboardManager } from './leaderboard.js?v=4';
+import { SocketIONetplay } from './socketio-netplay.js?v=4';
 
 class AssetLoader {
     constructor() {
@@ -93,7 +93,7 @@ export class Game {
         // Persistence
         this.highScore = parseInt(localStorage.getItem('midnight_highscore')) || 0;
         this.coins = parseInt(localStorage.getItem('midnight_coins')) || 0;
-        
+
         // Testing toggles
         const UNLOCK_ALL_SHIPS_FOR_TESTING = false;
         const RESET_SHIPS = true;
@@ -119,7 +119,7 @@ export class Game {
             this.ownedShips = JSON.parse(localStorage.getItem('midnight_owned_ships')) || ['default'];
             this.selectedShip = localStorage.getItem('midnight_selected_ship') || 'default';
         }
-        
+
         // Ensure guardian is not equipped by default
         if (this.selectedShip === 'guardian') {
             this.selectedShip = 'default';
@@ -241,7 +241,7 @@ export class Game {
         };
         this.remoteShipType = this.selectedShip;
         this.localShipType = this.selectedShip;
-        this.netplay = new PollingNetplay();
+        this.netplay = new SocketIONetplay();
         this.netSyncTimer = 0;
 
         // Fullscreen management
@@ -257,7 +257,7 @@ export class Game {
     }
 
     initAtmosphere() {
-        import('./utils.js').then(m => {
+        import('./utils.js?v=4').then(m => {
             for (let i = 0; i < 5; i++) this.nebulas.push(new m.Nebula(this));
             for (let i = 0; i < 30; i++) this.cosmicDust.push(new m.CosmicDust(this));
         });
@@ -457,7 +457,7 @@ export class Game {
 
         // Keyboard Pause
         window.addEventListener('keydown', (e) => {
-            if ((e.key === 'Escape' || e.key.toLowerCase() === 'p') && this.isRunning && !this.gameOver) {
+            if (e.key && (e.key === 'Escape' || e.key.toLowerCase() === 'p') && this.isRunning && !this.gameOver) {
                 this.togglePause();
             }
         });
@@ -477,6 +477,37 @@ export class Game {
         this.netplay.on('closed', () => {
             if (this.onlineCoop) {
                 this.leaveCollaborateRoom(true, true);
+            }
+        });
+
+        // Remote Spawn Listeners
+        this.netplay.on('spawn_enemy', (data) => {
+            if (this.onlineRole === 'guest') {
+                const enemy = new Enemy(this, data.type);
+                enemy.x = data.x;
+                enemy.y = data.y;
+                enemy.remoteId = data.id;
+                this.enemies.push(enemy);
+            }
+        });
+
+        this.netplay.on('spawn_boss', (data) => {
+            if (this.onlineRole === 'guest') {
+                import('./entities/boss.js?v=4').then(m => {
+                    this.boss = new m.Boss(this, data.level, data.side, data.modelIndex);
+                    const bossHud = document.getElementById('boss-hud');
+                    if (bossHud) bossHud.classList.add('active');
+                    const bossName = document.getElementById('boss-name');
+                    if (bossName) bossName.innerText = data.name;
+                });
+            }
+        });
+
+        this.netplay.on('spawn_powerup', (data) => {
+            if (this.onlineRole === 'guest') {
+                const pu = new PowerUp(this, data.type, data.x, data.y);
+                pu.remoteId = data.id;
+                this.powerups.push(pu);
             }
         });
     }
@@ -661,27 +692,47 @@ export class Game {
     }
 
     spawnBoss() {
-        // Mark first boss appearance
         if (!this.firstBossAppeared) {
             this.firstBossAppeared = true;
         }
         this.lastBossLevel = this.currentLevel;
-        
-        // Clear all enemies when boss appears
+
         this.enemies.forEach(enemy => {
             enemy.markedForDeletion = true;
             this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
         });
         this.enemies = [];
 
-        import('./entities/boss.js').then(m => {
+        import('./entities/boss.js?v=4').then(m => {
             const sides = ['top', 'left', 'right'];
             const side = sides[Math.floor(Math.random() * sides.length)];
-            this.boss = new m.Boss(this, this.currentLevel, side);
+            const modelIndex = Math.floor(Math.random() * 5);
+            this.boss = new m.Boss(this, this.currentLevel, side, modelIndex);
+
             const bossHud = document.getElementById('boss-hud');
             if (bossHud) bossHud.classList.add('active');
+
+            const names = [
+                'ANOMALY: V-STRIKE',
+                'ANOMALY: THE FORTRESS',
+                'ANOMALY: THE APEX',
+                'ANOMALY: SHADOW REAPER',
+                'ANOMALY: VOID CARRIER'
+            ];
+            const name = (this.currentLevel % 10 === 0 ? 'ELITE ' : '') + names[modelIndex];
+
             const bossName = document.getElementById('boss-name');
-            if (bossName) bossName.innerText = this.currentLevel % 10 === 0 ? 'ELITE ANOMALY: THE FORTRESS' : 'ANOMALY DETECTED: V-STRIKE';
+            if (bossName) bossName.innerText = name;
+
+            // Broadcast boss spawn if host
+            if (this.onlineCoop && this.onlineRole === 'host') {
+                this.netplay.emit('spawn_boss', {
+                    level: this.currentLevel,
+                    side: side,
+                    modelIndex: modelIndex,
+                    name: name
+                });
+            }
         });
     }
 
@@ -828,13 +879,13 @@ export class Game {
         this.startScreen.classList.remove('active');
         document.getElementById('leaderboard-screen').classList.add('active');
         this.leaderboard.displayLeaderboard();
-        
+
         // Set player name input value if exists
         const input = document.getElementById('player-name-input');
         if (input && this.leaderboard.getPlayerName()) {
             input.value = this.leaderboard.getPlayerName();
         }
-        
+
         // Hide SET NAME button if player already has a name
         const setNameBtn = document.getElementById('set-name-btn');
         const playerName = this.leaderboard.getPlayerName();
@@ -847,13 +898,13 @@ export class Game {
         this.gameOverScreen.classList.remove('active');
         document.getElementById('leaderboard-screen').classList.add('active');
         this.leaderboard.displayLeaderboard();
-        
+
         // Set player name input value if exists
         const input = document.getElementById('player-name-input');
         if (input && this.leaderboard.getPlayerName()) {
             input.value = this.leaderboard.getPlayerName();
         }
-        
+
         // Hide SET NAME button if player already has a name
         const setNameBtn = document.getElementById('set-name-btn');
         const playerName = this.leaderboard.getPlayerName();
@@ -868,12 +919,6 @@ export class Game {
     }
 
     openCollaborate() {
-        // Coming Soon notification - restrict access
-        alert('🚀 COLLABORATE MODE\n\n⏳ COMING SOON!\n\nMultiplayer co-op functionality is currently under development.\n\nStay tuned for updates!');
-        return;
-        
-        // Original code disabled
-        /*
         this.startScreen.classList.remove('active');
         const screen = document.getElementById('collab-screen');
         if (screen) screen.classList.add('active');
@@ -887,247 +932,20 @@ export class Game {
         const leaveBtn = document.getElementById('collab-leave-btn');
         if (roomDisplay) roomDisplay.classList.add('hidden');
         if (waiting) waiting.classList.add('hidden');
-        if (leaveBtn) leaveBtn.classList.add('hidden');
         if (status) status.innerText = '';
-        */
+        if (leaveBtn) leaveBtn.classList.add('hidden');
+
+        const createBtn = document.getElementById('collab-create-btn');
+        const joinBtn = document.getElementById('collab-join-btn');
+        if (createBtn) createBtn.classList.remove('hidden');
+        if (joinBtn) joinBtn.disabled = false;
     }
 
     closeCollaborate() {
-        const screen = document.getElementById('collab-screen');
-        if (screen) screen.classList.remove('active');
+        document.getElementById('collab-screen').classList.remove('active');
         this.startScreen.classList.add('active');
-        this.stopCollabPolling();
     }
 
-    async createCollaborateRoom() {
-        const status = document.getElementById('collab-status');
-        if (status) status.innerText = '';
-
-        const hostName = this.leaderboard.getPlayerName();
-        if (!hostName) {
-            if (status) status.innerText = 'Set your pilot name first.';
-            return;
-        }
-
-        try {
-            const response = await fetch(`${window.location.origin}/api/rooms/create`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ hostName })
-            });
-
-            const data = await response.json();
-            if (!data.success) {
-                if (status) status.innerText = data.error || 'Failed to create room.';
-                return;
-            }
-
-            this.collabRoomId = data.roomId;
-
-            const roomIdEl = document.getElementById('collab-room-id');
-            const roomDisplay = document.getElementById('collab-room-display');
-            const waiting = document.getElementById('collab-waiting');
-            const leaveBtn = document.getElementById('collab-leave-btn');
-
-            if (roomIdEl) roomIdEl.innerText = data.roomId;
-            if (roomDisplay) roomDisplay.classList.remove('hidden');
-            if (waiting) waiting.classList.remove('hidden');
-            if (leaveBtn) leaveBtn.classList.remove('hidden');
-
-            // Start polling for guest to join
-            this.pollForGuestJoin(data.roomId, hostName);
-        } catch (error) {
-            if (status) status.innerText = 'Failed to create room.';
-        }
-    }
-
-    async joinCollaborateRoom() {
-        const status = document.getElementById('collab-status');
-        if (status) status.innerText = '';
-
-        const playerName = this.leaderboard.getPlayerName();
-        if (!playerName) {
-            if (status) status.innerText = 'Set your pilot name first.';
-            return;
-        }
-
-        const roomInput = document.getElementById('collab-room-input');
-        const roomId = roomInput ? roomInput.value.trim() : '';
-        if (!roomId) {
-            if (status) status.innerText = 'Enter a room ID.';
-            return;
-        }
-
-        try {
-            const response = await fetch(`${window.location.origin}/api/rooms/join?roomId=${encodeURIComponent(roomId)}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ playerName })
-            });
-
-            const data = await response.json();
-            if (!data.success) {
-                console.error('Failed to join room:', data.error);
-                if (status) status.innerText = data.error || 'Failed to join room.';
-                return;
-            }
-
-            // Data contains roomId, hostName, guestName at top level
-            await this.activateCoop(data.roomId, data.hostName, data.guestName, 'guest');
-            this.closeCollaborate();
-            this.startGame();
-        } catch (error) {
-            console.error('Error joining room:', error);
-            if (status) status.innerText = 'Failed to join room. Check room ID.';
-        }
-    }
-
-    pollForGuestJoin(roomId, hostName) {
-        if (this.collabPollTimer) clearInterval(this.collabPollTimer);
-        
-        this.collabPollTimer = setInterval(async () => {
-            try {
-                const response = await fetch(`${window.location.origin}/api/rooms/state?roomId=${encodeURIComponent(roomId)}`);
-                if (!response.ok) return;
-                
-                const data = await response.json();
-                if (!data.success || !data.room) return;
-
-                const room = data.room;
-                if (room.status === 'full' && room.guestName) {
-                    if (this.collabPollTimer) clearInterval(this.collabPollTimer);
-                    await this.activateCoop(room.roomId, hostName, room.guestName, 'host');
-                    this.closeCollaborate();
-                    this.startGame();
-                }
-            } catch (error) {
-                console.warn('[Game] Polling error:', error.message);
-            }
-        }, 1000);
-    }
-
-    stopCollabPolling() {
-        if (this.collabPollTimer) {
-            clearInterval(this.collabPollTimer);
-            this.collabPollTimer = null;
-        }
-    }
-
-    async activateCoop(roomId, hostName, guestName, role = 'host') {
-        this.coopMode = true;
-        this.onlineCoop = true;
-        this.onlineRole = role;
-        this.collabRoomId = roomId;
-        this.collabTeamMembers = [hostName, guestName];
-        this.localShipType = this.selectedShip;
-        this.remoteShipType = this.selectedShip;
-        this.input.setBindings(InputHandler.bindings.coopPlayerOne);
-        this.inputTwo.setEnabled(role === 'host');
-
-        const healthP2 = document.getElementById('health-container-p2');
-        if (healthP2) healthP2.style.display = 'flex';
-
-        try {
-            console.log('[Game] Activating co-op mode...');
-            await this.connectNetplay();
-            console.log('[Game] Co-op mode activated successfully');
-        } catch (error) {
-            console.error('[Game] Failed to activate co-op:', error);
-            alert(`Connection failed: ${error.message}\n\nMake sure the server is running (npm start)`);
-            this.resetCoop();
-            throw error;
-        }
-        this.updatePlayerNameDisplay();
-        this.updatePlayerHudInfo();
-    }
-
-    resetCoop() {
-        this.coopMode = false;
-        this.onlineCoop = false;
-        this.onlineRole = null;
-        this.collabRoomId = null;
-        this.collabTeamMembers = null;
-        this.remotePlayerState = null;
-        this.remoteShipType = this.selectedShip;
-        this.localShipType = this.selectedShip;
-        this.netplay.disconnect();
-        this.input.setBindings(InputHandler.bindings.singlePlayer);
-        this.inputTwo.setEnabled(false);
-
-        const healthP2 = document.getElementById('health-container-p2');
-        if (healthP2) healthP2.style.display = 'none';
-
-        const leaveRoomBtn = document.getElementById('leave-room-btn');
-        if (leaveRoomBtn) leaveRoomBtn.style.display = 'none';
-
-        this.updatePlayerNameDisplay();
-        this.updatePlayerHudInfo();
-    }
-
-    async connectNetplay() {
-        if (!this.collabRoomId) {
-            console.error('No room ID available for connection');
-            throw new Error('No room ID');
-        }
-
-        const playerName = this.leaderboard.getPlayerName();
-        console.log(`[Game] Connecting to room ${this.collabRoomId} as ${playerName}...`);
-        
-        try {
-            const joined = await this.netplay.connect({
-                roomId: this.collabRoomId,
-                playerName,
-                shipType: this.localShipType
-            });
-
-            console.log('[Game] Successfully connected to room');
-
-            const peerRole = this.onlineRole === 'host' ? 'guest' : 'host';
-            const peerState = joined?.players?.[peerRole];
-            if (peerState?.shipType) {
-                this.remoteShipType = peerState.shipType;
-            }
-        } catch (error) {
-            console.error('[Game] WebSocket connection failed:', error.message);
-            throw error;
-        }
-    }
-
-    async leaveCollaborateRoom(goMainMenu = false, silent = false) {
-        if (this.collabRoomId) {
-            try {
-                await fetch(`${window.location.origin}/api/rooms/leave`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        roomId: this.collabRoomId,
-                        playerName: this.leaderboard.getPlayerName()
-                    })
-                });
-            } catch {
-                // ignore leave errors
-            }
-        }
-
-        this.stopCollabPolling();
-        this.resetCoop();
-
-        if (goMainMenu) {
-            this.isRunning = false;
-            this.gameOver = false;
-            document.getElementById('pause-menu').classList.remove('active');
-            document.getElementById('settings-menu').classList.remove('active');
-            if (this.hud) this.hud.style.display = 'none';
-            this.startScreen.classList.add('active');
-            if (!silent) {
-                const status = document.getElementById('collab-status');
-                if (status) status.innerText = 'Room closed.';
-            }
-            return;
-        }
-
-        this.closeCollaborate();
-    }
 
     setPlayerName() {
         const input = document.getElementById('player-name-input');
@@ -1135,12 +953,12 @@ export class Game {
             alert('Please enter a valid pilot name!');
             return;
         }
-        
+
         const name = input.value.trim();
         this.leaderboard.setPlayerName(name);
         this.updatePlayerNameDisplay();
         alert(`Pilot name set to: ${name}`);
-        
+
         // Hide SET NAME button after setting the name
         const setNameBtn = document.getElementById('set-name-btn');
         if (setNameBtn) {
@@ -1342,15 +1160,8 @@ export class Game {
             const players = this.getPlayers();
             if (players.length > 0) {
                 if (this.onlineCoop && this.coopMode) {
-                    // Update local player with local input
-                    if (this.player) {
-                        this.player.update(dt, this.input);
-                    }
-                    // Update remote player with remote input for shooting/cooldowns
-                    // Position will be corrected by state updates
-                    if (this.playerTwo) {
-                        this.playerTwo.update(dt, this.remoteInputState);
-                    }
+                    if (this.player) this.player.update(dt, this.input);
+                    if (this.playerTwo) this.playerTwo.update(dt, this.remoteInputState);
                 } else {
                     players.forEach((player, index) => {
                         const input = index === 0 ? this.input : this.inputTwo;
@@ -1361,43 +1172,66 @@ export class Game {
 
             if (this.onlineCoop) {
                 this.netSyncTimer += dt;
-
                 this.netplay.emit('input_update', { input: { ...this.input.keys } });
 
-                if (this.netSyncTimer >= 0.05 && this.player) {
+                if (this.netSyncTimer >= (1 / 60) && this.player) {
                     this.netSyncTimer = 0;
                     this.netplay.emit('state_update', {
                         state: {
                             x: this.player.x,
                             y: this.player.y,
                             angle: this.player.angle,
-                            currentHealth: this.player.currentHealth,
+                            health: this.player.currentHealth,
                             maxHealth: this.player.maxHealth,
                             shipType: this.player.shipType,
-                            gameOver: this.gameOver,
+                            isDashing: this.player.isDashing,
                             score: this.score,
                             level: this.currentLevel
                         }
                     });
                 }
+
+                if (this.playerTwo && this.remotePlayerState) {
+                    const s = this.remotePlayerState;
+                    const lerpFactor = 0.3;
+                    this.playerTwo.x += (s.x - this.playerTwo.x) * lerpFactor;
+                    this.playerTwo.y += (s.y - this.playerTwo.y) * lerpFactor;
+                    this.playerTwo.angle = s.angle;
+                    this.playerTwo.currentHealth = s.health;
+                    this.playerTwo.maxHealth = s.maxHealth;
+                    this.playerTwo.isDashing = s.isDashing;
+
+                    if (this.onlineRole === 'guest') {
+                        if (s.score !== undefined) this.score = s.score;
+                        if (s.level !== undefined) this.currentLevel = s.level;
+                    }
+
+                    if (s.shipType && this.playerTwo.shipType !== s.shipType) {
+                        this.playerTwo.shipType = s.shipType;
+                        this.remoteShipType = s.shipType;
+                        this.updatePlayerHudInfo();
+                    }
+                }
             }
 
-            // Spawn logic
-            this.enemyTimer += dt;
-            // No enemies spawn during boss fights - only boss appears
-            if (this.enemyTimer > this.enemyInterval &&
-                this.enemies.length < this.getMaxEnemiesOnScreen() &&
-                !this.boss &&
-                this.enemiesSpawned < this.enemiesForLevel) {
-                this.spawnEnemy();
-                this.enemiesSpawned++; // Count the spawn
-                this.enemyTimer = 0;
-            }
+            // Spawning logic - Only the host handles spawning
+            const isHost = !this.onlineCoop || this.onlineRole === 'host';
+            if (isHost) {
+                this.enemyTimer += dt;
+                if (this.enemyTimer > this.enemyInterval &&
+                    this.enemies.length < this.getMaxEnemiesOnScreen() &&
+                    !this.boss &&
+                    this.enemiesSpawned < this.enemiesForLevel) {
+                    this.spawnEnemy();
+                    this.enemiesSpawned++;
+                    this.enemyTimer = 0;
+                }
 
-            this.powerupTimer += dt;
-            if (this.powerupTimer > this.powerupInterval && this.powerups.length < 3) {
-                this.spawnPowerUp();
-                this.powerupTimer = 0;
+                this.powerupTimer += dt;
+                if (this.powerupTimer > this.powerupInterval && this.powerups.length < 3) {
+                    this.spawnPowerUp();
+                    this.powerupTimer = 0;
+                }
             }
 
             // Entity Updates
@@ -1571,57 +1405,63 @@ export class Game {
         const typeRand = Math.random();
         const level = this.currentLevel || 1;
         let type = 'chaser';
-        
-        // Get available enemy types based on level
+
         const availableTypes = this.getAvailableEnemyTypes(level);
-        
-        // If boss just defeated, only spawn types not yet seen
+
         if (this.bossJustDefeated) {
             const uniqueTypes = availableTypes.filter(t => !this.spawnedEnemyTypes.has(t));
             if (uniqueTypes.length > 0) {
                 type = uniqueTypes[Math.floor(Math.random() * uniqueTypes.length)];
             } else {
-                // Fallback to normal spawn if all types have been seen
                 this.bossJustDefeated = false;
                 type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
             }
         } else {
-            // Normal spawn logic with probability
             type = this.selectEnemyTypeByProbability(typeRand, level, availableTypes);
         }
-        
-        // Track that this enemy type has been spawned
+
         this.spawnedEnemyTypes.add(type);
-        
-        this.enemies.push(new Enemy(this, type));
+
+        const enemy = new Enemy(this, type);
+        this.enemies.push(enemy);
+
+        // Broadcast spawn if host
+        if (this.onlineCoop && this.onlineRole === 'host') {
+            this.netplay.emit('spawn_enemy', {
+                type: type,
+                x: enemy.x,
+                y: enemy.y,
+                id: Date.now() + Math.random()
+            });
+        }
     }
 
     getAvailableEnemyTypes(level) {
         // Return array of enemy types available at this level
         if (level >= 21) {
-            return ['chaser', 'heavy', 'shooter', 'swarm', 'sniper', 'splitter', 'phantom', 'titan', 'wraith', 'vortex', 
-                    'bomber', 'interceptor', 'decoy', 'launcher', 'shielder', 'pulsar', 'blade', 'tractor', 'mirror', 'swarmer'];
+            return ['chaser', 'heavy', 'shooter', 'swarm', 'sniper', 'splitter', 'phantom', 'titan', 'wraith', 'vortex',
+                'bomber', 'interceptor', 'decoy', 'launcher', 'shielder', 'pulsar', 'blade', 'tractor', 'mirror', 'swarmer'];
         } else if (level >= 16) {
-            return ['chaser', 'heavy', 'shooter', 'swarm', 'sniper', 'splitter', 'wraith', 
-                    'bomber', 'interceptor', 'decoy', 'launcher', 'shielder', 'pulsar', 'blade', 'tractor', 'mirror', 'swarmer'];
+            return ['chaser', 'heavy', 'shooter', 'swarm', 'sniper', 'splitter', 'wraith',
+                'bomber', 'interceptor', 'decoy', 'launcher', 'shielder', 'pulsar', 'blade', 'tractor', 'mirror', 'swarmer'];
         } else if (level >= 14) {
-            return ['chaser', 'heavy', 'shooter', 'swarm', 'sniper', 'titan', 
-                    'bomber', 'interceptor', 'decoy', 'launcher', 'shielder', 'pulsar', 'blade', 'swarmer'];
+            return ['chaser', 'heavy', 'shooter', 'swarm', 'sniper', 'titan',
+                'bomber', 'interceptor', 'decoy', 'launcher', 'shielder', 'pulsar', 'blade', 'swarmer'];
         } else if (level >= 12) {
-            return ['chaser', 'heavy', 'shooter', 'swarm', 'sniper', 'titan', 
-                    'bomber', 'interceptor', 'decoy', 'launcher', 'shielder', 'pulsar', 'blade', 'tractor'];
+            return ['chaser', 'heavy', 'shooter', 'swarm', 'sniper', 'titan',
+                'bomber', 'interceptor', 'decoy', 'launcher', 'shielder', 'pulsar', 'blade', 'tractor'];
         } else if (level >= 10) {
-            return ['chaser', 'heavy', 'shooter', 'swarm', 'sniper', 'phantom', 
-                    'bomber', 'interceptor', 'decoy', 'launcher', 'shielder', 'blade'];
+            return ['chaser', 'heavy', 'shooter', 'swarm', 'sniper', 'phantom',
+                'bomber', 'interceptor', 'decoy', 'launcher', 'shielder', 'blade'];
         } else if (level >= 8) {
-            return ['chaser', 'heavy', 'shooter', 'swarm', 'sniper', 'phantom', 
-                    'bomber', 'interceptor', 'decoy', 'launcher', 'shielder'];
+            return ['chaser', 'heavy', 'shooter', 'swarm', 'sniper', 'phantom',
+                'bomber', 'interceptor', 'decoy', 'launcher', 'shielder'];
         } else if (level >= 6) {
-            return ['chaser', 'heavy', 'shooter', 'swarm', 'sniper', 'phantom', 
-                    'bomber', 'interceptor', 'decoy', 'launcher'];
+            return ['chaser', 'heavy', 'shooter', 'swarm', 'sniper', 'phantom',
+                'bomber', 'interceptor', 'decoy', 'launcher'];
         } else if (level >= 4) {
-            return ['chaser', 'heavy', 'shooter', 'swarm', 
-                    'bomber', 'interceptor', 'decoy'];
+            return ['chaser', 'heavy', 'shooter', 'swarm',
+                'bomber', 'interceptor', 'decoy'];
         } else if (level >= 3) {
             return ['chaser', 'heavy', 'shooter', 'bomber'];
         } else {
@@ -1797,18 +1637,18 @@ export class Game {
 
     removeLowestHPEnemy() {
         if (this.enemies.length === 0) return;
-        
+
         // Sort enemies by health (ascending) and remove the lowest HP enemy
         let lowestHPEnemy = this.enemies[0];
         let lowestIndex = 0;
-        
+
         for (let i = 1; i < this.enemies.length; i++) {
             if (this.enemies[i].health < lowestHPEnemy.health) {
                 lowestHPEnemy = this.enemies[i];
                 lowestIndex = i;
             }
         }
-        
+
         // Mark the lowest HP enemy for deletion
         lowestHPEnemy.markedForDeletion = true;
     }
@@ -1816,7 +1656,18 @@ export class Game {
     spawnPowerUp() {
         const types = ['speed', 'slowmo', 'invulnerability', 'health_recover', 'health_boost', 'shield', 'double_damage', 'rapid_fire'];
         const type = types[Math.floor(Math.random() * types.length)];
-        this.powerups.push(new PowerUp(this, type));
+        const pu = new PowerUp(this, type);
+        this.powerups.push(pu);
+
+        // Broadcast powerup spawn if host
+        if (this.onlineCoop && this.onlineRole === 'host') {
+            this.netplay.emit('spawn_powerup', {
+                type: type,
+                x: pu.x,
+                y: pu.y,
+                id: Date.now() + Math.random()
+            });
+        }
     }
 
     spawnPowerUpAt(x, y) {
@@ -2203,7 +2054,7 @@ export class Game {
         if (this.fromPauseMenu) {
             // Return to pause menu
             document.getElementById('pause-menu').classList.add('active');
-            
+
             // Ensure player is updated with selected ship if changed while paused
             if (this.isRunning && this.player && !this.gameOver) {
                 if (this.player.shipType !== this.selectedShip) {
@@ -2216,15 +2067,15 @@ export class Game {
                         rapidFireTimer: this.player.rapidFireTimer,
                         invulnerabilityTimer: this.player.invulnerabilityTimer
                     };
-                    
+
                     // Create new player with selected ship
                     this.player = new Player(this, this.selectedShip, { playerId: this.player.playerId || 'player1' });
-                    
+
                     // Restore position and health (capped at new max)
                     this.player.x = oldX;
                     this.player.y = oldY;
                     this.player.currentHealth = Math.min(oldHealth, this.player.maxHealth);
-                    
+
                     // Restore power-ups
                     this.player.speedBoostTimer = oldPowerups.speedBoostTimer;
                     this.player.doubleDamageTimer = oldPowerups.doubleDamageTimer;
@@ -2232,7 +2083,7 @@ export class Game {
                     this.player.invulnerabilityTimer = oldPowerups.invulnerabilityTimer;
                 }
             }
-            
+
             this.fromPauseMenu = false;
         } else {
             // Return to start screen
@@ -2315,7 +2166,7 @@ export class Game {
 
     buyShip(type) {
         const ship = SHIP_DATA[type];
-        
+
         // Check if ship requires previous ship to be unlocked
         if (ship.requiresPrevious) {
             const shipKeys = Object.keys(SHIP_DATA);
@@ -2328,7 +2179,7 @@ export class Game {
                 }
             }
         }
-        
+
         if (this.coins >= ship.price) {
             this.coins -= ship.price;
             this.ownedShips.push(type);
@@ -2363,7 +2214,7 @@ export class Game {
             this.localShipType = type;
             localStorage.setItem('midnight_selected_ship', this.selectedShip);
             if (this.audio) this.audio.dash(); // Select sound
-            
+
             // Always update player if game is running, even if paused
             if (this.isRunning && this.player && !this.gameOver) {
                 // Check if ship actually changed
@@ -2378,15 +2229,15 @@ export class Game {
                         rapidFireTimer: this.player.rapidFireTimer,
                         invulnerabilityTimer: this.player.invulnerabilityTimer
                     };
-                    
+
                     // Create new player with selected ship
                     this.player = new Player(this, this.selectedShip, { playerId: this.player.playerId || 'player1' });
-                    
+
                     // Restore position and health (capped at new max)
                     this.player.x = oldX;
                     this.player.y = oldY;
                     this.player.currentHealth = Math.min(oldHealth, this.player.maxHealth);
-                    
+
                     // Restore power-ups
                     this.player.speedBoostTimer = oldPowerups.speedBoostTimer;
                     this.player.doubleDamageTimer = oldPowerups.doubleDamageTimer;
@@ -2396,8 +2247,168 @@ export class Game {
             }
 
             this.updatePlayerHudInfo();
-            
+
             this.renderStore();
         }
+    }
+
+    async createCollaborateRoom() {
+        if (!this.playerName) {
+            const name = prompt("Enter your pilot name:");
+            if (!name) return;
+            this.playerName = name;
+            localStorage.setItem('midnight_playerName', name);
+            this.updatePlayerNameDisplay();
+        }
+
+        const statusEl = document.getElementById('collab-status');
+        statusEl.innerText = "Creating secure room...";
+        statusEl.style.color = "#00f3ff";
+
+        try {
+            const response = await fetch('/api/rooms/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ hostName: this.playerName })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                const roomId = data.roomId;
+                this.collabRoomId = roomId;
+
+                await this.netplay.connect({
+                    roomId,
+                    playerName: this.playerName,
+                    shipType: this.selectedShip
+                });
+
+                this.netplay.on('peer_joined', (peerData) => {
+                    statusEl.innerText = `${peerData.playerName} joined! Starting mission...`;
+                    this.collabTeamMembers = [this.playerName, peerData.playerName];
+                    this.remoteShipType = peerData.shipType || 'default';
+                    this.spawnRemotePlayer(peerData.playerName, this.remoteShipType);
+
+                    setTimeout(() => {
+                        this.closeCollaborate();
+                        this.startGame();
+                    }, 1000);
+                });
+
+                document.getElementById('collab-room-id').innerText = roomId;
+                document.getElementById('collab-room-display').classList.remove('hidden');
+                document.getElementById('collab-waiting').classList.remove('hidden');
+                document.getElementById('collab-leave-btn').classList.remove('hidden');
+                document.getElementById('collab-create-btn').classList.add('hidden');
+                document.getElementById('collab-join-btn').disabled = true;
+
+                statusEl.innerText = "Room created. Waiting for partner...";
+                this.onlineRole = 'host';
+                this.onlineCoop = true;
+                this.coopMode = true;
+                this.collabTeamMembers = [this.playerName];
+
+            } else {
+                statusEl.innerText = "Failed to create room: " + (data.error || "Unknown error");
+                statusEl.style.color = "#ff0000";
+            }
+        } catch (error) {
+            statusEl.innerText = "Connection error. Please check internet.";
+            statusEl.style.color = "#ff0000";
+        }
+    }
+
+    async joinCollaborateRoom() {
+        const roomIdInput = document.getElementById('collab-room-input');
+        const roomId = roomIdInput.value.trim();
+
+        if (!roomId) {
+            alert("Please enter a Room ID");
+            return;
+        }
+
+        if (!this.playerName) {
+            const name = prompt("Enter your pilot name:");
+            if (!name) return;
+            this.playerName = name;
+            localStorage.setItem('midnight_playerName', name);
+            this.updatePlayerNameDisplay();
+        }
+
+        const statusEl = document.getElementById('collab-status');
+        statusEl.innerText = "Connecting to room " + roomId + "...";
+        statusEl.style.color = "#00f3ff";
+
+        try {
+            const response = await fetch('/api/rooms/join', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roomId, playerName: this.playerName })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                this.collabRoomId = roomId;
+
+                await this.netplay.connect({
+                    roomId,
+                    playerName: this.playerName,
+                    shipType: this.selectedShip
+                });
+
+                statusEl.innerText = "Connected to room: " + roomId;
+                this.onlineRole = 'guest';
+                this.onlineCoop = true;
+                this.coopMode = true;
+                this.collabTeamMembers = [data.room.hostName, this.playerName];
+                this.remoteShipType = data.room.hostShipType || 'default';
+
+                this.spawnRemotePlayer(data.room.hostName, this.remoteShipType);
+
+                setTimeout(() => {
+                    this.closeCollaborate();
+                    this.startGame();
+                }, 1000);
+
+            } else {
+                statusEl.innerText = "Error: " + (data.error || "Could not join room");
+                statusEl.style.color = "#ff0000";
+            }
+        } catch (error) {
+            statusEl.innerText = "Connection error. Please check internet.";
+            statusEl.style.color = "#ff0000";
+        }
+    }
+
+    spawnRemotePlayer(name, shipType) {
+        if (this.playerTwo) return;
+        this.playerTwo = new Player(this, shipType || 'default', { playerId: 'player2' });
+        this.playerTwo.playerName = name;
+        this.updatePlayerHudInfo();
+    }
+
+    leaveCollaborateRoom(stopGame = false, silent = false) {
+        if (this.onlineCoop) {
+            this.netplay.disconnect();
+            this.onlineCoop = false;
+            this.onlineRole = null;
+        }
+
+        this.coopMode = false;
+        this.playerTwo = null;
+        this.collabRoomId = null;
+
+        document.getElementById('collab-room-display').classList.add('hidden');
+        document.getElementById('collab-waiting').classList.add('hidden');
+        document.getElementById('collab-leave-btn').classList.add('hidden');
+        document.getElementById('collab-create-btn').classList.remove('hidden');
+        document.getElementById('collab-join-btn').disabled = false;
+        document.getElementById('collab-status').innerText = silent ? "" : "You left the session.";
+
+        if (stopGame && this.isRunning) {
+            this.goToMainMenu();
+        }
+
+        this.updatePlayerHudInfo();
     }
 }

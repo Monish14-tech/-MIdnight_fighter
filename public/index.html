@@ -145,10 +145,11 @@
                     <button id="start-btn" class="neon-btn">INITIATE SEQUENCE</button>
                     <button id="store-btn" class="neon-btn">ARMORY</button>
                     <button id="leaderboard-btn" class="neon-btn">LEADERBOARD</button>
-                    <button id="collab-btn" class="neon-btn coming-soon" disabled>COLLABORATE</button>
+                    <button id="collab-btn" class="neon-btn">COLLABORATE</button>
                 </div>
                 <p id="total-coins-display">COINS: 0</p>
-                <p id="player-name-display" style="margin-top: 10px; font-size: 14px;">PILOT: <span id="current-player-name">UNKNOWN</span></p>
+                <p id="player-name-display" style="margin-top: 10px; font-size: 14px;">PILOT: <span
+                        id="current-player-name">UNKNOWN</span></p>
 
                 <!-- Game Instructions (Desktop Only) -->
                 <div id="game-instructions">
@@ -213,10 +214,10 @@
             <div id="leaderboard-screen" class="screen">
                 <h2>GLOBAL LEADERBOARD</h2>
                 <div id="player-name-section" style="margin-bottom: 20px;">
-                    <input type="text" id="player-name-input" placeholder="Enter your pilot name" maxlength="20" 
-                        style="padding: 10px; background: rgba(0,0,0,0.7); border: 2px solid #00f3ff; color: #00f3ff; 
+                    <input type="text" id="player-name-input" placeholder="Enter your pilot name" maxlength="20" style="padding: 10px; background: rgba(0,0,0,0.7); border: 2px solid #00f3ff; color: #00f3ff; 
                         font-family: 'Orbitron', sans-serif; font-size: 16px; text-align: center; width: 300px;">
-                    <button id="set-name-btn" class="neon-btn" style="margin-left: 10px; padding: 10px 20px;">SET NAME</button>
+                    <button id="set-name-btn" class="neon-btn" style="margin-left: 10px; padding: 10px 20px;">SET
+                        NAME</button>
                 </div>
                 <div id="leaderboard-container">
                     <div class="leaderboard-header">
@@ -239,14 +240,16 @@
                         <h3>CREATE ROOM</h3>
                         <p class="collab-subtitle">Host a co-op session</p>
                         <button id="collab-create-btn" class="neon-btn">CREATE</button>
-                        <div id="collab-room-display" class="collab-room-display hidden">ROOM ID: <span id="collab-room-id"></span></div>
+                        <div id="collab-room-display" class="collab-room-display hidden">ROOM ID: <span
+                                id="collab-room-id"></span></div>
                         <div id="collab-waiting" class="collab-waiting hidden">WAITING FOR PARTNER...</div>
                         <button id="collab-leave-btn" class="neon-btn hidden">LEAVE ROOM</button>
                     </div>
                     <div class="collab-divider"></div>
                     <div class="collab-section">
                         <h3>JOIN ROOM</h3>
-                        <input type="text" id="collab-room-input" placeholder="ROOM ID" maxlength="12" class="name-input">
+                        <input type="text" id="collab-room-input" placeholder="ROOM ID" maxlength="12"
+                            class="name-input">
                         <button id="collab-join-btn" class="neon-btn">JOIN</button>
                     </div>
                 </div>
@@ -267,9 +270,17 @@
         </div>
     </div>
 
+    <!-- Import map: resolves bare 'three' specifier so stale cached files don't crash -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "./three.js?v=4"
+        }
+    }
+    </script>
     <!-- Socket.IO Client Library -->
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js" crossorigin="anonymous"></script>
-    <script type="module" src="main.js"></script>
+    <script type="module" src="main.js?v=4"></script>
 </body>
 
 </html>
