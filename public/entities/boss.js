@@ -589,42 +589,41 @@ export class Boss {
     }
 
     handleDashing(deltaTime) {
-        if (this.stateTimer < 0.5) {
-            // Charge up — use deterministic shake (no Math.random)
+        // Charge up — use deterministic shake (no Math.random)
+        if (this.stateTimer < 0.6) {
             const shake = Math.sin(this.game.lastTime * 0.05) * 6;
             this.x += shake;
             this.y += Math.cos(this.game.lastTime * 0.05) * 6;
 
-            if (this.stateTimer < 0.6) {
-                // Keep boss on screen during charge
-                const margin = 50;
-                this.x = Math.max(margin, Math.min(this.game.width - margin, this.x));
-                this.y = Math.max(margin, Math.min(this.game.height - margin, this.y));
+            // Keep boss on screen during charge
+            const margin = 50;
+            this.x = Math.max(margin, Math.min(this.game.width - margin, this.x));
+            this.y = Math.max(margin, Math.min(this.game.height - margin, this.y));
 
-                // Lock angle
-                const dx = this.dashTarget.x - this.x;
-                const dy = this.dashTarget.y - this.y;
-                this.angle = Math.atan2(dy, dx);
+            // Lock angle
+            const dx = this.dashTarget.x - this.x;
+            const dy = this.dashTarget.y - this.y;
+            this.angle = Math.atan2(dy, dx);
 
-            } else if (this.stateTimer < 1.1) {
-                const dashSpeed = 900 * (this.phase === 3 ? 1.4 : 1.0);
-                this.x += Math.cos(this.angle) * dashSpeed * deltaTime;
-                this.y += Math.sin(this.angle) * dashSpeed * deltaTime;
+        } else if (this.stateTimer < 1.1) {
+            const dashSpeed = 900 * (this.phase === 3 ? 1.4 : 1.0);
+            this.x += Math.cos(this.angle) * dashSpeed * deltaTime;
+            this.y += Math.sin(this.angle) * dashSpeed * deltaTime;
 
-                // Keep boss on screen during dash
-                const margin = 80;
-                this.x = Math.max(margin, Math.min(this.game.width - margin, this.x));
-                this.y = Math.max(margin, Math.min(this.game.height - margin, this.y));
+            // Keep boss on screen during dash
+            const margin = 80;
+            this.x = Math.max(margin, Math.min(this.game.width - margin, this.x));
+            this.y = Math.max(margin, Math.min(this.game.height - margin, this.y));
 
-                // Deterministic trail
-                if (Math.abs(Math.sin(this.game.lastTime * 0.1)) > 0.5) {
-                    this.game.particles.push(new Explosion(this.game, this.x, this.y, this.color));
-                }
-            } else {
-                this.state = 'idle';
-                this.stateTimer = 0;
+            // Deterministic trail
+            if (Math.abs(Math.sin(this.game.lastTime * 0.1)) > 0.5) {
+                this.game.particles.push(new Explosion(this.game, this.x, this.y, this.color));
             }
+        } else {
+            this.state = 'idle';
+            this.stateTimer = 0;
         }
+    }
 
         // ── Attack: Spiral Shoot ───────────────────────────────────
         spiralShoot(deltaTime) {

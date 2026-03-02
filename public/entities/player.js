@@ -875,6 +875,54 @@ export class Player {
                 ctx.strokeRect(-8, -10, 10, 20);
                 break;
 
+            case 'laser_drone': // LASER DRONE - Autonomous ring fighter
+                const laserGrad = ctx.createRadialGradient(0, 0, 4, 0, 0, 26);
+                laserGrad.addColorStop(0, '#ffffff');
+                laserGrad.addColorStop(0.35, '#ff99ee');
+                laserGrad.addColorStop(1, '#770055');
+                ctx.fillStyle = laserGrad;
+
+                // Central drone core
+                ctx.beginPath();
+                ctx.arc(0, 0, 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // Outer control ring
+                ctx.strokeStyle = 'rgba(255, 150, 240, 0.8)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, 20, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Forward nose / laser emitter
+                ctx.fillStyle = '#ff00cc';
+                ctx.beginPath();
+                ctx.moveTo(32, 0);
+                ctx.lineTo(12, 6);
+                ctx.lineTo(12, -6);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Side pods
+                ctx.fillStyle = 'rgba(255, 0, 200, 0.65)';
+                ctx.beginPath();
+                ctx.rect(-10, 14, 16, 6);
+                ctx.rect(-10, -20, 16, 6);
+                ctx.fill();
+                ctx.stroke();
+
+                // Core glow
+                ctx.shadowBlur = 16;
+                ctx.shadowColor = '#ff00cc';
+                ctx.fillStyle = '#ffccff';
+                ctx.beginPath();
+                ctx.arc(2, 0, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                break;
+
             case 'tank': // IRON TURTLE - Heavily Armored Gunship
                 const tankGrad = ctx.createLinearGradient(-30, -30, 30, 30);
                 tankGrad.addColorStop(0, '#333333');
@@ -1523,6 +1571,54 @@ export class Player {
                 ctx.closePath();
                 ctx.stroke();
                 break;
+
+            case 'nova': // NOVA ASCENDANT - Supernova lance ship
+                const novaGrad = ctx.createRadialGradient(6, 0, 3, 0, 0, 32);
+                novaGrad.addColorStop(0, '#ffffff');
+                novaGrad.addColorStop(0.4, '#ffeeaa');
+                novaGrad.addColorStop(1, '#ff9933');
+                ctx.fillStyle = novaGrad;
+
+                // Lance fuselage
+                ctx.beginPath();
+                ctx.moveTo(44, 0);
+                ctx.lineTo(16, 7);
+                ctx.lineTo(-18, 10);
+                ctx.lineTo(-26, 0);
+                ctx.lineTo(-18, -10);
+                ctx.lineTo(16, -7);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Stellar wings
+                ctx.beginPath();
+                ctx.moveTo(8, 8);
+                ctx.lineTo(-12, 30);
+                ctx.lineTo(-26, 34);
+                ctx.lineTo(-14, 10);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(8, -8);
+                ctx.lineTo(-12, -30);
+                ctx.lineTo(-26, -34);
+                ctx.lineTo(-14, -10);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Supernova core
+                ctx.shadowBlur = 22;
+                ctx.shadowColor = '#ffeeaa';
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(12, 0, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                break;
         }
 
         // Common Engine Glow
@@ -1532,7 +1628,7 @@ export class Player {
         ctx.fillStyle = engineColor;
 
         // Single central exhaust for sleek jets, dual for heavies
-        const isHeavy = ['tank', 'bomber', 'rapid', 'guardian', 'juggernaut'].includes(type);
+        const isHeavy = ['tank', 'bomber', 'rapid', 'guardian', 'juggernaut', 'laser_drone', 'nova'].includes(type);
 
         if (isHeavy) {
             // Dual Exhausts
