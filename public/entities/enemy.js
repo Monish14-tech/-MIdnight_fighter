@@ -1,19 +1,192 @@
 import { Projectile } from './projectile.js?v=4';
 import { Explosion } from './particle.js?v=4';
 
+// ============================================================
+//  EnemyBrain — Advanced AI Module
+//  Provides: player movement prediction, threat assessment,
+//  pack coordination, and adaptive behavior selection.
+//  All randomness uses deterministic sin/cos seeds so co-op
+//  PRNG remains perfectly synchronized (no Math.random).
+// ============================================================
+class EnemyBrain {
+    constructor(enemy) {
+        this.enemy = enemy;
+        this.game = enemy.game;
+
+        // Player movement prediction
+        this.playerSamples = [];       // [{x,y,t}] last 20 samples
+        this.sampleInterval = 0.1;     // sample every 0.1 s
+        this.sampleTimer = 0;
+        this.predictedPlayerX = 0;
+        this.predictedPlayerY = 0;
+        this.playerVelX = 0;
+        this.playerVelY = 0;
+
+        // Behavior state
+        this.behavior = 'aggro';        // 'aggro'|'flank'|'retreat'|'orbit'
+        this.behaviorTimer = 0;
+        this.behaviorCooldown = 1.5;
+
+        // Pack coordination
+        this.alertRadius = 250;
+        this.isAlerted = false;
+        this.alertTimer = 0;
+        this.flanking = false;
+        this.flankSide = 1;            // +1 or -1
+
+        // Targeting bracket visual
+        this.bracketAlpha = 0;
+
+        // Counter used safely for deterministic pseudo-random
+        const numericId = enemy.getNumericId ? enemy.getNumericId() : 0;
+        this._seed = numericId + Math.floor(Math.sin((numericId || 1) * 3.14) * 1000);
+    }
+
+    // Deterministic pseudo-random [0,1) — NO Math.random
+    _prng(offset = 0) {
+        return Math.abs(Math.sin(this._seed + offset + this.game.lastTime * 0.0001));
+    }
+
+    update(deltaTime) {
+        const player = this.game.player;
+        if (!player) return;
+
+        // ── Sample player position ──────────────────────────────
+        this.sampleTimer += deltaTime;
+        if (this.sampleTimer >= this.sampleInterval) {
+            this.sampleTimer = 0;
+            this.playerSamples.push({ x: player.x, y: player.y, t: this.game.lastTime });
+            if (this.playerSamples.length > 20) this.playerSamples.shift();
+        }
+
+        // ── Compute player velocity from last 2 samples ─────────
+        if (this.playerSamples.length >= 2) {
+            const a = this.playerSamples[this.playerSamples.length - 2];
+            const b = this.playerSamples[this.playerSamples.length - 1];
+            const dt = Math.max((b.t - a.t) * 0.001, 0.001);
+            this.playerVelX = (b.x - a.x) / dt;
+            this.playerVelY = (b.y - a.y) / dt;
+        }
+
+        // ── Predicted player position (adaptive lead time) ──────────
+        // Clamp lead time so chasers don't wildly over-predict at high levels
+        const level = this.game.currentLevel || 1;
+        const leadTime = Math.max(0.18, 0.38 - level * 0.008);
+        this.predictedPlayerX = player.x + this.playerVelX * leadTime;
+        this.predictedPlayerY = player.y + this.playerVelY * leadTime;
+        // Clamp to arena
+        this.predictedPlayerX = Math.max(20, Math.min(this.game.width - 20, this.predictedPlayerX));
+        this.predictedPlayerY = Math.max(20, Math.min(this.game.height - 20, this.predictedPlayerY));
+
+        // ── Threat assessment → pick behavior ───────────────────
+        this.behaviorTimer += deltaTime;
+        if (this.behaviorTimer >= this.behaviorCooldown) {
+            this.behaviorTimer = 0;
+            const dx = player.x - this.enemy.x;
+            const dy = player.y - this.enemy.y;
+            const dist = Math.hypot(dx, dy);
+            const hpRatio = this.enemy.health / (this.enemy.maxStartingHealth || this.enemy.health);
+
+            if (hpRatio < 0.35 && dist < 200) {
+                this.behavior = 'retreat';
+            } else if (dist < 120) {
+                this.behavior = 'orbit';
+            } else if (this.isAlerted && this.flanking) {
+                this.behavior = 'flank';
+            } else {
+                this.behavior = 'aggro';
+            }
+        }
+
+        // ── Alert nearby allies ──────────────────────────────────
+        this.alertTimer += deltaTime;
+        if (this.alertTimer > 3.0 && this.behavior === 'aggro') {
+            this.alertTimer = 0;
+            if (this.game.enemies) {
+                for (const e of this.game.enemies) {
+                    if (e !== this.enemy && e.brain && !e.brain.isAlerted) {
+                        const dist = Math.hypot(e.x - this.enemy.x, e.y - this.enemy.y);
+                        if (dist < this.alertRadius) {
+                            e.brain.isAlerted = true;
+                            e.brain.flanking = true;
+                            // Alternate flank side per enemy
+                            e.brain.flankSide = e.brain._prng(7) > 0.5 ? 1 : -1;
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Targeting bracket fade-in ────────────────────────────
+        this.bracketAlpha = Math.min(1, this.bracketAlpha + deltaTime * 2);
+    }
+
+    // Returns the angle toward the predicted player position (lead-targeting)
+    getLeadAngle() {
+        const dx = this.predictedPlayerX - this.enemy.x;
+        const dy = this.predictedPlayerY - this.enemy.y;
+        return Math.atan2(dy, dx);
+    }
+
+    // Returns the angle for flanking movement (offset ±90° from direct line)
+    getFlankAngle(directAngle) {
+        return directAngle + (Math.PI / 2) * this.flankSide;
+    }
+
+    // Returns the "retreat" direction (away from player + slight sideways)
+    getRetreatAngle(directAngle) {
+        return directAngle + Math.PI + this.flankSide * 0.4;
+    }
+
+    // Returns an orbit tangent angle (circles the player)
+    getOrbitAngle(directAngle) {
+        const orbitSpeed = this._prng(3) > 0.5 ? 1 : -1;
+        return directAngle + (Math.PI / 2) * orbitSpeed;
+    }
+
+    // Draw targeting bracket (called from Enemy.draw)
+    drawBrackets(ctx) {
+        if (this.bracketAlpha <= 0) return;
+        const px = this.predictedPlayerX - this.enemy.x;
+        const py = this.predictedPlayerY - this.enemy.y;
+        ctx.save();
+        ctx.rotate(-this.enemy.angle); // unrotate so brackets align to world
+        ctx.translate(px, py);
+        ctx.globalAlpha = this.bracketAlpha * 0.55;
+        ctx.strokeStyle = '#ff4444';
+        ctx.lineWidth = 1.5;
+        const s = 7, g = 4;
+        // Corner brackets
+        for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+            ctx.beginPath();
+            ctx.moveTo(sx * (s + g), sy * g);
+            ctx.lineTo(sx * (s + g), sy * (s + g));
+            ctx.lineTo(sx * g, sy * (s + g));
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+}
+
 export class Enemy {
-    constructor(game, type = 'chaser') {
+    constructor(game, type = 'chaser', x = null, y = null) {
         this.game = game;
         this.type = type;
         this.markedForDeletion = false;
 
-        // Spawn at edges
-        if (Math.random() < 0.5) {
-            this.x = Math.random() < 0.5 ? -50 : this.game.width + 50;
-            this.y = Math.random() * this.game.height;
+        // Spawn at edges — use game.random() for co-op PRNG sync
+        const rng = () => (game.random ? game.random() : Math.random());
+        if (x !== null && y !== null) {
+            this.x = x;
+            this.y = y;
         } else {
-            this.x = Math.random() * this.game.width;
-            this.y = Math.random() < 0.5 ? -50 : this.game.height + 50;
+            if (rng() < 0.5) {
+                this.x = rng() < 0.5 ? -50 : this.game.width + 50;
+                this.y = rng() * this.game.height;
+            } else {
+                this.x = rng() * this.game.width;
+                this.y = rng() < 0.5 ? -50 : this.game.height + 50;
+            }
         }
 
         this.angle = 0;
@@ -66,7 +239,8 @@ export class Enemy {
             this.points = 250;
             this.health = 2 + hpBonus;
             this.shootTimer = 0;
-            this.preferredRange = 260;
+            // Snipers back off more as levels increase
+            this.preferredRange = 260 + Math.min((level - 1) * 8, 200);
         } else if (this.type === 'splitter') {
             this.speed = 140 * speedMultiplier;
             this.color = '#a97bff';
@@ -202,85 +376,195 @@ export class Enemy {
             this.health = 1 + hpBonus;
             this.swarming = true;
         }
+
+        // ── Attach EnemyBrain for smart AI ──────────────────────
+        this.maxStartingHealth = this.health;
+        this.brain = new EnemyBrain(this);
+
+        // Swarm flanking init — every swarm enemy gets a flank side
+        if (this.type === 'swarm' || this.type === 'swarmer') {
+            this.brain.flankSide = Math.sin(this.getNumericId() * 7.3 + 1) > 0 ? 1 : -1;
+            this.brain.flanking = true;
+        }
+    }
+
+    // Helper to extract numeric ID from string (e.g., 'enemy_42' -> 42) to prevent NaN in Math functions
+    getNumericId() {
+        if (!this.remoteId) return 0;
+        if (typeof this.remoteId === 'number') return this.remoteId;
+        const match = this.remoteId.match(/\d+$/);
+        return match ? parseInt(match[0]) : 0;
     }
 
     update(deltaTime) {
         if (!this.game.player) return;
 
-        const dx = this.game.player.x - this.x;
-        const dy = this.game.player.y - this.y;
-        this.angle = Math.atan2(dy, dx);
+        // ── EnemyBrain tick ──────────────────────────────────────
+        if (this.brain) this.brain.update(deltaTime);
+
+        const player = this.game.player;
+        const dx = player.x - this.x;
+        const dy = player.y - this.y;
+        const dist = Math.hypot(dx, dy);
+        const directAngle = Math.atan2(dy, dx);
+        this.angle = directAngle; // default; types may override below
 
         // Apply slow motion if player has the power-up
         let effectiveSpeed = this.speed;
-        if (this.game.player.slowMotionTimer > 0) {
-            effectiveSpeed *= 0.5;
-        }
+        if (player.slowMotionTimer > 0) effectiveSpeed *= 0.5;
 
-        // Movement behaviors
-        if (this.type === 'sniper') {
-            const dist = Math.hypot(dx, dy);
-            let moveAngle = this.angle;
+        // ── Helper: choose movement angle from brain behavior ────
+        const getMoveAngle = (baseAngle) => {
+            if (!this.brain) return baseAngle;
+            switch (this.brain.behavior) {
+                case 'retreat': return this.brain.getRetreatAngle(baseAngle);
+                case 'orbit': return this.brain.getOrbitAngle(baseAngle);
+                case 'flank': return this.brain.getFlankAngle(baseAngle);
+                default: return baseAngle;
+            }
+        };
+
+        // ── Per-type Smart AI Movement ───────────────────────────
+        if (this.type === 'chaser') {
+            // ★ Predictive intercept — aim at where player WILL be
+            const leadAngle = this.brain ? this.brain.getLeadAngle() : directAngle;
+            this.angle = leadAngle;
+            const moveAngle = getMoveAngle(leadAngle);
+            this.x += Math.cos(moveAngle) * effectiveSpeed * deltaTime;
+            this.y += Math.sin(moveAngle) * effectiveSpeed * deltaTime;
+
+        } else if (this.type === 'swarm') {
+            // ★ Coordinated pincer — split into two groups from opposite angles
+            const pincerAngle = directAngle + (Math.PI / 2.2) * (this.brain ? this.brain.flankSide : 1);
+            this.angle = directAngle;
+            this.x += Math.cos(pincerAngle) * effectiveSpeed * deltaTime;
+            this.y += Math.sin(pincerAngle) * effectiveSpeed * deltaTime;
+
+        } else if (this.type === 'swarmer') {
+            // ★ Coordinated pincer (same mechanic for larger swarmer)
+            const pincerAngle = directAngle + (Math.PI / 2.5) * (this.brain ? this.brain.flankSide : 1);
+            this.angle = directAngle;
+            this.x += Math.cos(pincerAngle) * effectiveSpeed * deltaTime;
+            this.y += Math.sin(pincerAngle) * effectiveSpeed * deltaTime;
+
+        } else if (this.type === 'sniper') {
+            // ★ Smart range control + strafe
+            let moveAngle = directAngle;
             if (dist < this.preferredRange - 40) {
-                moveAngle = this.angle + Math.PI; // Back away
+                moveAngle = directAngle + Math.PI; // back off
             } else if (dist > this.preferredRange + 60) {
-                moveAngle = this.angle; // Move in
+                moveAngle = directAngle; // close in
             } else {
-                moveAngle = this.angle + Math.PI / 2 * (Math.sin(this.game.lastTime * 0.001) > 0 ? 1 : -1);
+                // Strafe sideways using brain orbit tangent
+                moveAngle = this.brain ? this.brain.getOrbitAngle(directAngle) : directAngle + Math.PI / 2;
             }
             this.x += Math.cos(moveAngle) * effectiveSpeed * deltaTime;
             this.y += Math.sin(moveAngle) * effectiveSpeed * deltaTime;
+
         } else if (this.type === 'interceptor') {
-            // Fast aggressive pursuit with occasional dashes - Deterministic
+            // ★ Dash toward predicted position when player is moving fast
             this.dashTimer -= deltaTime;
-            const pseudoRandom = Math.abs(Math.sin((this.remoteId || 0) + this.game.lastTime * 0.005));
-            if (this.dashTimer <= 0 && pseudoRandom < 0.3) {
+            const playerSpeed = this.brain
+                ? Math.hypot(this.brain.playerVelX, this.brain.playerVelY)
+                : 0;
+            // Dash if player is accelerating away
+            const pseudoRandom = Math.abs(Math.sin(this.getNumericId() + this.game.lastTime * 0.005));
+            if (this.dashTimer <= 0 && (pseudoRandom < 0.3 || playerSpeed > 220)) {
                 this.dashTimer = this.dashCooldown;
-                effectiveSpeed *= 2.5; // Boost speed for dash
+                effectiveSpeed *= 2.5;
             }
-            this.x += Math.cos(this.angle) * effectiveSpeed * deltaTime;
-            this.y += Math.sin(this.angle) * effectiveSpeed * deltaTime;
+            // Aim at predicted position
+            const interceptAngle = this.brain ? this.brain.getLeadAngle() : directAngle;
+            this.angle = interceptAngle;
+            this.x += Math.cos(interceptAngle) * effectiveSpeed * deltaTime;
+            this.y += Math.sin(interceptAngle) * effectiveSpeed * deltaTime;
+
+        } else if (this.type === 'heavy') {
+            // ★ Zigzag approach — harder to hit
+            const zigzag = Math.sin(this.game.lastTime * 0.002 + this.getNumericId()) * 0.6;
+            const moveAngle = directAngle + zigzag;
+            this.x += Math.cos(moveAngle) * effectiveSpeed * deltaTime;
+            this.y += Math.sin(moveAngle) * effectiveSpeed * deltaTime;
+
         } else if (this.type === 'tractor') {
-            // Move toward player and apply pull force
-            this.x += Math.cos(this.angle) * effectiveSpeed * deltaTime;
-            this.y += Math.sin(this.angle) * effectiveSpeed * deltaTime;
-
-            // Apply pull force to player if in range
-            const dist = Math.hypot(dx, dy);
+            // ★ Orbit player while pulling
+            const orbitAngle = this.brain ? this.brain.getOrbitAngle(directAngle) : directAngle;
+            this.x += Math.cos(orbitAngle) * effectiveSpeed * deltaTime;
+            this.y += Math.sin(orbitAngle) * effectiveSpeed * deltaTime;
+            // Pull force
             if (dist < this.tractorRange) {
-                const pullAngle = Math.atan2(dy, dx);
-                this.game.player.x += Math.cos(pullAngle) * this.tractorPull * deltaTime;
-                this.game.player.y += Math.sin(pullAngle) * this.tractorPull * deltaTime;
+                player.x += Math.cos(directAngle) * this.tractorPull * deltaTime;
+                player.y += Math.sin(directAngle) * this.tractorPull * deltaTime;
             }
+
         } else if (this.type === 'blade') {
-            // Aggressive fast movement with slashing
-            this.x += Math.cos(this.angle) * effectiveSpeed * deltaTime;
-            this.y += Math.sin(this.angle) * effectiveSpeed * deltaTime;
-
-            // Update slash timer
+            // ★ Attacks the player's LANDING ZONE — aims where player will stop
+            const landAngle = this.brain ? this.brain.getLeadAngle() : directAngle;
+            this.angle = landAngle;
+            this.x += Math.cos(landAngle) * effectiveSpeed * deltaTime;
+            this.y += Math.sin(landAngle) * effectiveSpeed * deltaTime;
             this.slashTimer -= deltaTime;
-        } else if (this.type === 'mirror') {
-            // Rotate and move
-            this.rotation = (this.rotation + 180 * deltaTime) % 360;
-            this.x += Math.cos(this.angle) * effectiveSpeed * deltaTime;
-            this.y += Math.sin(this.angle) * effectiveSpeed * deltaTime;
-        } else if (this.type === 'pulsar') {
-            // Move toward player and pulse
-            this.x += Math.cos(this.angle) * effectiveSpeed * deltaTime;
-            this.y += Math.sin(this.angle) * effectiveSpeed * deltaTime;
 
-            // Update pulse timer
-            this.pulseTimer -= deltaTime;
-        } else if (this.type === 'launcher') {
-            // Medium speed, stands ground to shoot
-            if (Math.hypot(dx, dy) > 250) {
-                this.x += Math.cos(this.angle) * effectiveSpeed * deltaTime;
-                this.y += Math.sin(this.angle) * effectiveSpeed * deltaTime;
+        } else if (this.type === 'phantom') {
+            // ★ Phases out (invisible) when a player projectile is aimed at it
+            this.phaseTimer -= deltaTime;
+            let moveAngle = directAngle;
+            // Check if any player projectile is heading toward this phantom
+            if (this.phaseTimer <= 0 && this.game.projectiles) {
+                for (const p of this.game.projectiles) {
+                    if (p.owner === 'player') {
+                        const pdx = this.x - p.x;
+                        const pdy = this.y - p.y;
+                        const projAngle = Math.atan2(pdy, pdx);
+                        const projHeading = p.angle || Math.atan2(p.vy || 0, p.vx || 1);
+                        const angleDiff = Math.abs(projAngle - projHeading);
+                        if (angleDiff < 0.25 && Math.hypot(pdx, pdy) < 180) {
+                            // Dodge sideways!
+                            this.phaseTimer = this.phaseCooldown;
+                            moveAngle = directAngle + (Math.PI / 2) * (this.brain ? this.brain.flankSide : 1);
+                            this.isPhasing = true;
+                            break;
+                        }
+                    }
+                }
             }
+            if (this.phaseTimer > this.phaseCooldown - 0.5) {
+                this.isPhasing = true;
+            } else {
+                this.isPhasing = false;
+            }
+            this.x += Math.cos(moveAngle) * effectiveSpeed * deltaTime;
+            this.y += Math.sin(moveAngle) * effectiveSpeed * deltaTime;
+
+        } else if (this.type === 'mirror') {
+            this.rotation = (this.rotation + 180 * deltaTime) % 360;
+            const moveAngle = getMoveAngle(directAngle);
+            this.x += Math.cos(moveAngle) * effectiveSpeed * deltaTime;
+            this.y += Math.sin(moveAngle) * effectiveSpeed * deltaTime;
+
+        } else if (this.type === 'pulsar') {
+            this.pulseTimer -= deltaTime;
+            const moveAngle = getMoveAngle(directAngle);
+            this.x += Math.cos(moveAngle) * effectiveSpeed * deltaTime;
+            this.y += Math.sin(moveAngle) * effectiveSpeed * deltaTime;
+
+        } else if (this.type === 'launcher') {
+            // ★ Strafe sideways while keeping firing range
+            if (dist > 250) {
+                this.x += Math.cos(directAngle) * effectiveSpeed * deltaTime;
+                this.y += Math.sin(directAngle) * effectiveSpeed * deltaTime;
+            } else {
+                // Strafe
+                const strafeAngle = directAngle + Math.PI / 2;
+                this.x += Math.cos(strafeAngle) * effectiveSpeed * 0.65 * deltaTime;
+                this.y += Math.sin(strafeAngle) * effectiveSpeed * 0.65 * deltaTime;
+            }
+
         } else {
-            // Simple movement towards player
-            this.x += Math.cos(this.angle) * effectiveSpeed * deltaTime;
-            this.y += Math.sin(this.angle) * effectiveSpeed * deltaTime;
+            // Generic brain-aware movement
+            const moveAngle = getMoveAngle(directAngle);
+            this.x += Math.cos(moveAngle) * effectiveSpeed * deltaTime;
+            this.y += Math.sin(moveAngle) * effectiveSpeed * deltaTime;
         }
 
         // Shooter Logic (only shooter, sniper, launcher, and pulsar can attack)
@@ -298,7 +582,9 @@ export class Enemy {
                 this.shootTimer = 0;
                 if (singleMissileMode) {
                     if (!this.hasFiredSingleMissile) {
-                        const missile = new Projectile(this.game, this.x, this.y, this.angle, 'missile', 'enemy');
+                        // Lead-targeted missile
+                        const aimAngle = this.brain ? this.brain.getLeadAngle() : this.angle;
+                        const missile = new Projectile(this.game, this.x, this.y, aimAngle, 'missile', 'enemy');
                         missile.speed = 260;
                         missile.maxSpeed = 700;
                         missile.acceleration = 300;
@@ -307,18 +593,33 @@ export class Enemy {
                         this.hasFiredSingleMissile = true;
                     }
                 } else {
-                    const seed = (this.remoteId || 0) + this.game.lastTime;
-                    const spread = (Math.sin(seed * 1.5) * 0.5) * spreadMultiplier;
-                    this.game.projectiles.push(new Projectile(this.game, this.x, this.y, this.angle + spread, 'bullet', 'enemy'));
+                    const seed = this.getNumericId() + this.game.lastTime;
+                    // Add slight inaccuracy to lead calculation (up to 0.15 radians error)
+                    const accuracyError = (this.brain ? (this.brain._prng(99) - 0.5) * 0.3 : 0);
+                    const leadAngle = (this.brain ? this.brain.getLeadAngle() : this.angle) + accuracyError;
+
+                    if (dist < 200) {
+                        // Close range: slightly more spread (0.2 instead of 0.12)
+                        const spread = 0.2 * spreadMultiplier;
+                        for (let i = -1; i <= 1; i += 2) {
+                            this.game.projectiles.push(new Projectile(this.game, this.x, this.y, leadAngle + spread * i, 'bullet', 'enemy'));
+                        }
+                    } else {
+                        // Long range: much more spread (0.8 instead of 0.5)
+                        const spread = (Math.sin(seed * 1.5) * 0.8) * spreadMultiplier;
+                        this.game.projectiles.push(new Projectile(this.game, this.x, this.y, leadAngle + spread, 'bullet', 'enemy'));
+                    }
                 }
             }
         } else if (this.type === 'sniper') {
             this.shootTimer += deltaTime;
             if (this.shootTimer > (2.8 / fireRateMultiplier)) {
                 this.shootTimer = 0;
+                // Sniper always lead-targets
+                const leadAngle = this.brain ? this.brain.getLeadAngle() : this.angle;
                 if (singleMissileMode) {
                     if (!this.hasFiredSingleMissile) {
-                        const missile = new Projectile(this.game, this.x, this.y, this.angle, 'missile', 'enemy');
+                        const missile = new Projectile(this.game, this.x, this.y, leadAngle, 'missile', 'enemy');
                         missile.speed = 300;
                         missile.maxSpeed = 800;
                         missile.acceleration = 350;
@@ -328,10 +629,12 @@ export class Enemy {
                         this.hasFiredSingleMissile = true;
                     }
                 } else {
-                    const seed = (this.remoteId || 0) + this.game.lastTime;
-                    const spread = (Math.sin(seed * 2.1) * 0.2) * spreadMultiplier;
-                    const shot = new Projectile(this.game, this.x, this.y, this.angle + spread, 'bullet', 'enemy');
-                    shot.speed = 700;
+                    // Precision lead shot — slightly more spread for fairness
+                    const seed = this.getNumericId() + this.game.lastTime;
+                    const accuracyError = (this.brain ? (this.brain._prng(88) - 0.5) * 0.15 : 0);
+                    const spread = (Math.sin(seed * 2.1) * 0.15) * spreadMultiplier;
+                    const shot = new Projectile(this.game, this.x, this.y, leadAngle + spread + accuracyError, 'bullet', 'enemy');
+                    shot.speed = 750; // slightly faster for lead-targeting accuracy
                     shot.damage = 2;
                     shot.color = '#6bd6ff';
                     this.game.projectiles.push(shot);
@@ -354,7 +657,7 @@ export class Enemy {
                         this.hasFiredSingleMissile = true;
                     }
                 } else {
-                    const seed = (this.remoteId || 0) + this.game.lastTime;
+                    const seed = this.getNumericId() + this.game.lastTime;
                     const spread = (Math.sin(seed * 0.8) * 0.3) * spreadMultiplier;
                     const bullet = new Projectile(this.game, this.x, this.y, this.angle + spread, 'bullet', 'enemy');
                     bullet.speed = 350;
@@ -1302,6 +1605,47 @@ export class Enemy {
                 ctx.beginPath();
                 ctx.arc(8, 0, 2, 0, Math.PI * 2);
                 ctx.fill();
+            }
+        }
+
+        // ── Smart AI Visual Indicators ─────────────────────────────
+        if (this.brain) {
+            // 1. Red targeting brackets (predicted player position)
+            this.brain.drawBrackets(ctx);
+
+            // 2. Blue warning arc — shown when about to dash or slash
+            const showWarningArc = (
+                (this.type === 'interceptor' && this.dashTimer !== undefined && this.dashTimer <= 0.6) ||
+                (this.type === 'blade' && this.slashTimer !== undefined && this.slashTimer <= 0.4)
+            );
+            if (showWarningArc) {
+                ctx.save();
+                ctx.rotate(-this.angle); // world space
+                const pulse = 0.5 + 0.5 * Math.sin(this.game.lastTime * 0.015);
+                ctx.globalAlpha = 0.55 + pulse * 0.35;
+                ctx.shadowBlur = 14;
+                ctx.shadowColor = '#44aaff';
+                ctx.strokeStyle = '#44aaff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius + 7 + pulse * 3, -Math.PI * 0.6, Math.PI * 0.6);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // 3. Yellow ! alert icon — pack backup signal received
+            if (this.brain.isAlerted) {
+                ctx.save();
+                ctx.rotate(-this.angle); // world space
+                const iconPulse = 0.7 + 0.3 * Math.abs(Math.sin(this.game.lastTime * 0.01));
+                ctx.globalAlpha = iconPulse * 0.9;
+                ctx.font = 'bold 13px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#ffdd00';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#ffaa00';
+                ctx.fillText('!', 0, -(this.radius + 12));
+                ctx.restore();
             }
         }
 

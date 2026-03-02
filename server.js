@@ -15,7 +15,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 3000;
 const ROOM_TTL_MS = 15 * 60 * 1000;
 const ROOM_CLIENT_TIMEOUT_MS = 45 * 1000;
 
@@ -26,16 +26,12 @@ const DB_NAME = 'midnight_fighter';
 const COLLECTION_NAME = 'leaderboard';
 const ROOMS_COLLECTION_NAME = 'rooms';
 
-if (!MONGO_URI) {
-    console.error('❌ MONGO_URI environment variable is not set!');
-    console.error('Please check your .env file');
-    process.exit(1);
-}
+// Track DB availability — game still works offline without leaderboard/co-op
+let dbAvailable = false;
 
-if (!MONGO_URI1) {
-    console.error('❌ MONGO_URI1 environment variable is not set!');
-    console.error('Please check your .env file');
-    process.exit(1);
+if (!MONGO_URI || !MONGO_URI1) {
+    console.warn('⚠️  MONGO_URI / MONGO_URI1 not set — leaderboard & co-op APIs will return 503.');
+    console.warn('   The game itself (singleplayer) will still work at http://localhost:' + (process.env.PORT || 3000));
 }
 
 let leaderboardDb;
@@ -61,8 +57,12 @@ app.use(express.static(path.join(__dirname, 'public'), {
     }
 }));
 
-// Connect to MongoDB
+// Connect to MongoDB (non-fatal — game works without it)
 async function connectDB() {
+    if (!MONGO_URI || !MONGO_URI1) {
+        console.warn('⚠️  Skipping MongoDB connection (env vars missing).');
+        return;
+    }
     try {
         console.log('🔄 Connecting to MongoDB Atlas (Leaderboard)...');
         leaderboardClient = await MongoClient.connect(MONGO_URI1, {
@@ -71,13 +71,10 @@ async function connectDB() {
             serverSelectionTimeoutMS: 10000,
             socketTimeoutMS: 45000,
         });
-
         leaderboardDb = leaderboardClient.db(DB_NAME);
         leaderboardCollection = leaderboardDb.collection(COLLECTION_NAME);
-
-        // Create index on score for efficient sorting
         await leaderboardCollection.createIndex({ score: -1 });
-        console.log('✅ Connected to Leaderboard Database successfully!');
+        console.log('✅ Connected to Leaderboard Database!');
 
         console.log('🔄 Connecting to MongoDB Atlas (Rooms)...');
         roomsClient = await MongoClient.connect(MONGO_URI, {
@@ -86,26 +83,32 @@ async function connectDB() {
             serverSelectionTimeoutMS: 10000,
             socketTimeoutMS: 45000,
         });
-
         roomsDb = roomsClient.db(DB_NAME);
         roomsCollection = roomsDb.collection(ROOMS_COLLECTION_NAME);
-
-        // Unique room id index for co-op rooms
         await roomsCollection.createIndex({ roomId: 1 }, { unique: true });
         await roomsCollection.createIndex({ expiresAt: 1 });
-        console.log('✅ Connected to Rooms Database successfully!');
-
-        console.log('✅ Connected to all MongoDB Atlas databases!');
+        console.log('✅ Connected to Rooms Database!');
+        console.log('✅ All MongoDB connections established!');
+        dbAvailable = true;
     } catch (error) {
-        console.error('❌ MongoDB Connection Error:', error);
-        process.exit(1);
+        console.warn('⚠️  MongoDB connection failed — leaderboard & co-op disabled.');
+        console.warn('   Error:', error.message);
+        dbAvailable = false;
     }
+}
+
+// Middleware: guard DB-dependent routes
+function requireDB(req, res, next) {
+    if (!dbAvailable) {
+        return res.status(503).json({ success: false, error: 'Database unavailable (offline mode)' });
+    }
+    next();
 }
 
 // API Routes
 
 // GET: Fetch top leaderboard entries
-app.get('/api/leaderboard', async (req, res) => {
+app.get('/api/leaderboard', requireDB, async (req, res) => {
     try {
         const limit = parseInt(req.query.limit) || 10;
         const leaderboard = await leaderboardCollection
@@ -128,7 +131,7 @@ app.get('/api/leaderboard', async (req, res) => {
 });
 
 // POST: Submit a new score
-app.post('/api/score', async (req, res) => {
+app.post('/api/score', requireDB, async (req, res) => {
     try {
         const { playerName, score, level, shipType, teamMembers } = req.body;
 
@@ -869,23 +872,24 @@ app.get('/api/player/:playerName', async (req, res) => {
     }
 });
 
-// Start Server
+// Start Server — listen immediately, connect DB in background
 async function startServer() {
-    await connectDB();
-
     const httpServer = createServer(app);
     setupRealtimeServer(httpServer);
-    startRoomCleanup();
 
     httpServer.listen(PORT, () => {
         console.log('========================================');
         console.log('🚀 MIDNIGHT FIGHTER - Server Running');
         console.log('========================================');
-        console.log(`🌐 Game URL: http://localhost:${PORT}`);
-        console.log(`📊 API: http://localhost:${PORT}/api/leaderboard`);
+        console.log(`🌐 Game URL:        http://localhost:${PORT}`);
+        console.log(`📊 Leaderboard API: http://localhost:${PORT}/api/leaderboard`);
         console.log(`🔌 Socket.IO ready on port ${PORT}`);
         console.log('========================================');
     });
+
+    // Connect to DB after listening so game is immediately playable
+    await connectDB();
+    if (dbAvailable) startRoomCleanup();
 }
 
 startServer();

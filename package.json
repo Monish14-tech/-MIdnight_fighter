@@ -9,7 +9,8 @@
   },
   "scripts": {
     "start": "node server.js",
-    "dev": "vercel dev"
+    "dev": "vercel dev",
+    "test": "node public/test/game.test.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

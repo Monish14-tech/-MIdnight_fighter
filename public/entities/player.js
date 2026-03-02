@@ -81,6 +81,23 @@ export class Player {
         // Extra power-up timers
         this.doubleDamageTimer = 0;
         this.rapidFireTimer = 0;
+
+        // Ghost powerup
+        this.ghostTimer = 0;
+
+        // Passive: partial heal accumulator (for tank/juggernaut)
+        this._passiveHealAccum = 0;
+
+        // ── Ship Passive Abilities ─────────────────────────────
+        // Speedy ships: shorter dash cooldown
+        if (['scout', 'phantom', 'wraith', 'reaper'].includes(shipType)) {
+            this.dashCooldown = 3.0;
+        }
+        // Firepower ships: slight extra fire rate bonus
+        if (['rapid', 'pulse', 'laser_drone'].includes(shipType)) {
+            this.fireRate = Math.max(0.03, this.fireRate * 0.85);
+            this.baseFireRate = this.fireRate;
+        }
     }
 
     update(deltaTime, input) {
@@ -108,6 +125,9 @@ export class Player {
             if (this.rapidFireTimer <= 0 && this.baseFireRate) {
                 this.fireRate = this.baseFireRate; // Reset to normal fire rate
             }
+        }
+        if (this.ghostTimer > 0) {
+            this.ghostTimer -= deltaTime;
         }
 
         // Dash cooldowns
@@ -158,6 +178,8 @@ export class Player {
                 this.dashCooldownTimer = this.dashCooldown;
                 this.dashDirection = dashVector;
                 this.angle = Math.atan2(this.dashDirection.y, this.dashDirection.x);
+                // Grant i-frames for the duration of the dash
+                this.invulnerableTimer = this.dashDuration + 0.05;
                 if (this.game.audio) this.game.audio.dash();
             }
 
@@ -247,20 +269,20 @@ export class Player {
             const noseY = this.y + Math.sin(this.angle) * 20;
 
             if (this.bulletType === 'spread') {
-                // Fire 3-5 bullets in a fan
+                // Fire 3 bullets in a fan
                 const count = 3;
                 for (let i = 0; i < count; i++) {
-                    const offset = (i - (count - 1) / 2) * 0.2;
+                    const offset = (i - (count - 1) / 2) * 0.22;
                     const p = new Projectile(this.game, noseX, noseY, this.angle + offset, 'bullet', this.playerId);
                     p.damage = this.bulletDamage || 1;
                     this.game.projectiles.push(p);
                 }
             } else if (this.bulletType === 'railgun') {
-                // Single huge high-speed high-damage shot
+                // Single high-speed high-damage piercing shot
                 const p = new Projectile(this.game, noseX, noseY, this.angle, 'bullet', this.playerId);
-                p.speed = 2500;
+                p.speed = 2600;
                 p.damage = this.bulletDamage || 5;
-                p.radius = 8;
+                p.radius = 7;
                 p.piercing = true;
                 p.color = '#ffffff';
                 this.game.projectiles.push(p);
@@ -275,17 +297,34 @@ export class Player {
                 const p = new Projectile(this.game, noseX, noseY, this.angle, 'bullet', this.playerId);
                 p.damage = this.bulletDamage || 1;
                 p.piercing = true;
-                p.color = '#00ff44';
+                p.color = '#00ff88';
+                this.game.projectiles.push(p);
+            } else if (this.bulletType === 'laser') {
+                // Rapid-fire laser pulses: thin, fast, piercing, short-lived
+                const p = new Projectile(this.game, noseX, noseY, this.angle, 'bullet', this.playerId);
+                p.speed = 2200;
+                p.damage = this.bulletDamage || 2;
+                p.radius = 3;
+                p.piercing = true;
+                p.lifetime = 0.12;
+                p.color = '#ff44ff';
                 this.game.projectiles.push(p);
             } else {
-                // Default Normal Shot
-                const spread = (Math.random() - 0.5) * 0.1;
+                // Normal shot with tiny spread
+                const spread = (Math.random() - 0.5) * 0.08;
                 const p = new Projectile(this.game, noseX, noseY, this.angle + spread, 'bullet', this.playerId);
                 p.damage = this.bulletDamage || 1;
                 this.game.projectiles.push(p);
             }
 
-            if (this.game.audio) this.game.audio.dash();
+            // Correct: shoot sound for bullets (was wrongly calling dash sound)
+            if (this.game.audio) {
+                // Use shoot sound if available, fall back to dash
+                if (typeof this.game.audio.shoot === 'function') {
+                    this.game.audio.shoot();
+                }
+                // (no fallback — silent fire is better than wrong sfx)
+            }
         } else if (type === 'missile') {
             const p = new Projectile(this.game, this.x, this.y, this.angle, 'missile', this.playerId);
             this.game.projectiles.push(p);
@@ -1511,9 +1550,11 @@ export class Player {
     }
 
     takeDamage(amount) {
-        // Check if player is invulnerable
-        if (this.isInvincible || this.invulnerableTimer > 0 || this.invulnerabilityTimer > 0 || this.isDashing) {
-            return false; // No damage taken
+        // Check all invulnerability conditions
+        if (this.isInvincible || this.invulnerableTimer > 0 ||
+            this.invulnerabilityTimer > 0 || this.isDashing ||
+            this.ghostTimer > 0) {
+            return false;
         }
 
         this.currentHealth -= amount;
@@ -1534,45 +1575,61 @@ export class Player {
         return false; // Player survived
     }
 
-    applyPowerUp(type) {
-        const duration = 5.0; // 5 seconds for all power-ups
+    // Called by game when this player kills an enemy (passive ability)
+    onEnemyKill() {
+        if (['tank', 'juggernaut', 'guardian'].includes(this.shipType)) {
+            this._passiveHealAccum = (this._passiveHealAccum || 0) + 0.25;
+            if (this._passiveHealAccum >= 1) {
+                this._passiveHealAccum -= 1;
+                this.currentHealth = Math.min(this.maxHealth, this.currentHealth + 1);
+            }
+        }
+    }
 
+    applyPowerUp(type) {
         switch (type) {
             case 'speed':
-                this.speedBoostTimer = duration;
+                this.speedBoostTimer = 6.0;
                 break;
             case 'slowmo':
-                this.slowMotionTimer = duration;
+                this.slowMotionTimer = 5.0;
                 break;
             case 'invulnerability':
-                this.invulnerabilityTimer = duration;
+                this.invulnerabilityTimer = 6.0;
                 break;
             case 'health_recover':
-                this.currentHealth = Math.min(this.currentHealth + 1, this.maxHealth);
+                this.currentHealth = Math.min(this.currentHealth + 2, this.maxHealth);
                 break;
             case 'health_boost':
-                this.maxHealth = Math.min(this.maxHealth + 1, 10);
-                this.currentHealth = this.maxHealth;
+                this.maxHealth = Math.min(this.maxHealth + 1, 15);
+                this.currentHealth = Math.min(this.currentHealth + 1, this.maxHealth);
                 break;
             case 'shield':
-                this.invulnerableTimer = 5.0; // 5 seconds of shield
+                this.invulnerableTimer = 6.0;
                 break;
             case 'double_damage':
-                this.doubleDamageTimer = 10.0; // 10 seconds of double damage
+                this.doubleDamageTimer = 10.0;
                 if (!this.baseBulletDamage) this.baseBulletDamage = this.bulletDamage;
                 this.bulletDamage = this.baseBulletDamage * 2;
                 break;
             case 'rapid_fire':
-                this.rapidFireTimer = 8.0; // 8 seconds of rapid fire
+                this.rapidFireTimer = 8.0;
                 if (!this.baseFireRate) this.baseFireRate = this.fireRate;
-                this.fireRate = this.baseFireRate * 0.5; // Double fire rate
+                this.fireRate = this.baseFireRate * 0.4; // 2.5x fire rate
+                break;
+            case 'ghost':
+                this.ghostTimer = 4.0; // Phase through enemy contact for 4s
+                break;
+            case 'ammo_refill':
+                this.missileTimer = 0; // Instant missile reload
+                break;
+            case 'nuke':
+                // Screen-clear handled in game.js checkPowerUpCollisions
                 break;
         }
 
         // Play power-up sound
-        if (this.game.audio) {
-            this.game.audio.dash();
-        }
+        if (this.game.audio) this.game.audio.dash();
     }
 
     isInvulnerable() {

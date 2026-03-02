@@ -40,32 +40,41 @@ class AssetLoader {
 }
 
 export const SHIP_DATA = {
-    'default': { name: 'INTERCEPTOR', price: 0, hp: 3, speed: 320, damage: 1, fireRate: 0.20, missileCooldown: 3.0, missileCount: 1, color: '#00f3ff', bulletType: 'normal', desc: 'Standard issue.', requiresPrevious: false },
-    'scout': { name: 'RAZORBACK', price: 15000, hp: 2, speed: 420, damage: 1, fireRate: 0.20, missileCooldown: 2.5, missileCount: 1, color: '#ffff00', bulletType: 'spread', desc: 'Fast, spread fire.', requiresPrevious: true },
-    'phantom': { name: 'PHANTOM', price: 16000, hp: 2, speed: 400, damage: 1, fireRate: 0.22, missileCooldown: 2.0, missileCount: 1, color: '#9900ff', bulletType: 'spread', desc: 'Nimbly spread.', requiresPrevious: true },
-    'rapid': { name: 'STORM BRINGER', price: 17000, hp: 3, speed: 320, damage: 1, fireRate: 0.23, missileCooldown: 2.0, missileCount: 1, color: '#aa00ff', bulletType: 'normal', desc: 'Extreme fire rate.', requiresPrevious: true },
-    'fighter': { name: 'CRIMSON FURY', price: 18000, hp: 3, speed: 340, damage: 2, fireRate: 0.24, missileCooldown: 3.0, missileCount: 1, color: '#ff0055', bulletType: 'normal', desc: 'High damage fighter.', requiresPrevious: true },
-    'pulse': { name: 'NEON PULSE', price: 19000, hp: 3, speed: 380, damage: 1, fireRate: 0.08, missileCooldown: 2.5, missileCount: 1, color: '#00ffff', bulletType: 'normal', desc: 'Hyper-frequency pulse.', requiresPrevious: true },
-    'quantum': { name: 'QUANTUM GHOST', price: 20000, hp: 4, speed: 480, damage: 8, fireRate: 0.08, missileCooldown: 1.8, missileCount: 3, color: '#39ff14', bulletType: 'railgun', invincible: true, desc: 'Quantum entity. Hyper velocity.', requiresPrevious: true },
-    'void': { name: 'VOID STALKER', price: 21000, hp: 4, speed: 360, damage: 5, fireRate: 0.40, missileCooldown: 3.0, missileCount: 1, color: '#4400ff', bulletType: 'railgun', desc: 'Experimental Railgun.', requiresPrevious: true },
-    'solar': { name: 'SOLAR FLARE', price: 22000, hp: 4, speed: 310, damage: 2, fireRate: 0.25, missileCooldown: 3.5, missileCount: 1, color: '#ffcc00', bulletType: 'explosive', desc: 'Explosive solar rounds.', requiresPrevious: true },
-    'bomber': { name: 'DOOMSDAY', price: 23000, hp: 4, speed: 280, damage: 2, fireRate: 0.20, missileCooldown: 4.0, missileCount: 3, color: '#ff6600', bulletType: 'normal', desc: 'Triple missile barrage.', requiresPrevious: true },
-    'tank': { name: 'V.G. TITAN', price: 25000, hp: 5, speed: 280, damage: 2, fireRate: 0.25, missileCooldown: 4.0, missileCount: 1, color: '#00ff44', bulletType: 'piercing', desc: 'Heavy armor, piercing shots.', requiresPrevious: true },
-    'wraith': { name: 'COSMIC WRAITH', price: 28000, hp: 5, speed: 440, damage: 10, fireRate: 0.09, missileCooldown: 2.0, missileCount: 2, color: '#2d1b69', bulletType: 'railgun', invincible: true, desc: 'Void phantom. Reality breaker.', requiresPrevious: true },
-    'vanguard': { name: 'VANGUARD', price: 31000, hp: 5, speed: 340, damage: 2, fireRate: 0.12, missileCooldown: 3.0, missileCount: 2, color: '#00ffcc', bulletType: 'piercing', desc: 'Elite piercing fighter.', requiresPrevious: true },
-    'eclipse': { name: 'ECLIPSE SERAPH', price: 34000, hp: 6, speed: 360, damage: 5, fireRate: 0.08, missileCooldown: 2.2, missileCount: 3, color: '#66ccff', bulletType: 'piercing', invincible: true, desc: 'Angel core. Invincible hull.', requiresPrevious: true },
-    'shadowblade': { name: 'SHADOWBLADE', price: 37000, hp: 6, speed: 420, damage: 6, fireRate: 0.11, missileCooldown: 2.5, missileCount: 3, color: '#1a1a2e', bulletType: 'piercing', invincible: true, desc: 'Silent assassin. Stealth enhanced.', requiresPrevious: true },
-    'guardian': { name: 'GALAXY GUARDIAN', price: 40000, hp: 6, speed: 260, damage: 2, fireRate: 0.20, missileCooldown: 4.0, missileCount: 2, color: '#ffffff', bulletType: 'normal', desc: 'Invincible protector.', requiresPrevious: true },
-    'obliterator': { name: 'OBLITERATOR PRIME', price: 45000, hp: 7, speed: 300, damage: 7, fireRate: 0.12, missileCooldown: 2.8, missileCount: 4, color: '#ff3366', bulletType: 'explosive', invincible: true, desc: 'Siege frame. Invincible core.', requiresPrevious: true },
-    'inferno': { name: 'INFERNO KING', price: 52000, hp: 7, speed: 380, damage: 9, fireRate: 0.14, missileCooldown: 2.3, missileCount: 4, color: '#ff4500', bulletType: 'explosive', invincible: true, desc: 'Blazing hellfire. Pure devastation.', requiresPrevious: true },
-    'juggernaut': { name: 'JUGGERNAUT', price: 60000, hp: 8, speed: 240, damage: 3, fireRate: 0.30, missileCooldown: 5.0, missileCount: 4, color: '#ff9900', bulletType: 'piercing', desc: 'God of War, 4 missiles.', requiresPrevious: true },
-    'tempest': { name: 'TEMPEST LORD', price: 72000, hp: 8, speed: 360, damage: 7, fireRate: 0.13, missileCooldown: 2.7, missileCount: 5, color: '#00d9ff', bulletType: 'spread', invincible: true, desc: 'Lightning god. Storm incarnate.', requiresPrevious: true },
-    'reaper': { name: 'VOID REAPER', price: 82000, hp: 8, speed: 400, damage: 14, fireRate: 0.11, missileCooldown: 2.2, missileCount: 4, color: '#1a1a1a', bulletType: 'explosive', invincible: true, desc: 'Death embodied. Final judgment.', requiresPrevious: true },
-    'crimson_emperor': { name: 'CRIMSON EMPEROR', price: 98000, hp: 9, speed: 350, damage: 12, fireRate: 0.12, missileCooldown: 2.5, missileCount: 7, color: '#dc143c', bulletType: 'piercing', invincible: true, desc: 'Royal ruler. Absolute dominion.', requiresPrevious: true },
-    'phoenix': { name: 'CELESTIAL PHOENIX', price: 125000, hp: 10, speed: 390, damage: 13, fireRate: 0.15, missileCooldown: 2.4, missileCount: 6, color: '#ffa500', bulletType: 'explosive', invincible: true, desc: 'Mythic firebird. Eternal rebirth.', requiresPrevious: true },
-    'starborn': { name: 'STARBORN TITAN', price: 162000, hp: 10, speed: 340, damage: 8, fireRate: 0.10, missileCooldown: 2.0, missileCount: 5, color: '#99ffcc', bulletType: 'railgun', invincible: true, desc: 'Mythic relic. Invincible.', requiresPrevious: true },
-    'leviathan': { name: 'LEVIATHAN ROX', price: 220000, hp: 12, speed: 320, damage: 11, fireRate: 0.16, missileCooldown: 3.0, missileCount: 6, color: '#003d82', bulletType: 'explosive', invincible: true, desc: 'Deep sea titan. Unstoppable force.', requiresPrevious: true },
-    'sentinel': { name: 'ETERNAL SENTINEL', price: 300000, hp: 15, speed: 360, damage: 15, fireRate: 0.13, missileCooldown: 2.1, missileCount: 8, color: '#e8e8e8', bulletType: 'railgun', invincible: true, desc: 'Ultimate guardian. Infinite power.', requiresPrevious: true }
+    // ── Tier 0: Starter ──────────────────────────────────────────────────────
+    'default': { name: 'INTERCEPTOR', price: 0, hp: 3, speed: 340, damage: 1, fireRate: 0.18, missileCooldown: 3.0, missileCount: 1, color: '#00f3ff', bulletType: 'normal', desc: 'Standard issue. Reliable & fast.', requiresPrevious: false },
+    // ── Tier 1: Early ────────────────────────────────────────────────────────
+    'scout': { name: 'RAZORBACK', price: 15000, hp: 2, speed: 460, damage: 1, fireRate: 0.14, missileCooldown: 2.0, missileCount: 1, color: '#ffff00', bulletType: 'spread', desc: 'Blazing speed. Fan spread.', requiresPrevious: true },
+    'phantom': { name: 'PHANTOM', price: 16000, hp: 3, speed: 420, damage: 1, fireRate: 0.13, missileCooldown: 1.8, missileCount: 1, color: '#9900ff', bulletType: 'spread', desc: 'Nimble spread fighter.', requiresPrevious: true },
+    'rapid': { name: 'STORM BRINGER', price: 17000, hp: 3, speed: 350, damage: 1, fireRate: 0.10, missileCooldown: 1.8, missileCount: 2, color: '#aa00ff', bulletType: 'normal', desc: 'Hyper fire rate. Dual missiles.', requiresPrevious: true },
+    'fighter': { name: 'CRIMSON FURY', price: 18000, hp: 4, speed: 360, damage: 2, fireRate: 0.17, missileCooldown: 2.5, missileCount: 2, color: '#ff0055', bulletType: 'normal', desc: 'High damage. Extra HP.', requiresPrevious: true },
+    'pulse': { name: 'NEON PULSE', price: 19000, hp: 4, speed: 400, damage: 2, fireRate: 0.06, missileCooldown: 2.0, missileCount: 2, color: '#00ffff', bulletType: 'normal', desc: 'Extreme fire rate. Neon core.', requiresPrevious: true },
+    // ── Tier 2: Mid ──────────────────────────────────────────────────────────
+    'quantum': { name: 'QUANTUM GHOST', price: 20000, hp: 5, speed: 500, damage: 9, fireRate: 0.07, missileCooldown: 1.6, missileCount: 3, color: '#39ff14', bulletType: 'railgun', desc: 'Quantum entity. Hyper velocity.', requiresPrevious: true, invincible: true },
+    'void': { name: 'VOID STALKER', price: 21000, hp: 5, speed: 380, damage: 6, fireRate: 0.32, missileCooldown: 2.5, missileCount: 2, color: '#4400ff', bulletType: 'railgun', desc: 'Experimental railgun. Shadow walk.', requiresPrevious: true },
+    'solar': { name: 'SOLAR FLARE', price: 22000, hp: 5, speed: 340, damage: 3, fireRate: 0.20, missileCooldown: 3.0, missileCount: 2, color: '#ffcc00', bulletType: 'explosive', desc: 'Explosive solar rounds.', requiresPrevious: true },
+    'bomber': { name: 'DOOMSDAY', price: 23000, hp: 5, speed: 300, damage: 3, fireRate: 0.18, missileCooldown: 3.0, missileCount: 3, color: '#ff6600', bulletType: 'explosive', desc: 'Triple missile barrage.', requiresPrevious: true },
+    'tank': { name: 'V.G. TITAN', price: 25000, hp: 7, speed: 290, damage: 3, fireRate: 0.20, missileCooldown: 3.5, missileCount: 2, color: '#00ff44', bulletType: 'piercing', desc: 'Heavy armor. Piercing shots. Heals on kill.', requiresPrevious: true },
+    'laser_drone': { name: 'LASER DRONE', price: 30000, hp: 5, speed: 370, damage: 2, fireRate: 0.05, missileCooldown: 2.5, missileCount: 2, color: '#ff00cc', bulletType: 'laser', desc: 'Sustained laser pulses. High DPS.', requiresPrevious: true },
+    // ── Tier 3: Upper-Mid ─────────────────────────────────────────────────────
+    'wraith': { name: 'COSMIC WRAITH', price: 35000, hp: 6, speed: 460, damage: 11, fireRate: 0.08, missileCooldown: 1.8, missileCount: 3, color: '#cc44ff', bulletType: 'railgun', desc: 'Void phantom. Reality breaker.', requiresPrevious: true, invincible: true },
+    'vanguard': { name: 'VANGUARD', price: 40000, hp: 6, speed: 360, damage: 3, fireRate: 0.10, missileCooldown: 2.5, missileCount: 3, color: '#00ffcc', bulletType: 'piercing', desc: 'Elite piercing fighter.', requiresPrevious: true },
+    'eclipse': { name: 'ECLIPSE SERAPH', price: 46000, hp: 7, speed: 380, damage: 6, fireRate: 0.07, missileCooldown: 2.0, missileCount: 4, color: '#66ccff', bulletType: 'piercing', desc: 'Angel core. Invincible hull.', requiresPrevious: true, invincible: true },
+    'shadowblade': { name: 'SHADOWBLADE', price: 55000, hp: 7, speed: 440, damage: 7, fireRate: 0.09, missileCooldown: 2.2, missileCount: 4, color: '#5522aa', bulletType: 'piercing', desc: 'Silent assassin. Stealth.', requiresPrevious: true, invincible: true },
+    'guardian': { name: 'GALAXY GUARDIAN', price: 65000, hp: 8, speed: 270, damage: 3, fireRate: 0.17, missileCooldown: 3.5, missileCount: 3, color: '#ffffff', bulletType: 'normal', desc: 'Invincible protector. High HP.', requiresPrevious: true },
+    // ── Tier 4: Advanced ──────────────────────────────────────────────────────
+    'obliterator': { name: 'OBLITERATOR PRIME', price: 78000, hp: 8, speed: 320, damage: 8, fireRate: 0.10, missileCooldown: 2.5, missileCount: 5, color: '#ff3366', bulletType: 'explosive', desc: 'Siege frame. Invincible core.', requiresPrevious: true, invincible: true },
+    'inferno': { name: 'INFERNO KING', price: 95000, hp: 8, speed: 400, damage: 10, fireRate: 0.12, missileCooldown: 2.0, missileCount: 5, color: '#ff4500', bulletType: 'explosive', desc: 'Blazing hellfire. Pure devastation.', requiresPrevious: true, invincible: true },
+    'juggernaut': { name: 'JUGGERNAUT', price: 115000, hp: 10, speed: 260, damage: 4, fireRate: 0.22, missileCooldown: 4.0, missileCount: 5, color: '#ff9900', bulletType: 'piercing', desc: 'God of War. Heals on kill.', requiresPrevious: true },
+    'tempest': { name: 'TEMPEST LORD', price: 138000, hp: 9, speed: 380, damage: 8, fireRate: 0.11, missileCooldown: 2.4, missileCount: 6, color: '#00d9ff', bulletType: 'spread', desc: 'Lightning god. Storm incarnate.', requiresPrevious: true, invincible: true },
+    // ── Tier 5: Elite ────────────────────────────────────────────────────────
+    'reaper': { name: 'VOID REAPER', price: 165000, hp: 9, speed: 420, damage: 15, fireRate: 0.09, missileCooldown: 2.0, missileCount: 5, color: '#880022', bulletType: 'explosive', desc: 'Death embodied. Final judgment.', requiresPrevious: true, invincible: true },
+    'crimson_emperor': { name: 'CRIMSON EMPEROR', price: 200000, hp: 10, speed: 370, damage: 13, fireRate: 0.10, missileCooldown: 2.2, missileCount: 8, color: '#dc143c', bulletType: 'piercing', desc: 'Royal ruler. Absolute dominion.', requiresPrevious: true, invincible: true },
+    'phoenix': { name: 'CELESTIAL PHOENIX', price: 250000, hp: 11, speed: 410, damage: 14, fireRate: 0.12, missileCooldown: 2.0, missileCount: 7, color: '#ffa500', bulletType: 'explosive', desc: 'Mythic firebird. Eternal rebirth.', requiresPrevious: true, invincible: true },
+    'starborn': { name: 'STARBORN TITAN', price: 320000, hp: 11, speed: 360, damage: 9, fireRate: 0.08, missileCooldown: 1.8, missileCount: 6, color: '#99ffcc', bulletType: 'railgun', desc: 'Mythic relic. Invincible.', requiresPrevious: true, invincible: true },
+    'leviathan': { name: 'LEVIATHAN ROX', price: 420000, hp: 13, speed: 340, damage: 12, fireRate: 0.13, missileCooldown: 2.5, missileCount: 7, color: '#003d82', bulletType: 'explosive', desc: 'Deep sea titan. Unstoppable.', requiresPrevious: true, invincible: true },
+    // ── Tier 6: Legendary ─────────────────────────────────────────────────────
+    'sentinel': { name: 'ETERNAL SENTINEL', price: 550000, hp: 15, speed: 380, damage: 16, fireRate: 0.11, missileCooldown: 1.8, missileCount: 9, color: '#e8e8e8', bulletType: 'railgun', desc: 'Ultimate guardian. Infinite power.', requiresPrevious: true, invincible: true },
+    'nova': { name: 'NOVA ASCENDANT', price: 750000, hp: 12, speed: 440, damage: 18, fireRate: 0.07, missileCooldown: 1.5, missileCount: 8, color: '#ffeeaa', bulletType: 'railgun', desc: 'Supernova core. Reality-shattering.', requiresPrevious: true, invincible: true },
 };
 
 const STARTING_SHIP_PRICE = 15000;
@@ -195,9 +204,12 @@ export class Game {
 
         // Timers
         this.enemyTimer = 0;
-        this.enemyInterval = 2.0;
+        this.enemyInterval = 0.8;      // Balanced spawn rate
         this.powerupTimer = 0;
         this.powerupInterval = 12.0;
+        this.enemiesSpawned = 0;
+        this.enemiesForLevel = 12 + (this.currentLevel * 4); // Level 1 = 16, L2 = 20, L5 = 32 ...
+        this.entityCounter = 0;
         this.comboMultiplier = 1;
         this.comboTimer = 0;
 
@@ -664,10 +676,14 @@ export class Game {
     }
 
     getMaxEnemiesOnScreen() {
-        if (this.currentLevel >= 24) {
-            return 101 + ((this.currentLevel - 24) * 20);
-        }
-        return 50;
+        const level = this.currentLevel || 1;
+        // Balanced concurrent caps for challenge without frustration
+        if (level >= 24) return 40 + ((level - 24) * 5);
+        if (level >= 20) return 32;
+        if (level >= 15) return 25;
+        if (level >= 10) return 18;
+        if (level >= 5) return 12;
+        return 7 + level; // L1=8, L2=9, L3=10, L4=11
     }
 
     getEnemyContactDamage() {
@@ -700,16 +716,17 @@ export class Game {
 
             this.currentLevel++;
 
-            // New Level Setup
+            // New Level Setup — balanced wave progression
             if (this.currentLevel >= 24) {
-                this.enemiesForLevel = 101 + ((this.currentLevel - 24) * 20);
+                this.enemiesForLevel = 100 + ((this.currentLevel - 24) * 30);
             } else {
-                this.enemiesForLevel = 5 + (this.currentLevel * 3);
+                this.enemiesForLevel = 12 + (this.currentLevel * 4);
             }
             this.enemiesSpawned = 0;
 
             this.difficultyMultiplier = Math.min(5.0, 1 + (this.currentLevel - 1) * 0.15);
-            this.enemyInterval = Math.max(0.3, 2.0 / this.difficultyMultiplier);
+            // Spawn interval baseline adjusted (0.8s)
+            this.enemyInterval = Math.max(0.2, 0.8 / this.difficultyMultiplier);
 
             // Removing 'level_up' netplay event because progression is strictly symmetric
 
@@ -847,20 +864,21 @@ export class Game {
         this.difficultyMultiplier = 1.0; // Retained from original
         this.lastTime = 0; // Retained from original
 
-        // Only reset entities if we're not a guest joining a room
-        // Guests receive their initial entities via netplay
+        // Reset entities. Guests also need these values initialised so spawning works symmetrically.
         if (!this.onlineCoop || this.onlineRole === 'host') {
             this.enemies = [];
             this.particles = [];
             this.projectiles = [];
             this.afterburners = [];
             this.powerups = [];
-            this.enemiesSpawned = 0;
-            this.enemiesForLevel = 5 + (this.currentLevel * 3);
         }
+        // Always reset spawn counters so the spawn condition never starts as undefined
+        this.enemiesSpawned = 0;
+        this.enemiesForLevel = 12 + (this.currentLevel * 4);
+        this.entityCounter = 0;
 
         this.enemyTimer = 0;
-        this.enemyInterval = 2.0;
+        this.enemyInterval = 0.8;
         this.powerupTimer = 0;
         this.powerupInterval = 12.0;
 
@@ -1308,12 +1326,23 @@ export class Game {
             const isHost = !this.onlineCoop || this.onlineRole === 'host';
             if (isHost) {
                 this.enemyTimer += dt;
-                if (this.enemyTimer > this.enemyInterval &&
-                    this.enemies.length < this.getMaxEnemiesOnScreen() &&
-                    !this.boss &&
-                    this.enemiesSpawned < this.enemiesForLevel) {
-                    this.spawnEnemy();
-                    this.enemiesSpawned++;
+
+                // Burst Spawn Logic: If screen is too empty, spawn faster
+                const maxOnScreen = this.getMaxEnemiesOnScreen();
+                const currentCount = this.enemies.length;
+                const burstThreshold = Math.ceil(maxOnScreen * 0.4);
+
+                if (this.enemyTimer > this.enemyInterval && !this.boss) {
+                    // Decide how many to spawn: 2 if screen is empty, 1 otherwise
+                    let spawnCount = (currentCount < burstThreshold) ? 2 : 1;
+
+                    for (let i = 0; i < spawnCount; i++) {
+                        if (this.enemies.length < maxOnScreen &&
+                            this.enemiesSpawned < this.enemiesForLevel) {
+                            this.spawnEnemy();
+                            this.enemiesSpawned++;
+                        }
+                    }
                     this.enemyTimer = 0;
                 }
 
@@ -1486,6 +1515,9 @@ export class Game {
         this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
         if (this.audio) this.audio.explosion();
 
+        // Passive: trigger on-kill effects for all players
+        this.getPlayers().forEach(p => { if (p.onEnemyKill) p.onEnemyKill(); });
+
         if (enemy.splitOnDeath) {
             for (let i = 0; i < enemy.splitCount; i++) {
                 const child = new Enemy(this, enemy.splitType || 'swarm');
@@ -1503,37 +1535,33 @@ export class Game {
         }
     }
 
-    spawnEnemy() {
+    spawnEnemy(forcedType = null, forcedX = null, forcedY = null) {
         const typeRand = this.random();
         const level = this.currentLevel || 1;
-        let type = 'chaser';
+        let type = forcedType || 'chaser';
 
-        const availableTypes = this.getAvailableEnemyTypes(level);
-
-        if (this.bossJustDefeated) {
-            const uniqueTypes = availableTypes.filter(t => !this.spawnedEnemyTypes.has(t));
-            if (uniqueTypes.length > 0) {
-                type = uniqueTypes[Math.floor(this.random() * uniqueTypes.length)];
+        if (!forcedType) {
+            const availableTypes = this.getAvailableEnemyTypes(level);
+            if (this.bossJustDefeated) {
+                const uniqueTypes = availableTypes.filter(t => !this.spawnedEnemyTypes.has(t));
+                if (uniqueTypes.length > 0) {
+                    type = uniqueTypes[Math.floor(this.random() * uniqueTypes.length)];
+                } else {
+                    this.bossJustDefeated = false;
+                    type = availableTypes[Math.floor(this.random() * availableTypes.length)];
+                }
             } else {
-                this.bossJustDefeated = false;
-                type = availableTypes[Math.floor(this.random() * availableTypes.length)];
+                type = this.selectEnemyTypeByProbability(typeRand, level, availableTypes);
             }
-        } else {
-            type = this.selectEnemyTypeByProbability(typeRand, level, availableTypes);
         }
 
         this.spawnedEnemyTypes.add(type);
-
-        const enemy = new Enemy(this, type);
-
-        // Assign symmetric network ID
+        const enemy = new Enemy(this, type, forcedX, forcedY);
         enemy.remoteId = 'enemy_' + (this.entityCounter++);
-
         this.enemies.push(enemy);
     }
 
     getAvailableEnemyTypes(level) {
-        // Return array of enemy types available at this level
         if (level >= 21) {
             return ['chaser', 'heavy', 'shooter', 'swarm', 'sniper', 'splitter', 'phantom', 'titan', 'wraith', 'vortex',
                 'bomber', 'interceptor', 'decoy', 'launcher', 'shielder', 'pulsar', 'blade', 'tractor', 'mirror', 'swarmer'];
@@ -1750,7 +1778,12 @@ export class Game {
     }
 
     spawnPowerUp() {
-        const types = ['speed', 'slowmo', 'invulnerability', 'health_recover', 'health_boost', 'shield', 'double_damage', 'rapid_fire'];
+        const types = [
+            'speed', 'slowmo', 'invulnerability',
+            'health_recover', 'health_boost',
+            'shield', 'double_damage', 'rapid_fire',
+            'nuke', 'ghost', 'ammo_refill'
+        ];
         const type = types[Math.floor(this.random() * types.length)];
         const pu = new PowerUp(this, type);
 
@@ -2001,6 +2034,13 @@ export class Game {
                     }
 
                     player.applyPowerUp(p.type);
+
+                    // Nuke: instant screen clear of all enemies
+                    if (p.type === 'nuke') {
+                        [...this.enemies].forEach(e => this.handleEnemyDefeat(e, false));
+                        if (this.screenShake) this.screenShake.trigger(60, 0.8);
+                    }
+
                     p.markedForDeletion = true;
                     this.screenShake.trigger(10, 0.1);
                     if (this.audio) this.audio.dash();
