@@ -1073,10 +1073,9 @@ export class Game {
         this.isPaused = false;
         this.gameOver = false;
 
+        // Hide all screens
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
 
-        document.getElementById('pause-menu').classList.remove('active');
-        document.getElementById('settings-menu').classList.remove('active');
-        this.gameOverScreen.classList.remove('active');
         if (this.hud) this.hud.style.display = 'none';
 
         // Fix: Ensure Boss HUD is hidden when going to main menu
@@ -1185,18 +1184,19 @@ export class Game {
     }
 
     updatePlayerNameDisplay() {
+        console.log("Updating player name displays...");
+        // 1. Update main menu display
         const displayEl = document.getElementById('current-player-name');
         if (displayEl) {
             const playerName = this.leaderboard.getPlayerName();
-            if (this.coopMode && this.collabTeamMembers && this.collabTeamMembers.length === 2) {
-                displayEl.innerText = this.collabTeamMembers.join(' & ');
-            } else {
-                displayEl.innerText = playerName || 'UNKNOWN';
-            }
+            displayEl.innerText = playerName || 'UNKNOWN';
         }
+        // 2. Update HUD display
+        this.updatePlayerHudInfo();
     }
 
     updatePlayerHudInfo() {
+        console.log("Updating HUD info. Local name:", this.leaderboard.getPlayerName());
         const p1NameEl = document.getElementById('p1-hud-name');
         const p1ShipEl = document.getElementById('p1-hud-ship');
         const p2NameEl = document.getElementById('p2-hud-name');
@@ -1622,6 +1622,7 @@ export class Game {
 
         enemy.markedForDeletion = true;
         this.addScore(enemy.points, useCombo);
+        if (this.achievementManager) this.achievementManager.addStat('kills', 1);
         this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
         if (this.audio) this.audio.explosion();
 
@@ -2090,6 +2091,7 @@ export class Game {
         const loot = this.boss.coinReward || 500;
         this.score += this.boss.points;
         this.coins += loot;
+        if (this.achievementManager) this.achievementManager.addStat('bosses', 1);
 
         // Save coins
         localStorage.setItem('midnight_coins', this.coins);
@@ -2237,6 +2239,13 @@ export class Game {
     handleGameOver() {
         if (this.gameOver) return; // Prevent multiple calls
         this.gameOver = true;
+
+        // Stats
+        if (this.achievementManager) {
+            this.achievementManager.addStat('games', 1);
+            this.achievementManager.addStat('deaths', 1);
+        }
+
         if (this.onlineCoop) {
             this.netplay.emit('player_died', { reason: 'hp_zero' });
         }
@@ -2326,7 +2335,9 @@ export class Game {
                         speedBoostTimer: this.player.speedBoostTimer,
                         doubleDamageTimer: this.player.doubleDamageTimer,
                         rapidFireTimer: this.player.rapidFireTimer,
-                        invulnerabilityTimer: this.player.invulnerabilityTimer
+                        invulnerabilityTimer: this.player.invulnerabilityTimer,
+                        slowMotionTimer: this.player.slowMotionTimer,
+                        ghostTimer: this.player.ghostTimer
                     };
 
                     // Create new player with selected ship
@@ -2342,6 +2353,8 @@ export class Game {
                     this.player.doubleDamageTimer = oldPowerups.doubleDamageTimer;
                     this.player.rapidFireTimer = oldPowerups.rapidFireTimer;
                     this.player.invulnerabilityTimer = oldPowerups.invulnerabilityTimer;
+                    this.player.slowMotionTimer = oldPowerups.slowMotionTimer;
+                    this.player.ghostTimer = oldPowerups.ghostTimer;
                 }
             }
 
@@ -2475,7 +2488,9 @@ export class Game {
                         speedBoostTimer: this.player.speedBoostTimer,
                         doubleDamageTimer: this.player.doubleDamageTimer,
                         rapidFireTimer: this.player.rapidFireTimer,
-                        invulnerabilityTimer: this.player.invulnerabilityTimer
+                        invulnerabilityTimer: this.player.invulnerabilityTimer,
+                        slowMotionTimer: this.player.slowMotionTimer,
+                        ghostTimer: this.player.ghostTimer
                     };
 
                     // Create new player with selected ship
@@ -2491,6 +2506,8 @@ export class Game {
                     this.player.doubleDamageTimer = oldPowerups.doubleDamageTimer;
                     this.player.rapidFireTimer = oldPowerups.rapidFireTimer;
                     this.player.invulnerabilityTimer = oldPowerups.invulnerabilityTimer;
+                    this.player.slowMotionTimer = oldPowerups.slowMotionTimer;
+                    this.player.ghostTimer = oldPowerups.ghostTimer;
                 }
             }
 

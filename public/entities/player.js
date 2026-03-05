@@ -116,12 +116,20 @@ export class Player {
         // New power-up timers
         if (this.doubleDamageTimer > 0) {
             this.doubleDamageTimer -= deltaTime;
+            // Ensure effect is applied (handles re-initialization during ship change)
+            if (this.bulletDamage === this.baseBulletDamage) {
+                this.bulletDamage = this.baseBulletDamage * 2;
+            }
             if (this.doubleDamageTimer <= 0 && this.baseBulletDamage) {
                 this.bulletDamage = this.baseBulletDamage;
             }
         }
         if (this.rapidFireTimer > 0) {
             this.rapidFireTimer -= deltaTime;
+            // Ensure effect is applied (handles re-initialization during ship change)
+            if (this.fireRate === this.baseFireRate) {
+                this.fireRate = this.baseFireRate * 0.4;
+            }
             if (this.rapidFireTimer <= 0 && this.baseFireRate) {
                 this.fireRate = this.baseFireRate; // Reset to normal fire rate
             }
