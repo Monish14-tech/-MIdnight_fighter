@@ -331,7 +331,6 @@ h1 {
     border: 2px solid var(--neon-blue);
     box-shadow: 0 0 20px var(--neon-blue), inset 0 0 20px var(--neon-blue);
     padding: 2rem;
-    display: flex;
     flex-direction: column;
     align-items: center;
     border-radius: 10px;
