@@ -14,9 +14,9 @@ export class Projectile {
         this.color = '#ffff00'; // Yellow
 
         if (this.type === 'missile') {
-            this.speed = 200; // Start slower, accelerate
-            this.maxSpeed = 600; // Was 1200
-            this.acceleration = 250; // Was 800
+            this.speed = 400; // Start slower, accelerate
+            this.maxSpeed = 1200;
+            this.acceleration = 800;
             this.damage = 5;
             this.radius = 8;
             this.color = '#ff4400'; // Orange-Red
@@ -54,8 +54,8 @@ export class Projectile {
                 const dy = this.target.y - this.y;
                 const targetAngle = Math.atan2(dy, dx);
 
-                // Smooth turning - drastically reduced for dodgeability
-                const turnSpeed = 2.5 * deltaTime; // Was 10.0
+                // Smooth turning
+                const turnSpeed = 10.0 * deltaTime;
                 let angleDiff = targetAngle - this.angle;
 
                 // Normalize angle

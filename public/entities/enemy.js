@@ -596,14 +596,15 @@ export class Enemy {
                 this.shootTimer = 0;
                 if (singleMissileMode) {
                     if (!this.hasFiredSingleMissile) {
-                        // Lead-targeted missile
+                        // Replaced homing missiles with slow explosive plasma orbs
                         const aimAngle = this.brain ? this.brain.getLeadAngle() : this.angle;
-                        const missile = new Projectile(this.game, this.x, this.y, aimAngle, 'missile', 'enemy');
-                        missile.speed = 260;
-                        missile.maxSpeed = 700;
-                        missile.acceleration = 300;
-                        missile.damage = 2;
-                        this.game.projectiles.push(missile);
+                        const orb = new Projectile(this.game, this.x, this.y, aimAngle, 'bullet', 'enemy');
+                        orb.speed = 200; // Slow travel
+                        orb.damage = 2;
+                        orb.radius = 12; // Large orb
+                        orb.explosive = true;
+                        orb.color = '#ff00ff'; // Purple/Magenta 
+                        this.game.projectiles.push(orb);
                         this.hasFiredSingleMissile = true;
                     }
                 } else {
