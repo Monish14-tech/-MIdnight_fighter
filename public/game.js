@@ -8,6 +8,7 @@ import { PowerUp } from './entities/powerup.js?v=4';
 import { LeaderboardManager } from './leaderboard.js?v=4';
 import { SocketIONetplay } from './socketio-netplay.js?v=4';
 import { AchievementManager } from './achievements.js?v=4';
+import { RANK_DATA, getRankByScore } from './ranks.js?v=4';
 
 class AssetLoader {
     constructor() {
@@ -438,6 +439,17 @@ export class Game {
             collabBackBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.closeCollaborate(); }, { passive: false });
         }
 
+        const backFromRanksBtn = document.getElementById('back-from-ranks-btn');
+        if (backFromRanksBtn) {
+            backFromRanksBtn.addEventListener('click', () => this.goToMainMenu());
+            backFromRanksBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.goToMainMenu(); }, { passive: false });
+        }
+
+        const rankBadge = document.getElementById('player-rank-main');
+        if (rankBadge) {
+            rankBadge.addEventListener('click', () => this.openRankInfo());
+        }
+
         const collabCreateBtn = document.getElementById('collab-create-btn');
         if (collabCreateBtn) {
             collabCreateBtn.addEventListener('click', () => this.createCollaborateRoom());
@@ -667,6 +679,24 @@ export class Game {
     }
 
 
+    toggleSettingsMenu() {
+        const settingsMenu = document.getElementById('settings-menu');
+        if (!settingsMenu) return;
+        if (settingsMenu.classList.contains('active')) {
+            settingsMenu.classList.remove('active');
+            // Restore whichever screen was visible before
+            if (this.isRunning && !this.gameOver && !this.isPaused) {
+                // nothing to restore - settings was over gameplay
+            } else if (this.isPaused) {
+                document.getElementById('pause-menu')?.classList.add('active');
+            } else {
+                this.startScreen.classList.add('active');
+            }
+        } else {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            settingsMenu.classList.add('active');
+        }
+    }
 
     toggleFullScreen() {
         if (!document.fullscreenElement) {
@@ -751,13 +781,35 @@ export class Game {
     }
 
     getPlayerRank(score) {
-        if (score >= 500000) return "GALACTIC LEGEND";
-        if (score >= 250000) return "ACE COMMANDER";
-        if (score >= 100000) return "ELITE VANGUARD";
-        if (score >= 50000) return "VETERAN FIGHTER";
-        if (score >= 25000) return "STRIKE PILOT";
-        if (score >= 10000) return "RECON SCOUT";
-        return "ROOKIE PILOT";
+        const rank = getRankByScore(score);
+        return rank.name;
+    }
+
+    openRankInfo() {
+        const screen = document.getElementById('ranks-screen');
+        if (!screen) return;
+
+        const list = document.getElementById('ranks-list');
+        if (list) {
+            list.innerHTML = '';
+            // Sort by threshold descending for display
+            [...RANK_DATA].sort((a, b) => b.threshold - a.threshold).forEach(rank => {
+                const item = document.createElement('div');
+                item.className = 'rank-info-item';
+                item.style.borderColor = rank.color;
+                item.innerHTML = `
+                    <div class="rank-info-badge" style="background: ${rank.color}">${rank.badge}</div>
+                    <div class="rank-info-details">
+                        <div class="rank-info-name" style="color: ${rank.color}">${rank.name}</div>
+                        <div class="rank-info-threshold">${rank.threshold.toLocaleString()} PTS</div>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        screen.classList.add('active');
     }
 
     checkLevelUp() {

@@ -1961,6 +1961,15 @@ body {
     display: inline-block;
     border-radius: 4px;
     animation: pulse-glow 3s infinite;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.rank-badge:hover {
+    background: rgba(0, 243, 255, 0.15);
+    border-color: #00f3ff;
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
 }
 
 @keyframes pulse-glow {

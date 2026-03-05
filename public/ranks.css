@@ -1,0 +1,75 @@
+/* --- Leaderboard Badge --- */
+.leaderboard-name-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.leaderboard-badge {
+    font-size: 0.6rem;
+    font-weight: bold;
+    padding: 2px 5px;
+    border-radius: 3px;
+    color: #000;
+    text-shadow: none;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+/* --- Ranks Info Screen --- */
+#ranks-container {
+    width: 100%;
+    max-width: 480px;
+    margin: 15px auto;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    border-radius: 12px;
+    padding: 15px;
+    max-height: 55vh;
+    overflow-y: auto;
+}
+
+.rank-info-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 4px solid #fff;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.rank-info-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.rank-info-badge {
+    min-width: 70px;
+    text-align: center;
+    padding: 5px 8px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: #000;
+    border-radius: 4px;
+    letter-spacing: 1px;
+}
+
+.rank-info-details {
+    flex: 1;
+    text-align: left;
+}
+
+.rank-info-name {
+    font-weight: bold;
+    letter-spacing: 1px;
+    font-size: 0.9rem;
+}
+
+.rank-info-threshold {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    font-family: 'Orbitron', sans-serif;
+    margin-top: 2px;
+}

@@ -57,6 +57,7 @@
         };
     </script>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="ranks.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
@@ -242,7 +243,7 @@
                 <div id="leaderboard-container">
                     <div class="leaderboard-header">
                         <div>RANK</div>
-                        <div>PILOT</div>
+                        <div>PILOT / BADGE</div>
                         <div>SCORE</div>
                     </div>
                     <div id="leaderboard-list">
@@ -251,6 +252,16 @@
                 </div>
                 <button id="refresh-leaderboard-btn" class="neon-btn" style="margin-top: 15px;">REFRESH</button>
                 <button id="back-from-leaderboard-btn" class="neon-btn" style="margin-top: 10px;">BACK</button>
+            </div>
+
+            <div id="ranks-screen" class="screen">
+                <h2>RANKING TIERS</h2>
+                <div id="ranks-container">
+                    <div id="ranks-list">
+                        <!-- Rank info injected here -->
+                    </div>
+                </div>
+                <button id="back-from-ranks-btn" class="neon-btn" style="margin-top: 20px;">BACK</button>
             </div>
 
             <div id="collab-screen" class="screen">
