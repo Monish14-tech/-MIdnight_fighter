@@ -104,9 +104,9 @@ export class Game {
         this.coins = parseInt(localStorage.getItem('midnight_coins')) || 0;
 
         // Testing toggles
-        const UNLOCK_ALL_SHIPS_FOR_TESTING = false;
-        const RESET_SHIPS = true;
-        const RESET_COINS = true;
+        const UNLOCK_ALL_SHIPS_FOR_TESTING = true;
+        const RESET_SHIPS = false;
+        const RESET_COINS = false;
 
         if (RESET_COINS) {
             this.coins = 0;
@@ -677,9 +677,9 @@ export class Game {
 
     getMaxEnemiesOnScreen() {
         const level = this.currentLevel || 1;
-        // Balanced concurrent caps for challenge without frustration
-        if (level >= 24) return 40 + ((level - 24) * 5);
-        if (level >= 20) return 32;
+        // Balanced concurrent caps for challenge without frustration (Max 35)
+        if (level >= 24) return 35;
+        if (level >= 20) return 30;
         if (level >= 15) return 25;
         if (level >= 10) return 18;
         if (level >= 5) return 12;
@@ -718,15 +718,15 @@ export class Game {
 
             // New Level Setup — balanced wave progression
             if (this.currentLevel >= 24) {
-                this.enemiesForLevel = 100 + ((this.currentLevel - 24) * 30);
+                this.enemiesForLevel = 80 + ((this.currentLevel - 24) * 15);
             } else {
-                this.enemiesForLevel = 12 + (this.currentLevel * 4);
+                this.enemiesForLevel = 10 + (this.currentLevel * 3);
             }
             this.enemiesSpawned = 0;
 
             this.difficultyMultiplier = Math.min(5.0, 1 + (this.currentLevel - 1) * 0.15);
-            // Spawn interval baseline adjusted (0.8s)
-            this.enemyInterval = Math.max(0.2, 0.8 / this.difficultyMultiplier);
+            // Spawn interval baseline adjusted (1.2s) to increase gaps between spawning
+            this.enemyInterval = Math.max(0.4, 1.2 / this.difficultyMultiplier);
 
             // Removing 'level_up' netplay event because progression is strictly symmetric
 

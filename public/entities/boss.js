@@ -29,11 +29,39 @@ class BossAI {
         this.strategyTimer = 0;
         this.strategyInterval = 4.0;
 
-        // Combo system
+        // Per-personality, per-phase combo tables
+        this.personalityCombos = {
+            Phantom: {
+                1: ['phantomShot', 'blinkDash', 'phantomShot', 'rapid'],
+                2: ['shadowVolley', 'blinkDash', 'shadowVolley', 'missiles'],
+                3: ['chainBlink', 'shadowVolley', 'chainBlink', 'shadowVolley'],
+            },
+            Titan: {
+                1: ['cannonBarrage', 'spread', 'cannonBarrage', 'missiles'],
+                2: ['railSalvo', 'cannonBarrage', 'railSalvo', 'spread'],
+                3: ['supernova', 'railSalvo', 'supernova', 'cannonBarrage'],
+            },
+            Berserker: {
+                1: ['rageSpin', 'spiral', 'rageSpin', 'rapid'],
+                2: ['rageSpin', 'dash', 'berserkerRush', 'rageSpin'],
+                3: ['frenzyStorm', 'berserkerRush', 'frenzyStorm', 'groundZero'],
+            },
+            Tactician: {
+                1: ['precisioShot', 'spread', 'precisioShot', 'missiles'],
+                2: ['flankVolley', 'precisioShot', 'annihilationBeam', 'flankVolley'],
+                3: ['flankVolley', 'coordinatedStrike', 'annihilationBeam', 'coordinatedStrike'],
+            },
+            Swarmlord: {
+                1: ['swarmDrop', 'thunderstrike', 'swarmDrop', 'spiral'],
+                2: ['clusterStrike', 'swarmDrop', 'forceField', 'clusterStrike'],
+                3: ['monsoonBarrage', 'clusterStrike', 'annihilationBeam', 'monsoonBarrage'],
+            },
+        };
+        // Fallback generic combos
         this.combos = {
             A: ['spiral', 'spread', 'missiles'],
             B: ['rapid', 'dash', 'annihilationBeam'],
-            C: ['forceField', 'spiral', 'rapid'],  // phase 3 only
+            C: ['forceField', 'spiral', 'rapid'],
         };
         this.currentCombo = 'A';
         this.comboStep = 0;
@@ -135,13 +163,18 @@ class BossAI {
         return Math.atan2(dy, dx) + counterOffset;
     }
 
-    // Advance to next attack in combo
+    // Advance to next attack — personality + phase aware
     nextComboAttack() {
-        this.comboStep = (this.comboStep + 1) % this.combos[this.currentCombo].length;
-        return this.combos[this.currentCombo][this.comboStep];
+        const pers = this.boss.personality;
+        const phase = this.boss.phase;
+        const table = (this.personalityCombos[pers] && this.personalityCombos[pers][phase])
+            ? this.personalityCombos[pers][phase]
+            : this.combos[this.currentCombo];
+        this.comboStep = (this.comboStep + 1) % table.length;
+        return table[this.comboStep];
     }
 
-    // Pick the best combo for current strategy
+    // Pick the best combo for current strategy (generic fallback)
     selectCombo() {
         if (this.boss.phase === 3) {
             this.currentCombo = 'C';
@@ -236,13 +269,25 @@ export class Boss {
         this.hasFiredSingleMissile = false;
         this._entrySpawnDone = false; // For entry mini-spawn
 
-        // Firing system (Simple fallback)
+        // Firing system — rapid-fire from the start
         this.fireTimer = 0;
-        this.fireRate = 0.3; // Fire every 0.3 seconds
-        this.fireDelay = 5.0; // Wait 5 seconds before starting to fire
+        this.fireRate = 0.28; // Balanced: gives player dodging window (was 0.08)
+
+        // ── Personality system ────────────────────────────────
+        this.personality = this._getPersonality(); // based on modelIndex
+        this.repoShootTimer = 0;  // shoot during repositioning
 
         // ── Smart BossAI ──────────────────────────────────────
         this.ai = new BossAI(this);
+        // Override AI combo to personality combo immediately
+        this.ai.currentCombo = this.personality;
+        this.ai.comboStep = 0;
+    }
+
+    // ── Personality based on modelIndex ──────────────────────────
+    _getPersonality() {
+        const map = { 0: 'Phantom', 1: 'Titan', 2: 'Berserker', 3: 'Tactician', 4: 'Swarmlord' };
+        return map[this.modelIndex] || 'Berserker';
     }
 
     update(deltaTime) {
@@ -323,13 +368,21 @@ export class Boss {
                 this.handleAttacking(deltaTime);
                 // Always move around screen while attacking
                 this.moveAroundScreen(deltaTime);
-                // Start firing only after 5 second delay
-                if (this.stateTimer > this.fireDelay && this.fireTimer > this.fireRate && this.game.player) {
+                // Fire immediately — no delay
+                if (this.fireTimer > this.fireRate && this.game.player) {
                     this.fireSimple();
                     this.fireTimer = 0;
                 }
                 break;
-            case 'repositioning': this.handleRepositioning(deltaTime); break;
+            case 'repositioning':
+                this.handleRepositioning(deltaTime);
+                // Keep shooting during repositioning
+                this.repoShootTimer += deltaTime;
+                if (this.repoShootTimer > 1.2 && this.game.player) {
+                    this.repoShootTimer = 0;
+                    this.tripleShot();
+                }
+                break;
             case 'dashing': this.handleDashing(deltaTime); break;
         }
 
@@ -391,51 +444,54 @@ export class Boss {
     }
 
     handleIdle(deltaTime) {
-        // Hover movement
         this.y += Math.sin(this.stateTimer * 3) * 0.5;
         this.tilt = Math.sin(this.stateTimer * 2) * 0.1;
-
-        // Keep boss on screen while hovering
         const margin = 70;
         this.y = Math.max(margin, Math.min(this.game.height - margin, this.y));
 
-        const idleDuration = this.phase === 3 ? 0.7 : 1.2;
+        const idleDuration = this.phase === 3 ? 0.1 : (this.phase === 2 ? 0.15 : 0.2);
         if (this.stateTimer > idleDuration) {
             this.state = 'attacking';
             this.stateTimer = 0;
-            this.fireTimer = 0; // Reset fire timer when attacking starts
-            // ── AI picks the next combo attack ─────────────────
-            if (this.phase >= 2) {
-                this.currentAttack = this.ai.nextComboAttack();
-            } else {
-                // Phase 1: deterministic selection
-                const seed = (this.getNumericId ? this.getNumericId() : 0) + this.game.currentLevel + Math.floor(this.game.lastTime / 5000);
-                const attackIdx = Math.floor(Math.abs(Math.sin(seed)) * 4); // Base 4 patterns
-                const basePatterns = ['spiral', 'spread', 'rapid', 'missiles'];
-                this.currentAttack = basePatterns[attackIdx];
-            }
-            // Don't do beam in phase 1
-            if (this.currentAttack === 'annihilationBeam' && this.phase < 2) {
-                this.currentAttack = 'spread';
-            }
-            // Don't do force field in phase 1
-            if (this.currentAttack === 'forceField' && this.phase < 2) {
-                this.currentAttack = 'rapid';
-            }
-            // Don't do thunderstrike in phase 1
-            if (this.currentAttack === 'thunderstrike' && this.phase < 2) {
-                this.currentAttack = 'spiral';
-            }
+            this.fireTimer = 0;
+            // Phase-aware personality attack—combo table always gives correct attack
+            this.currentAttack = this.ai.nextComboAttack();
         }
     }
 
     handleAttacking(deltaTime) {
         switch (this.currentAttack) {
+            // ── Shared/generic attacks
             case 'spiral': this.spiralShoot(deltaTime); break;
             case 'spread': this.spreadShoot(deltaTime); break;
             case 'rapid': this.rapidShoot(deltaTime); break;
             case 'missiles': this.missileBarrage(deltaTime); break;
             case 'thunderstrike': this.thunderstrike(deltaTime); break;
+            case 'tripleShot': this.tripleShot(deltaTime); break;
+            case 'crossfireBarrage': this.crossfireBarrage(deltaTime); break;
+            case 'groundZero': this.groundZero(deltaTime); break;
+            case 'blinkDash': this.blinkDash(deltaTime); break;
+            // ── Phantom
+            case 'phantomShot': this.phantomShot(deltaTime); break;
+            case 'shadowVolley': this.shadowVolley(deltaTime); break;
+            case 'chainBlink': this.chainBlink(deltaTime); break;
+            // ── Titan
+            case 'cannonBarrage': this.cannonBarrage(deltaTime); break;
+            case 'railSalvo': this.railSalvo(deltaTime); break;
+            case 'supernova': this.supernova(deltaTime); break;
+            // ── Berserker
+            case 'rageSpin': this.rageSpin(deltaTime); break;
+            case 'berserkerRush': this.berserkerRush(deltaTime); break;
+            case 'frenzyStorm': this.frenzyStorm(deltaTime); break;
+            // ── Tactician
+            case 'precisioShot': this.precisioShot(deltaTime); break;
+            case 'flankVolley': this.flankVolley(deltaTime); break;
+            case 'coordinatedStrike': this.coordinatedStrike(deltaTime); break;
+            // ── Swarmlord
+            case 'swarmDrop': this.swarmDrop(deltaTime); break;
+            case 'clusterStrike': this.clusterStrike(deltaTime); break;
+            case 'monsoonBarrage': this.monsoonBarrage(deltaTime); break;
+            // ── Special
             case 'annihilationBeam': this.startAnnihilationBeam(); return;
             case 'forceField': this.startForceField(); return;
             case 'dash':
@@ -444,8 +500,9 @@ export class Boss {
                 return;
         }
 
-        // End attack after duration
-        const attackDuration = this.currentAttack === 'spiral' ? (this.phase === 3 ? 2.0 : 3.0) : (this.phase === 3 ? 1.0 : 2.0);
+        // Much shorter attack windows — constant pressure
+        const base = this.phase === 3 ? 0.7 : (this.phase === 2 ? 1.0 : 1.3);
+        const attackDuration = this.currentAttack === 'spiral' ? base * 1.2 : base;
         if (this.stateTimer > attackDuration) {
             this.state = 'repositioning';
             this.stateTimer = 0;
@@ -453,42 +510,122 @@ export class Boss {
         }
     }
 
+    // ── Personality-specific movement while attacking ──────────────
     moveAroundScreen(deltaTime) {
-        // Move in a circular pattern around the screen while attacking
-        const centerX = this.game.width / 2;
-        const centerY = this.game.height / 3;
-        const radius = 200;
-        const orbitSpeed = 1.5; // Rad/sec
-
-        // Circular orbit around center point
-        const angle = this.stateTimer * orbitSpeed;
-        this.x = centerX + Math.cos(angle) * radius;
-        this.y = centerY + Math.sin(angle) * radius * 0.6;
-
-        // Clamp to screen bounds
-        const margin = 80;
-        this.x = Math.max(margin, Math.min(this.game.width - margin, this.x));
-        this.y = Math.max(margin, Math.min(this.game.height - margin, this.y));
+        switch (this.personality) {
+            case 'Phantom': {
+                // Fast erratic zigzag — across full screen
+                const spd = 220 + this.phase * 40;
+                const zigX = Math.sin(this.stateTimer * 3.5) * spd;
+                const zigY = Math.cos(this.stateTimer * 2.1) * spd * 0.5;
+                const cx = this.game.width * 0.5;
+                const cy = this.game.height * 0.5 + Math.sin(this.stateTimer * 0.8) * this.game.height * 0.3;
+                this.x += (cx + zigX - this.x) * 3 * deltaTime;
+                this.y += (cy + zigY - this.y) * 3 * deltaTime;
+                break;
+            }
+            case 'Titan': {
+                // Slow horizontal drift and vertical sweep — full screen
+                const titanY = this.game.height * 0.5 + Math.sin(this.stateTimer * 0.4) * this.game.height * 0.35;
+                const drift = Math.sin(this.stateTimer * 0.6) * this.game.width * 0.28;
+                this.x += (this.game.width * 0.5 + drift - this.x) * 0.8 * deltaTime;
+                this.y += (titanY - this.y) * 1.2 * deltaTime;
+                break;
+            }
+            case 'Berserker': {
+                // Aggressive charge: lurches toward player, then strafe-circles
+                if (this.game.player) {
+                    const px = this.game.player.x, py = this.game.player.y;
+                    const chaseWeight = 0.7 + this.phase * 0.1;
+                    const orbitX = Math.cos(this.stateTimer * 2.5) * 140;
+                    const orbitY = Math.sin(this.stateTimer * 2.5) * 60;
+                    const tx = px + orbitX, ty = py - 100 + orbitY;
+                    this.x += (tx - this.x) * chaseWeight * deltaTime;
+                    this.y += (ty - this.y) * chaseWeight * deltaTime;
+                }
+                break;
+            }
+            case 'Tactician': {
+                // Flanks to player's side, then repositions to opposite flank
+                if (this.game.player) {
+                    const flankSide = Math.sign(Math.sin(this.stateTimer * 0.4));
+                    const tx = this.game.player.x + flankSide * 260;
+                    const ty = this.game.player.y - 80;
+                    this.x += (tx - this.x) * 1.5 * deltaTime;
+                    this.y += (ty - this.y) * 1.5 * deltaTime;
+                }
+                break;
+            }
+            case 'Swarmlord': {
+                // Drifts across full screen space
+                const swY = this.game.height * 0.4 + Math.cos(this.stateTimer * 0.5) * this.game.height * 0.3;
+                const swX = this.game.width * 0.5 + Math.sin(this.stateTimer * 0.5) * this.game.width * 0.3;
+                this.x += (swX - this.x) * 0.9 * deltaTime;
+                this.y += (swY - this.y) * 1.5 * deltaTime;
+                break;
+            }
+            default: {
+                const cx = this.game.width / 2, cy = this.game.height / 3, r = 200;
+                const a = this.stateTimer * 1.5;
+                this.x = cx + Math.cos(a) * r;
+                this.y = cy + Math.sin(a) * r * 0.6;
+            }
+        }
+        const m = 80;
+        this.x = Math.max(m, Math.min(this.game.width - m, this.x));
+        this.y = Math.max(m, Math.min(this.game.height - m, this.y));
     }
 
+    // ── Personality-specific ambient fire (replaces old fireSimple) ─
     fireSimple() {
-        // Mix of bullets and missiles - improved accuracy
-        const count = this.phase === 2 ? 6 : 4;
-        const spread = 0.35; // Tighter spread for better accuracy
-        const baseAngle = this.angle;
-
-        // Bullets - more accurate spread
-        for (let i = 0; i < count; i++) {
-            const angle = baseAngle - spread / 2 + (spread / (count - 1)) * i;
-            this.fireProjectile(this.x, this.y, angle, 'bullet');
-        }
-
-        // Missiles - fire 2 missiles at player with improved accuracy
-        if (this.game.player) {
-            const missileSpread = 0.15; // Very tight spread for missile accuracy
-            const missileAngle = Math.atan2(this.game.player.y - this.y, this.game.player.x - this.x);
-            this.fireProjectile(this.x, this.y, missileAngle - missileSpread / 2, 'boss_missile');
-            this.fireProjectile(this.x, this.y, missileAngle + missileSpread / 2, 'boss_missile');
+        if (!this.game.player) return;
+        const pa = Math.atan2(this.game.player.y - this.y, this.game.player.x - this.x);
+        switch (this.personality) {
+            case 'Phantom': {
+                // Single precision cyan laser bolt
+                const p = this.fireProjectile(this.x, this.y, pa, 'bullet');
+                if (p) { p.color = '#00ffff'; p.speed = 400; p.radius = 3; }
+                break;
+            }
+            case 'Titan': {
+                // 2 fat orange cannonballs spread outward
+                const spread = 0.22;
+                const p1 = this.fireProjectile(this.x, this.y, pa - spread, 'bullet');
+                const p2 = this.fireProjectile(this.x, this.y, pa + spread, 'bullet');
+                [p1, p2].forEach(p => { if (p) { p.color = '#ff6600'; p.speed = 180; p.radius = 10; p.damage = 1.5; } });
+                break;
+            }
+            case 'Berserker': {
+                // 3-shot aggressive burst in tight cone
+                for (let i = -1; i <= 1; i++) {
+                    const p = this.fireProjectile(this.x, this.y, pa + i * 0.14, 'bullet');
+                    if (p) { p.color = '#ff2200'; p.speed = 340; }
+                }
+                break;
+            }
+            case 'Tactician': {
+                // 1 high-precision predicted shot
+                const target = this.ai.getTargetPosition();
+                const ta = Math.atan2(target.y - this.y, target.x - this.x);
+                const p = this.fireProjectile(this.x, this.y, ta, 'bullet');
+                if (p) { p.color = '#00ccff'; p.speed = 360; p.radius = 3; }
+                break;
+            }
+            case 'Swarmlord': {
+                // 2 vertical drop bombs
+                const dropA = Math.PI / 2; // straight down
+                const p1 = this.fireProjectile(this.x - 30, this.y, dropA, 'bullet');
+                const p2 = this.fireProjectile(this.x + 30, this.y, dropA, 'bullet');
+                [p1, p2].forEach(p => { if (p) { p.color = '#ffee00'; p.speed = 260; p.radius = 5; } });
+                break;
+            }
+            default: {
+                const count = this.phase === 2 ? 6 : 4;
+                const sp = 0.35;
+                for (let i = 0; i < count; i++) {
+                    this.fireProjectile(this.x, this.y, pa - sp / 2 + (sp / (count - 1)) * i, 'bullet');
+                }
+            }
         }
     }
 
@@ -625,652 +762,1048 @@ export class Boss {
         }
     }
 
-        // ── Attack: Spiral Shoot ───────────────────────────────────
-        spiralShoot(deltaTime) {
-            const fireRateMult = this.phase === 3 ? 2.5 : (this.phase === 2 ? 1.7 : 1.0);
-            const fireRate = 0.08 / fireRateMult;
-            const totalShots = Math.floor(this.stateTimer / fireRate);
-            const prevShots = Math.floor((this.stateTimer - deltaTime) / fireRate);
+    // ── Attack: Spiral Shoot ───────────────────────────────────
+    spiralShoot(deltaTime) {
+        const fireRateMult = this.phase === 3 ? 2.5 : (this.phase === 2 ? 1.7 : 1.0);
+        const fireRate = 0.08 / fireRateMult;
+        const totalShots = Math.floor(this.stateTimer / fireRate);
+        const prevShots = Math.floor((this.stateTimer - deltaTime) / fireRate);
 
-            if (totalShots > prevShots) {
-                const spin = this.stateTimer * (this.phase === 3 ? 7 : 5);
-                const arms = this.phase === 3 ? 6 : (this.phase === 2 ? 4 : 2);
-                for (let i = 0; i < arms; i++) {
-                    const angle = spin + (Math.PI * 2 / arms) * i;
-                    this.fireProjectile(this.x, this.y, angle, 'bullet');
-                }
-            }
-        }
-
-        // ── Attack: Spread Shoot ───────────────────────────────────
-        spreadShoot(deltaTime) {
-            const fireRateMult = this.phase === 3 ? 2.5 : (this.phase === 2 ? 1.7 : 1.0);
-            const burstRate = 0.55 / fireRateMult;
-            const totalBursts = Math.floor(this.stateTimer / burstRate);
-            const prevBursts = Math.floor((this.stateTimer - deltaTime) / burstRate);
-
-            if (totalBursts > prevBursts) {
-                const count = this.phase === 3 ? 9 : (this.phase === 2 ? 7 : 5);
-                const spread = 0.8;
-
-                // ── AI Strategy: use counter-dodge angle ──────────
-                let baseAngle = this.angle;
-                if (this.ai.strategy === 'counter-dodge') {
-                    baseAngle = this.ai.getCounterDodgeAngle();
-                } else {
-                    const target = this.ai.getTargetPosition();
-                    baseAngle = Math.atan2(target.y - this.y, target.x - this.x);
-                }
-
-                for (let i = 0; i < count; i++) {
-                    const angle = baseAngle - spread / 2 + (spread / (count - 1)) * i;
-                    this.fireProjectile(this.x, this.y, angle, 'bullet');
-                }
-            }
-        }
-
-        // ── Attack: Rapid Shoot ────────────────────────────────────
-        rapidShoot(deltaTime) {
-            const fireRateMult = this.phase === 3 ? 2.5 : (this.phase === 2 ? 1.7 : 1.0);
-            const fireRate = 0.09 / fireRateMult;
-            const total = Math.floor(this.stateTimer / fireRate);
-            const prev = Math.floor((this.stateTimer - deltaTime) / fireRate);
-
-            if (total > prev) {
-                // Aim at predicted player position
-                const target = this.ai.getTargetPosition();
-                const aimAngle = Math.atan2(target.y - this.y, target.x - this.x);
-                // Tiny jitter (deterministic)
-                const jitter = Math.sin(total * 2.7 + (this.remoteId || 0)) * 0.08;
-                this.fireProjectile(this.x, this.y, aimAngle + jitter, 'bullet');
-                // Phase 3: double tap
-                if (this.phase === 3) {
-                    this.fireProjectile(this.x, this.y, aimAngle - jitter, 'bullet');
-                }
-            }
-        }
-
-        // ── Attack: Missile Barrage ────────────────────────────────
-        missileBarrage(deltaTime) {
-            const fireRate = this.phase === 3 ? 0.3 : 0.5;
-            const total = Math.floor(this.stateTimer / fireRate);
-            const prev = Math.floor((this.stateTimer - deltaTime) / fireRate);
-            const maxVolley = this.phase === 3 ? 7 : 5;
-
-            if (total > prev && total < maxVolley) {
-                const count = this.phase === 3 ? 4 : (this.phase === 2 ? 3 : 2);
-                const spread = 0.6;
-
-                // Aim toward predicted player
-                const target = this.ai.getTargetPosition();
-                const aimAngle = Math.atan2(target.y - this.y, target.x - this.x);
-
-                for (let i = 0; i < count; i++) {
-                    const seed = total + i + (this.remoteId || 0);
-                    const accuracyOffset = Math.sin(seed * 1.7) * (this.phase === 3 ? 0.1 : 0.15);
-                    const angle = aimAngle - spread / 2 + (spread / Math.max(count - 1, 1)) * i + accuracyOffset;
-                    this.fireProjectile(this.x, this.y, angle, 'boss_missile');
-                }
-            }
-        }
-
-        // ── NEW Attack: Annihilation Beam ──────────────────────────
-        startAnnihilationBeam() {
-            if (this.beamCharging || this.beamActive) return;
-            this.beamCharging = true;
-            this.beamActive = false;
-            this.beamTimer = 0;
-            // Lock beam angle toward the counter-dodge zone
-            if (this.game.player) {
-                this.beamAngle = this.ai.strategy === 'counter-dodge'
-                    ? this.ai.getCounterDodgeAngle()
-                    : Math.atan2(this.game.player.y - this.y, this.game.player.x - this.x);
-            }
-            if (this.game.screenShake) this.game.screenShake.trigger(10, 0.3);
-            this.state = 'attacking'; // stays in attacking
-        }
-
-        _updateBeam(deltaTime) {
-            this.beamTimer += deltaTime;
-
-            if (this.beamCharging && this.beamTimer >= this.beamChargeTime) {
-                // Start firing
-                this.beamCharging = false;
-                this.beamActive = true;
-                this.beamTimer = 0;
-                if (this.game.screenShake) this.game.screenShake.trigger(40, 0.8);
-            }
-
-            if (this.beamActive) {
-                // Sweep the beam
-                const sweepRate = (this.phase === 3 ? 3.0 : 2.0); // radians per second
-                this.beamAngle += sweepRate * deltaTime;
-
-                // Spawn projectiles along beam direction rapid-fire
-                if (this.beamTimer < this.beamFireTime) {
-                    const fireRate = 0.04;
-                    const total = Math.floor(this.beamTimer / fireRate);
-                    const prev = Math.floor((this.beamTimer - deltaTime) / fireRate);
-                    if (total > prev) {
-                        const shot = new Projectile(this.game, this.x, this.y, this.beamAngle, 'bullet', 'enemy');
-                        shot.speed = 900;
-                        shot.damage = 1.5;
-                        shot.color = '#ffffff';
-                        shot.radius = 6;
-                        this.game.projectiles.push(shot);
-                        // Also spawn a wide beam projectile
-                        const wideShot = new Projectile(this.game, this.x, this.y, this.beamAngle + 0.08, 'bullet', 'enemy');
-                        wideShot.speed = 900;
-                        wideShot.damage = 1.0;
-                        wideShot.color = '#ff4400';
-                        wideShot.radius = 5;
-                        this.game.projectiles.push(wideShot);
-                    }
-                } else {
-                    // Beam done
-                    this.beamActive = false;
-                    this.state = 'repositioning';
-                    this.stateTimer = 0;
-                    this.pickNewPosition();
-                }
-            }
-        }
-
-        // ── NEW Attack: Force Field ────────────────────────────────
-        startForceField() {
-            if (this.forceFieldActive) return;
-            this.forceFieldActive = true;
-            this.forceFieldTimer = 0;
-            this.isInvulnerable = true;
-
-            // 360° burst ring
-            const bulletCount = this.phase === 3 ? 20 : 14;
-            for (let i = 0; i < bulletCount; i++) {
-                const angle = (i / bulletCount) * Math.PI * 2;
+        if (totalShots > prevShots) {
+            const spin = this.stateTimer * (this.phase === 3 ? 7 : 5);
+            const arms = this.phase === 3 ? 6 : (this.phase === 2 ? 4 : 2);
+            for (let i = 0; i < arms; i++) {
+                const angle = spin + (Math.PI * 2 / arms) * i;
                 this.fireProjectile(this.x, this.y, angle, 'bullet');
             }
-            if (this.game.screenShake) this.game.screenShake.trigger(20, 0.5);
-            this.state = 'attacking';
+        }
+    }
+
+    // ── Attack: Spread Shoot ───────────────────────────────────
+    spreadShoot(deltaTime) {
+        const fireRateMult = this.phase === 3 ? 2.5 : (this.phase === 2 ? 1.7 : 1.0);
+        const burstRate = 0.55 / fireRateMult;
+        const totalBursts = Math.floor(this.stateTimer / burstRate);
+        const prevBursts = Math.floor((this.stateTimer - deltaTime) / burstRate);
+
+        if (totalBursts > prevBursts) {
+            const count = this.phase === 3 ? 9 : (this.phase === 2 ? 7 : 5);
+            const spread = 0.8;
+
+            // ── AI Strategy: use counter-dodge angle ──────────
+            let baseAngle = this.angle;
+            if (this.ai.strategy === 'counter-dodge') {
+                baseAngle = this.ai.getCounterDodgeAngle();
+            } else {
+                const target = this.ai.getTargetPosition();
+                baseAngle = Math.atan2(target.y - this.y, target.x - this.x);
+            }
+
+            for (let i = 0; i < count; i++) {
+                const angle = baseAngle - spread / 2 + (spread / (count - 1)) * i;
+                this.fireProjectile(this.x, this.y, angle, 'bullet');
+            }
+        }
+    }
+
+    // ── Attack: Rapid Shoot ────────────────────────────────────
+    rapidShoot(deltaTime) {
+        const fireRateMult = this.phase === 3 ? 2.5 : (this.phase === 2 ? 1.7 : 1.0);
+        const fireRate = 0.09 / fireRateMult;
+        const total = Math.floor(this.stateTimer / fireRate);
+        const prev = Math.floor((this.stateTimer - deltaTime) / fireRate);
+
+        if (total > prev) {
+            // Aim at predicted player position
+            const target = this.ai.getTargetPosition();
+            const aimAngle = Math.atan2(target.y - this.y, target.x - this.x);
+            // Tiny jitter (deterministic)
+            const jitter = Math.sin(total * 2.7 + (this.remoteId || 0)) * 0.08;
+            this.fireProjectile(this.x, this.y, aimAngle + jitter, 'bullet');
+            // Phase 3: double tap
+            if (this.phase === 3) {
+                this.fireProjectile(this.x, this.y, aimAngle - jitter, 'bullet');
+            }
+        }
+    }
+
+    // ── Attack: Missile Barrage ────────────────────────────────
+    missileBarrage(deltaTime) {
+        const fireRate = this.phase === 3 ? 0.3 : 0.5;
+        const total = Math.floor(this.stateTimer / fireRate);
+        const prev = Math.floor((this.stateTimer - deltaTime) / fireRate);
+        const maxVolley = this.phase === 3 ? 7 : 5;
+
+        if (total > prev && total < maxVolley) {
+            const count = this.phase === 3 ? 4 : (this.phase === 2 ? 3 : 2);
+            const spread = 0.6;
+
+            // Aim toward predicted player
+            const target = this.ai.getTargetPosition();
+            const aimAngle = Math.atan2(target.y - this.y, target.x - this.x);
+
+            for (let i = 0; i < count; i++) {
+                const seed = total + i + (this.remoteId || 0);
+                const accuracyOffset = Math.sin(seed * 1.7) * (this.phase === 3 ? 0.1 : 0.15);
+                const angle = aimAngle - spread / 2 + (spread / Math.max(count - 1, 1)) * i + accuracyOffset;
+                this.fireProjectile(this.x, this.y, angle, 'boss_missile');
+            }
+        }
+    }
+
+    // ── NEW Attack: Annihilation Beam ──────────────────────────
+    startAnnihilationBeam() {
+        if (this.beamCharging || this.beamActive) return;
+        this.beamCharging = true;
+        this.beamActive = false;
+        this.beamTimer = 0;
+        // Lock beam angle toward the counter-dodge zone
+        if (this.game.player) {
+            this.beamAngle = this.ai.strategy === 'counter-dodge'
+                ? this.ai.getCounterDodgeAngle()
+                : Math.atan2(this.game.player.y - this.y, this.game.player.x - this.x);
+        }
+        if (this.game.screenShake) this.game.screenShake.trigger(10, 0.3);
+        this.state = 'attacking'; // stays in attacking
+    }
+
+    _updateBeam(deltaTime) {
+        this.beamTimer += deltaTime;
+
+        if (this.beamCharging && this.beamTimer >= this.beamChargeTime) {
+            // Start firing
+            this.beamCharging = false;
+            this.beamActive = true;
+            this.beamTimer = 0;
+            if (this.game.screenShake) this.game.screenShake.trigger(40, 0.8);
         }
 
-        _updateForceField(deltaTime) {
-            if (!this.forceFieldActive) return;
-            // Use its own dedicated timer (forceFieldTimer), NOT stateTimer, to avoid double-advancing
-            this.forceFieldTimer += deltaTime;
-            if (this.forceFieldTimer >= this.forceFieldDuration) {
-                this.forceFieldActive = false;
-                this.isInvulnerable = false;
+        if (this.beamActive) {
+            // Sweep the beam
+            const sweepRate = (this.phase === 3 ? 3.0 : 2.0); // radians per second
+            this.beamAngle += sweepRate * deltaTime;
+
+            // Spawn projectiles along beam direction rapid-fire
+            if (this.beamTimer < this.beamFireTime) {
+                const fireRate = 0.04;
+                const total = Math.floor(this.beamTimer / fireRate);
+                const prev = Math.floor((this.beamTimer - deltaTime) / fireRate);
+                if (total > prev) {
+                    const shot = new Projectile(this.game, this.x, this.y, this.beamAngle, 'bullet', 'enemy');
+                    shot.speed = 900;
+                    shot.damage = 1.5;
+                    shot.color = '#ffffff';
+                    shot.radius = 6;
+                    this.game.projectiles.push(shot);
+                    // Also spawn a wide beam projectile
+                    const wideShot = new Projectile(this.game, this.x, this.y, this.beamAngle + 0.08, 'bullet', 'enemy');
+                    wideShot.speed = 900;
+                    wideShot.damage = 1.0;
+                    wideShot.color = '#ff4400';
+                    wideShot.radius = 5;
+                    this.game.projectiles.push(wideShot);
+                }
+            } else {
+                // Beam done
+                this.beamActive = false;
                 this.state = 'repositioning';
                 this.stateTimer = 0;
                 this.pickNewPosition();
             }
         }
+    }
 
-        // ── NEW Attack: Thunderstrike ─────────────────────────────────
-        thunderstrike(deltaTime) {
-            // Fire one asterisk volley: 8 bolts in cardinal + diagonal directions,
-            // aimed roughly at player with a slight spread per bolt.
-            const fireRate = this.phase === 3 ? 0.35 : 0.55;
-            const total = Math.floor(this.stateTimer / fireRate);
-            const prev = Math.floor((this.stateTimer - deltaTime) / fireRate);
-            if (total <= prev) return;
+    // ── NEW Attack: Force Field ────────────────────────────────
+    startForceField() {
+        if (this.forceFieldActive) return;
+        this.forceFieldActive = true;
+        this.forceFieldTimer = 0;
+        this.isInvulnerable = true;
 
-            const target = this.ai.getTargetPosition();
-            const baseAngle = Math.atan2(target.y - this.y, target.x - this.x);
-            const count = this.phase === 3 ? 10 : 8;
-
-            for (let i = 0; i < count; i++) {
-                const spread = ((i / count) * Math.PI * 2);
-                const angle = baseAngle + spread;
-                const p = this.fireProjectile(this.x, this.y, angle, 'bullet');
-                if (p) {
-                    p.speed = 480 + (this.level * 8);
-                    p.color = '#ffee00';
-                    p.radius = 5;
-                }
-            }
-            if (this.game.screenShake) this.game.screenShake.trigger(12, 0.2);
+        // 360° burst ring
+        const bulletCount = this.phase === 3 ? 20 : 14;
+        for (let i = 0; i < bulletCount; i++) {
+            const angle = (i / bulletCount) * Math.PI * 2;
+            this.fireProjectile(this.x, this.y, angle, 'bullet');
         }
+        if (this.game.screenShake) this.game.screenShake.trigger(20, 0.5);
+        this.state = 'attacking';
+    }
 
-        fireProjectile(x, y, angle, type) {
-            const p = new Projectile(this.game, x, y, angle, type === 'boss_missile' ? 'missile' : type, 'enemy');
-            p.source = 'boss';
-
-            if (type === 'boss_missile') {
-                p.speed = 250;
-                p.maxSpeed = 600;
-                p.acceleration = 300;
-                p.damage = this.level >= 15 ? 2.5 : 1.8;
-                p.lifetime = 5.0;
-                p.isHoming = false;
-                p.color = '#ff0000';
-                p.radius = 10;
-            } else if (type === 'missile') {
-                p.speed = 160;
-                p.maxSpeed = 420;
-                p.acceleration = 180;
-                p.damage = this.level >= 20 ? 1.5 : 1.0;
-                p.lifetime = 4.0;
-                p.isHoming = false;
-            } else {
-                p.speed = 350 + (this.level * 5);
-                p.damage = Math.max(1, Math.floor(this.level / 5));
-            }
-            this.game.projectiles.push(p);
-            return p; // return so callers can customize further
-        }
-
-        takeDamage(amount) {
-            if (this.isInvulnerable) return false;
-            this.health -= amount;
-            // Track hits for AI accuracy adaptation
-            if (this.ai) this.ai.hitsLanded++;
-            if (this.health <= 0) {
-                this.health = 0;
-                // ─ Death burst: 12 explosions in a ring ────────────────────────
-                if (!this._deathBurstFired) {
-                    this._deathBurstFired = true;
-                    for (let i = 0; i < 12; i++) {
-                        const ra = (i / 12) * Math.PI * 2;
-                        const dist = 50 + (i % 3) * 30;
-                        this.game.particles.push(new Explosion(
-                            this.game,
-                            this.x + Math.cos(ra) * dist,
-                            this.y + Math.sin(ra) * dist,
-                            i % 2 === 0 ? '#ffffff' : this.color
-                        ));
-                    }
-                    if (this.game.screenShake) this.game.screenShake.trigger(80, 1.2);
-                }
-                return true;
-            }
-            return false;
-        }
-
-        draw(ctx) {
-            ctx.save();
-            ctx.translate(this.x, this.y);
-
-            // ── Force Field visual ────────────────────────────────
-            if (this.forceFieldActive) {
-                // NOTE: _updateForceField() is called solely from update() - do NOT call it here.
-                const ffPhase = (this.forceFieldTimer / this.forceFieldDuration);
-                const ffRadius = this.radius + 15 + Math.sin(this.game.lastTime * 0.015) * 5;
-                ctx.save();
-                ctx.globalAlpha = 0.7 - ffPhase * 0.5;
-                ctx.shadowBlur = 60;
-                ctx.shadowColor = '#00f3ff';
-                ctx.strokeStyle = '#00f3ff';
-                ctx.lineWidth = 4;
-                ctx.beginPath();
-                ctx.arc(0, 0, ffRadius, 0, Math.PI * 2);
-                ctx.stroke();
-                // Hexagonal inner pattern
-                ctx.globalAlpha = 0.3;
-                ctx.strokeStyle = '#aaffff';
-                ctx.lineWidth = 1.5;
-                for (let i = 0; i < 6; i++) {
-                    ctx.beginPath();
-                    const a = (i / 6) * Math.PI * 2 + this.game.lastTime * 0.003;
-                    ctx.moveTo(0, 0);
-                    ctx.lineTo(Math.cos(a) * ffRadius * 0.9, Math.sin(a) * ffRadius * 0.9);
-                    ctx.stroke();
-                }
-                ctx.restore();
-            }
-
-            // ── Beam charging visual ──────────────────────────────
-            if (this.beamCharging) {
-                const chargeProgress = this.beamTimer / this.beamChargeTime;
-                ctx.save();
-                ctx.globalAlpha = chargeProgress * 0.8;
-                ctx.shadowBlur = 80 * chargeProgress;
-                ctx.shadowColor = '#ffffff';
-                ctx.strokeStyle = '#ffaa00';
-                ctx.lineWidth = 3;
-                for (let i = 0; i < 3; i++) {
-                    const r = (1 - chargeProgress) * (this.radius + 30 + i * 15);
-                    ctx.beginPath();
-                    ctx.arc(0, 0, r, 0, Math.PI * 2);
-                    ctx.stroke();
-                }
-                ctx.restore();
-            }
-
-            // ── Beam active visual ─────────────────────────────────
-            if (this.beamActive) {
-                ctx.save();
-                ctx.globalAlpha = 0.95;
-                ctx.rotate(this.beamAngle - this.angle); // beam angle in local space
-                const beamLen = Math.max(this.game.width, this.game.height) * 1.5;
-                // Outer glow
-                const grd = ctx.createLinearGradient(0, 0, beamLen, 0);
-                grd.addColorStop(0, 'rgba(255,255,255,1)');
-                grd.addColorStop(0.2, 'rgba(255,100,0,0.9)');
-                grd.addColorStop(1, 'rgba(255,0,0,0)');
-                ctx.fillStyle = grd;
-                ctx.fillRect(0, -18, beamLen, 36);
-                // Core
-                ctx.fillStyle = 'rgba(255,255,255,0.95)';
-                ctx.fillRect(0, -6, beamLen, 12);
-                ctx.restore();
-            }
-
-            ctx.rotate(this.angle);
-
-            // Core Glow
-            ctx.shadowBlur = this.rageMode ? 80 : (this.phase === 2 ? 60 : 40);
-            ctx.shadowColor = this.rageMode ? '#ffffff' : this.color;
-
-            // Shield ring if invulnerable
-            if (this.isInvulnerable) {
-                ctx.shadowColor = '#00f3ff';
-                ctx.shadowBlur = 80;
-                ctx.lineWidth = 4;
-                ctx.strokeStyle = '#00f3ff';
-                ctx.beginPath();
-                ctx.arc(0, 0, this.radius + 10, 0, Math.PI * 2);
-                ctx.stroke();
-            }
-
-            // 3D Realistic Sprite Rendering
-            const sprite = this.game.assets.get('boss');
-            if (sprite) {
-                const size = this.radius * 2.5;
-                ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
-            } else {
-                this.drawModel(ctx);
-            }
-
-            ctx.restore();
-
-            // ── Boss HUD overlay ───────────────────────────────────
-            this._drawHUD(ctx);
-        }
-
-        _drawHUD(ctx) {
-            // Boss phase + strategy indicator (drawn in screen space below boss)
-            const hudX = this.x;
-            const hudY = this.y + this.radius + 22;
-
-            ctx.save();
-            ctx.globalAlpha = 0.85;
-
-            // Phase label
-            const phaseColors = ['#00ff88', '#ffaa00', '#ff4444'];
-            const phaseColor = phaseColors[this.phase - 1] || '#ffffff';
-            ctx.font = 'bold 11px "Segoe UI", monospace';
-            ctx.textAlign = 'center';
-            ctx.fillStyle = phaseColor;
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = phaseColor;
-
-            const phaseLabel = this.rageMode ? '⚡ RAGE MODE ⚡' : `PHASE ${this.phase}`;
-            ctx.fillText(phaseLabel, hudX, hudY);
-
-            // Strategy label
-            if (this.phase >= 2) {
-                const strategyLabels = {
-                    'standard': 'STANDARD',
-                    'counter-dodge': '⟲ COUNTER',
-                    'suppress': '▶▶ SUPPRESS',
-                    'overwhelm': '❯❯❯ OVERWHELM',
-                };
-                ctx.globalAlpha = 0.6;
-                ctx.font = '9px monospace';
-                ctx.fillStyle = '#aaaaff';
-                ctx.shadowBlur = 0;
-                ctx.fillText(strategyLabels[this.ai.strategy] || '', hudX, hudY + 13);
-            }
-
-            ctx.restore();
-        }
-
-        drawModel(ctx) {
-            ctx.save();
-            ctx.rotate(this.tilt);
-
-            switch (this.modelIndex) {
-                case 0: this.drawModelSleek(ctx); break;
-                case 1: this.drawModelHeavy(ctx); break;
-                case 2: this.drawModelTriangle(ctx); break;
-                case 3: this.drawModelStealth(ctx); break;
-                case 4: this.drawModelCarrier(ctx); break;
-                default: this.drawModelSleek(ctx);
-            }
-
-            // Cockpit
-            ctx.fillStyle = '#000';
-            ctx.beginPath();
-            ctx.ellipse(30, 0, 15, 8, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = this.color;
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            // Engine Detail
-            const engineGlow = ctx.createRadialGradient(-60, 0, 5, -60, 0, 30);
-            engineGlow.addColorStop(0, '#fff');
-            engineGlow.addColorStop(0.5, this.color);
-            engineGlow.addColorStop(1, 'transparent');
-            ctx.fillStyle = engineGlow;
-            ctx.beginPath();
-            ctx.arc(-60, 0, 20, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.restore();
-        }
-
-        drawModelSleek(ctx) {
-            const grad = ctx.createLinearGradient(-80, 0, 80, 0);
-            grad.addColorStop(0, '#111');
-            grad.addColorStop(0.5, this.color);
-            grad.addColorStop(1, '#fff');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.moveTo(100, 0);
-            ctx.lineTo(55, 12);
-            ctx.lineTo(-40, 16);
-            ctx.lineTo(-80, 8);
-            ctx.lineTo(-80, -8);
-            ctx.lineTo(-40, -16);
-            ctx.lineTo(55, -12);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(30, 14);
-            ctx.lineTo(-40, 90);
-            ctx.lineTo(-80, 90);
-            ctx.lineTo(-60, 14);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(30, -14);
-            ctx.lineTo(-40, -90);
-            ctx.lineTo(-80, -90);
-            ctx.lineTo(-60, -14);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(-50, 14);
-            ctx.lineTo(-70, 38);
-            ctx.lineTo(-80, 38);
-            ctx.lineTo(-65, 14);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(-50, -14);
-            ctx.lineTo(-70, -38);
-            ctx.lineTo(-80, -38);
-            ctx.lineTo(-65, -14);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(20, 12); ctx.lineTo(20, -12);
-            ctx.moveTo(-20, 15); ctx.lineTo(-20, -15);
-            ctx.stroke();
-        }
-
-        drawModelHeavy(ctx) {
-            const grad = ctx.createLinearGradient(-120, 0, 120, 0);
-            grad.addColorStop(0, '#110000');
-            grad.addColorStop(0.5, this.color);
-            grad.addColorStop(1, '#ffffff');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.moveTo(115, 0);
-            ctx.lineTo(70, 25);
-            ctx.lineTo(-50, 30);
-            ctx.lineTo(-120, 18);
-            ctx.lineTo(-120, -18);
-            ctx.lineTo(-50, -30);
-            ctx.lineTo(70, -25);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(30, 26);
-            ctx.lineTo(-20, 80);
-            ctx.lineTo(-60, 80);
-            ctx.lineTo(-30, 26);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(30, -26);
-            ctx.lineTo(-20, -80);
-            ctx.lineTo(-60, -80);
-            ctx.lineTo(-30, -26);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(60, 24);
-            ctx.lineTo(20, 55);
-            ctx.lineTo(-20, 55);
-            ctx.lineTo(0, 24);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(60, -24);
-            ctx.lineTo(20, -55);
-            ctx.lineTo(-20, -55);
-            ctx.lineTo(0, -24);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            ctx.fillStyle = '#ff3300';
-            ctx.beginPath();
-            ctx.arc(-118, 10, 5, 0, Math.PI * 2);
-            ctx.arc(-118, -10, 5, 0, Math.PI * 2);
-            ctx.arc(-58, 28, 4, 0, Math.PI * 2);
-            ctx.arc(-58, -28, 4, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = 'rgba(255,255,255,0.10)';
-            ctx.fillRect(-40, -22, 70, 44);
-            ctx.strokeStyle = 'rgba(255,255,255,0.30)';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(-40, -22, 70, 44);
-            ctx.fillStyle = 'rgba(255,255,255,0.15)';
-            ctx.beginPath();
-            ctx.moveTo(-60, 28);
-            ctx.lineTo(-110, 70);
-            ctx.lineTo(-80, 55);
-            ctx.closePath();
-            ctx.fill();
-            ctx.beginPath();
-            ctx.moveTo(-60, -28);
-            ctx.lineTo(-110, -70);
-            ctx.lineTo(-80, -55);
-            ctx.closePath();
-            ctx.fill();
-        }
-
-        drawModelTriangle(ctx) {
-            const grad = ctx.createLinearGradient(-100, 0, 100, 0);
-            grad.addColorStop(0, '#111');
-            grad.addColorStop(0.5, this.color);
-            grad.addColorStop(1, '#eee');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.moveTo(110, 0);
-            ctx.lineTo(-80, 100);
-            ctx.lineTo(-60, 0);
-            ctx.lineTo(-80, -100);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            ctx.fillStyle = 'rgba(0,0,0,0.5)';
-            ctx.beginPath();
-            ctx.moveTo(40, 0);
-            ctx.lineTo(-40, 0);
-            ctx.lineTo(-60, -25);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            ctx.fillStyle = this.color;
-            ctx.globalAlpha = 0.5;
-            ctx.fillRect(-20, 20, 15, 30);
-            ctx.fillRect(-20, -50, 15, 30);
-            ctx.globalAlpha = 1.0;
-        }
-
-        drawModelStealth(ctx) {
-            ctx.fillStyle = '#0a0a0a';
-            ctx.beginPath();
-            ctx.moveTo(120, 0);
-            ctx.lineTo(20, 45);
-            ctx.lineTo(-90, 110);
-            ctx.lineTo(-60, 30);
-            ctx.lineTo(-100, 0);
-            ctx.lineTo(-60, -30);
-            ctx.lineTo(-90, -110);
-            ctx.lineTo(20, -45);
-            ctx.closePath();
-            ctx.fill();
-            ctx.strokeStyle = this.color;
-            ctx.lineWidth = 3;
-            ctx.stroke();
-            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(40, 20); ctx.lineTo(-40, 20);
-            ctx.moveTo(40, -20); ctx.lineTo(-40, -20);
-            ctx.stroke();
-        }
-
-        drawModelCarrier(ctx) {
-            const grad = ctx.createLinearGradient(-130, 0, 100, 0);
-            grad.addColorStop(0, '#222');
-            grad.addColorStop(0.5, this.color);
-            grad.addColorStop(1, '#999');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.moveTo(90, 35);
-            ctx.lineTo(90, -35);
-            ctx.lineTo(-130, -55);
-            ctx.lineTo(-130, 55);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            ctx.fillRect(-100, 55, 60, 45);
-            ctx.fillRect(-100, -100, 60, 45);
-            ctx.strokeRect(-100, 55, 60, 45);
-            ctx.strokeRect(-100, -100, 60, 45);
-            ctx.fillStyle = '#00f3ff';
-            ctx.globalAlpha = 0.6;
-            for (let i = 0; i < 3; i++) {
-                ctx.fillRect(-80 + i * 25, 65, 10, 25);
-                ctx.fillRect(-80 + i * 25, -90, 10, 25);
-            }
-            ctx.globalAlpha = 1.0;
+    _updateForceField(deltaTime) {
+        if (!this.forceFieldActive) return;
+        // Use its own dedicated timer (forceFieldTimer), NOT stateTimer, to avoid double-advancing
+        this.forceFieldTimer += deltaTime;
+        if (this.forceFieldTimer >= this.forceFieldDuration) {
+            this.forceFieldActive = false;
+            this.isInvulnerable = false;
+            this.state = 'repositioning';
+            this.stateTimer = 0;
+            this.pickNewPosition();
         }
     }
+
+    // ── Attack: Thunderstrike ─────────────────────────────────
+    thunderstrike(deltaTime) {
+        const fireRate = this.phase === 3 ? 0.25 : 0.4;
+        const total = Math.floor(this.stateTimer / fireRate);
+        const prev = Math.floor((this.stateTimer - deltaTime) / fireRate);
+        if (total <= prev) return;
+
+        const target = this.ai.getTargetPosition();
+        const baseAngle = Math.atan2(target.y - this.y, target.x - this.x);
+        const count = this.phase === 3 ? 12 : 8;
+
+        for (let i = 0; i < count; i++) {
+            const angle = baseAngle + ((i / count) * Math.PI * 2);
+            const p = this.fireProjectile(this.x, this.y, angle, 'bullet');
+            if (p) { p.speed = 500 + this.level * 8; p.color = '#ffee00'; p.radius = 5; }
+        }
+        if (this.game.screenShake) this.game.screenShake.trigger(12, 0.2);
+    }
+
+    // ── NEW Attack: Triple Shot ────────────────────────────────────
+    tripleShot(deltaTime) {
+        const fireRate = this.phase === 3 ? 0.18 : 0.25; // wider dodge gaps
+        const total = Math.floor(this.stateTimer / fireRate);
+        const prev = Math.floor((this.stateTimer - deltaTime) / fireRate);
+        if (total <= prev) return;
+
+        const target = this.ai.getTargetPosition();
+        const base = Math.atan2(target.y - this.y, target.x - this.x);
+        const spread = 0.18;
+        for (let i = -1; i <= 1; i++) {
+            const p = this.fireProjectile(this.x, this.y, base + i * spread, 'bullet');
+            if (p) { p.color = '#00ffff'; p.speed = 320 + this.level * 4; } // slower
+        }
+    }
+
+    // ── NEW Attack: Crossfire Barrage (Titan) ─────────────────────
+    crossfireBarrage(deltaTime) {
+        const fireRate = this.phase === 3 ? 0.4 : 0.6; // wider gaps between cross volleys
+        const total = Math.floor(this.stateTimer / fireRate);
+        const prev = Math.floor((this.stateTimer - deltaTime) / fireRate);
+        if (total <= prev) return;
+
+        const rotOffset = total * (Math.PI / 4);
+        for (let i = 0; i < 4; i++) {
+            const angle = rotOffset + (i / 4) * Math.PI * 2;
+            const p = this.fireProjectile(this.x, this.y, angle, 'bullet');
+            if (p) { p.color = '#ff6600'; p.speed = 290; p.radius = 7; } // slower
+        }
+        if (this.game.player) {
+            const pa = Math.atan2(this.game.player.y - this.y, this.game.player.x - this.x);
+            const m = this.fireProjectile(this.x, this.y, pa, 'boss_missile');
+            if (m) { m.color = '#ff0000'; }
+        }
+        if (this.game.screenShake) this.game.screenShake.trigger(8, 0.15);
+    }
+
+    // ── NEW Attack: Ground Zero (Berserker) ───────────────────────
+    groundZero(deltaTime) {
+        const fireRate = this.phase === 3 ? 0.18 : 0.28; // slower rings = gaps to dodge through
+        const total = Math.floor(this.stateTimer / fireRate);
+        const prev = Math.floor((this.stateTimer - deltaTime) / fireRate);
+        if (total <= prev) return;
+
+        const arms = this.phase === 3 ? 8 : 6;
+        const spin = total * 0.4;
+        for (let i = 0; i < arms; i++) {
+            const angle = spin + (i / arms) * Math.PI * 2;
+            const p = this.fireProjectile(this.x, this.y, angle, 'bullet');
+            if (p) { p.color = '#ff2200'; p.speed = 260 + this.level * 4; } // slower
+        }
+        if (this.game.player) {
+            const pa = Math.atan2(this.game.player.y - this.y, this.game.player.x - this.x);
+            this.fireProjectile(this.x, this.y, pa, 'boss_missile');
+        }
+        if (this.game.screenShake) this.game.screenShake.trigger(15, 0.1);
+    }
+
+    // ── NEW Attack: Blink Dash (Phantom) ──────────────────────────
+    blinkDash(deltaTime) {
+        // Phase 1: charge. Phase 2: invisible blink to player, fire burst
+        if (!this._blinkState) this._blinkState = 'charge';
+        if (!this._blinkTimer) this._blinkTimer = 0;
+        this._blinkTimer += deltaTime;
+
+        if (this._blinkState === 'charge' && this._blinkTimer >= 0.4) {
+            // Teleport near player
+            if (this.game.player) {
+                const px = this.game.player.x, py = this.game.player.y;
+                const bAngle = Math.atan2(py - this.y, px - this.x);
+                this.x = px - Math.cos(bAngle) * 120;
+                this.y = py - Math.sin(bAngle) * 120;
+                this.x = Math.max(80, Math.min(this.game.width - 80, this.x));
+                this.y = Math.max(80, Math.min(this.game.height - 80, this.y));
+            }
+            this._blinkState = 'burst';
+            this._blinkTimer = 0;
+            this.isBlinking = true;
+            if (this.game.screenShake) this.game.screenShake.trigger(20, 0.3);
+            // Burst fire
+            const count = this.phase === 3 ? 10 : 7;
+            for (let i = 0; i < count; i++) {
+                const angle = (i / count) * Math.PI * 2;
+                const p = this.fireProjectile(this.x, this.y, angle, 'bullet');
+                if (p) { p.color = '#aa00ff'; p.speed = 450; }
+            }
+        } else if (this._blinkState === 'burst' && this._blinkTimer >= 0.3) {
+            this.isBlinking = false;
+            this._blinkState = null;
+            this._blinkTimer = 0;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  PHANTOM ATTACKS (purple precision teleporter)
+    // ══════════════════════════════════════════════════════════════
+
+    // P1: Single high-speed precision bolt, extremely fast
+    phantomShot(deltaTime) {
+        const rate = this.phase === 3 ? 0.15 : 0.22;
+        const total = Math.floor(this.stateTimer / rate);
+        const prev = Math.floor((this.stateTimer - deltaTime) / rate);
+        if (total <= prev) return;
+        const target = this.ai.getTargetPosition();
+        const a = Math.atan2(target.y - this.y, target.x - this.x);
+        const p = this.fireProjectile(this.x, this.y, a, 'bullet');
+        if (p) { p.color = '#cc00ff'; p.speed = 480; p.radius = 3; }
+    }
+
+    // P2: Fires from 2 "shadow" positions flanking the boss
+    shadowVolley(deltaTime) {
+        const rate = this.phase === 3 ? 0.2 : 0.32;
+        const total = Math.floor(this.stateTimer / rate);
+        const prev = Math.floor((this.stateTimer - deltaTime) / rate);
+        if (total <= prev) return;
+        const target = this.ai.getTargetPosition();
+        const perp = this.angle + Math.PI / 2;
+        const offset = 80 + this.phase * 20;
+        const origins = [
+            { x: this.x + Math.cos(perp) * offset, y: this.y + Math.sin(perp) * offset },
+            { x: this.x - Math.cos(perp) * offset, y: this.y - Math.sin(perp) * offset },
+        ];
+        origins.forEach(o => {
+            const a = Math.atan2(target.y - o.y, target.x - o.x);
+            const p = this.fireProjectile(o.x, o.y, a, 'bullet');
+            if (p) { p.color = '#dd00ff'; p.speed = 360; p.radius = 4; }
+        });
+    }
+
+    // P3: Teleports 3 times rapidly, fires burst ring each time
+    chainBlink(deltaTime) {
+        if (!this._chainPhase) { this._chainPhase = 0; this._chainTimer = 0; this._chainCount = this.phase === 3 ? 4 : 3; }
+        this._chainTimer += deltaTime;
+        const blinkInterval = 0.3;
+        if (this._chainTimer >= blinkInterval && this._chainPhase < this._chainCount) {
+            this._chainTimer = 0;
+            this._chainPhase++;
+            if (this.game.player) {
+                const ang = ((this._chainPhase - 1) / this._chainCount) * Math.PI * 2;
+                const r = 150;
+                this.x = Math.max(80, Math.min(this.game.width - 80, this.game.player.x + Math.cos(ang) * r));
+                this.y = Math.max(80, Math.min(this.game.height - 80, this.game.player.y + Math.sin(ang) * r));
+            }
+            this.isBlinking = true;
+            const burstCount = this.phase === 3 ? 8 : 6;
+            for (let i = 0; i < burstCount; i++) {
+                const a = (i / burstCount) * Math.PI * 2;
+                const p = this.fireProjectile(this.x, this.y, a, 'bullet');
+                if (p) { p.color = '#aa00ff'; p.speed = 300; p.radius = 4; }
+            }
+            if (this.game.screenShake) this.game.screenShake.trigger(15, 0.2);
+        }
+        if (this._chainPhase >= this._chainCount && this._chainTimer >= 0.2) {
+            this.isBlinking = false; this._chainPhase = 0; this._chainCount = 0;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  TITAN ATTACKS (orange heavy dreadnought)
+    // ══════════════════════════════════════════════════════════════
+
+    // P1: Wall of 3 slow fat cannonballs
+    cannonBarrage(deltaTime) {
+        const rate = this.phase === 3 ? 0.5 : 0.7;
+        const total = Math.floor(this.stateTimer / rate);
+        const prev = Math.floor((this.stateTimer - deltaTime) / rate);
+        if (total <= prev) return;
+        const target = this.ai.getTargetPosition();
+        const base = Math.atan2(target.y - this.y, target.x - this.x);
+        const count = this.phase === 3 ? 5 : 3;
+        const spread = 0.5;
+        for (let i = 0; i < count; i++) {
+            const a = base - spread / 2 + (spread / Math.max(count - 1, 1)) * i;
+            const p = this.fireProjectile(this.x, this.y, a, 'bullet');
+            if (p) { p.color = '#ff7700'; p.speed = 160; p.radius = 12; p.damage = 2; }
+        }
+        if (this.game.screenShake) this.game.screenShake.trigger(10, 0.2);
+    }
+
+    // P2: Two horizontal beam-lines sweep left-to-right (rail gun lanes)
+    railSalvo(deltaTime) {
+        const rate = this.phase === 3 ? 0.06 : 0.09;
+        const total = Math.floor(this.stateTimer / rate);
+        const prev = Math.floor((this.stateTimer - deltaTime) / rate);
+        if (total <= prev) return;
+        // Fire rapid stream from both upper and lower cannons
+        const offsets = [-40, 40];
+        offsets.forEach(yo => {
+            const p = this.fireProjectile(this.x, this.y + yo, 0, 'bullet'); // fires right
+            if (p) { p.color = '#ff4400'; p.speed = 420; p.radius = 7; p.damage = 1.5; }
+            const p2 = this.fireProjectile(this.x, this.y + yo, Math.PI, 'bullet'); // fires left
+            if (p2) { p2.color = '#ff4400'; p2.speed = 420; p2.radius = 7; p2.damage = 1.5; }
+        });
+    }
+
+    // P3: Full-screen supernova — 16 fat slow shots + shockwave
+    supernova(deltaTime) {
+        if (!this._supernovaFired) {
+            this._supernovaFired = true;
+            const count = this.phase === 3 ? 20 : 16;
+            for (let i = 0; i < count; i++) {
+                const a = (i / count) * Math.PI * 2;
+                const p = this.fireProjectile(this.x, this.y, a, 'bullet');
+                if (p) { p.color = '#ff8800'; p.speed = 130; p.radius = 14; p.damage = 2.5; }
+            }
+            // Inner fast ring
+            for (let i = 0; i < 8; i++) {
+                const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
+                const p = this.fireProjectile(this.x, this.y, a, 'boss_missile');
+                if (p) { p.color = '#ffffff'; }
+            }
+            if (this.game.screenShake) this.game.screenShake.trigger(60, 1.0);
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  BERSERKER ATTACKS (red rage delta wing)
+    // ══════════════════════════════════════════════════════════════
+
+    // P1/P2: Spinning ring, arms rotate each volley
+    rageSpin(deltaTime) {
+        const rate = this.phase === 3 ? 0.14 : 0.22;
+        const total = Math.floor(this.stateTimer / rate);
+        const prev = Math.floor((this.stateTimer - deltaTime) / rate);
+        if (total <= prev) return;
+        const arms = this.phase === 3 ? 10 : (this.phase === 2 ? 8 : 6);
+        const spin = total * (Math.PI / (arms * 0.8)); // rotate each volley
+        for (let i = 0; i < arms; i++) {
+            const a = spin + (i / arms) * Math.PI * 2;
+            const p = this.fireProjectile(this.x, this.y, a, 'bullet');
+            if (p) { p.color = '#ff3300'; p.speed = 260 + this.phase * 30; }
+        }
+        if (this.phase === 3 && this.game.screenShake) this.game.screenShake.trigger(8, 0.1);
+    }
+
+    // P2/P3: Charges directly at player firing continuous stream along path
+    berserkerRush(deltaTime) {
+        if (!this._rushPhase) { this._rushPhase = 'charge'; this._rushTimer = 0; }
+        this._rushTimer += deltaTime;
+        if (this._rushPhase === 'charge') {
+            if (this.game.player) {
+                const dx = this.game.player.x - this.x, dy = this.game.player.y - this.y;
+                const dist = Math.hypot(dx, dy);
+                const rushSpd = 500 + this.phase * 80;
+                this.x += (dx / dist) * rushSpd * deltaTime;
+                this.y += (dy / dist) * rushSpd * deltaTime;
+                // Fire bullets along path
+                const rate = 0.06;
+                const total = Math.floor(this._rushTimer / rate);
+                const prev = Math.floor((this._rushTimer - deltaTime) / rate);
+                if (total > prev) {
+                    const a = Math.atan2(dy, dx);
+                    const p = this.fireProjectile(this.x, this.y, a, 'bullet');
+                    if (p) { p.color = '#ff5500'; p.speed = 380; }
+                }
+            }
+            if (this._rushTimer >= 0.6) { this._rushPhase = 'recover'; this._rushTimer = 0; }
+        } else {
+            if (this._rushTimer >= 0.4) { this._rushPhase = null; this._rushTimer = 0; }
+        }
+    }
+
+    // P3: Full chaos — fast 12-arm ring + aimed burst simultaneously every frame
+    frenzyStorm(deltaTime) {
+        const rate = this.phase === 3 ? 0.1 : 0.16;
+        const total = Math.floor(this.stateTimer / rate);
+        const prev = Math.floor((this.stateTimer - deltaTime) / rate);
+        if (total <= prev) return;
+        const arms = 12;
+        const spin = total * 0.35;
+        for (let i = 0; i < arms; i++) {
+            const a = spin + (i / arms) * Math.PI * 2;
+            const p = this.fireProjectile(this.x, this.y, a, 'bullet');
+            if (p) { p.color = i % 2 === 0 ? '#ff2200' : '#ff8800'; p.speed = 220; }
+        }
+        const target = this.ai.getTargetPosition();
+        const aim = Math.atan2(target.y - this.y, target.x - this.x);
+        const m = this.fireProjectile(this.x, this.y, aim, 'boss_missile');
+        if (m) { m.color = '#ffffff'; }
+        if (this.game.screenShake) this.game.screenShake.trigger(10, 0.12);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  TACTICIAN ATTACKS (cyan precision flanker)
+    // ══════════════════════════════════════════════════════════════
+
+    // P1: Single perfectly-timed predicted shot with heavy lead
+    precisioShot(deltaTime) {
+        const rate = this.phase === 3 ? 0.22 : 0.35;
+        const total = Math.floor(this.stateTimer / rate);
+        const prev = Math.floor((this.stateTimer - deltaTime) / rate);
+        if (total <= prev) return;
+        const target = this.ai.getTargetPosition();
+        const base = Math.atan2(target.y - this.y, target.x - this.x);
+        // Tight 2-shot burst with minimal spread
+        const p1 = this.fireProjectile(this.x, this.y, base - 0.04, 'bullet');
+        const p2 = this.fireProjectile(this.x, this.y, base + 0.04, 'bullet');
+        [p1, p2].forEach(p => { if (p) { p.color = '#00ddff'; p.speed = 390; p.radius = 4; } });
+    }
+
+    // P2/P3: Fires from predicted flank angle — shots come from unexpected directions
+    flankVolley(deltaTime) {
+        const rate = this.phase === 3 ? 0.18 : 0.28;
+        const total = Math.floor(this.stateTimer / rate);
+        const prev = Math.floor((this.stateTimer - deltaTime) / rate);
+        if (total <= prev) return;
+        if (!this.game.player) return;
+        // Compute flank origin: 200px perpendicular to player's movement
+        const perp = this.ai.getCounterDodgeAngle() + Math.PI / 2;
+        const flankX = Math.max(80, Math.min(this.game.width - 80, this.game.player.x + Math.cos(perp) * 200));
+        const flankY = Math.max(80, Math.min(this.game.height - 80, this.game.player.y + Math.sin(perp) * 200));
+        const toPlayer = Math.atan2(this.game.player.y - flankY, this.game.player.x - flankX);
+        const count = this.phase === 3 ? 4 : 3;
+        for (let i = 0; i < count; i++) {
+            const a = toPlayer + (i - (count - 1) / 2) * 0.1;
+            const p = this.fireProjectile(flankX, flankY, a, 'bullet');
+            if (p) { p.color = '#00ffcc'; p.speed = 360; p.radius = 4; }
+        }
+    }
+
+    // P3: 5 perfectly-timed shots fired in sequence at 0.12s intervals
+    coordinatedStrike(deltaTime) {
+        if (!this._csTimer) this._csTimer = 0;
+        if (!this._csShot) this._csShot = 0;
+        this._csTimer += deltaTime;
+        const interval = 0.12;
+        const maxShots = this.phase === 3 ? 6 : 5;
+        if (this._csShot < maxShots && this._csTimer >= this._csShot * interval) {
+            const target = this.ai.getTargetPosition();
+            const a = Math.atan2(target.y - this.y, target.x - this.x);
+            const p = this.fireProjectile(this.x, this.y, a + (this._csShot % 2 === 0 ? 0 : 0.05), 'bullet');
+            if (p) { p.color = '#00ffff'; p.speed = 420; p.radius = 5; }
+            this._csShot++;
+        }
+        if (this._csShot >= maxShots && this._csTimer >= maxShots * interval + 0.3) {
+            this._csTimer = 0; this._csShot = 0;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  SWARMLORD ATTACKS (yellow carrier, area denial)
+    // ══════════════════════════════════════════════════════════════
+
+    // P1: 5 bullets dropped straight down like bombs
+    swarmDrop(deltaTime) {
+        const rate = this.phase === 3 ? 0.25 : 0.4;
+        const total = Math.floor(this.stateTimer / rate);
+        const prev = Math.floor((this.stateTimer - deltaTime) / rate);
+        if (total <= prev) return;
+        const count = this.phase === 3 ? 7 : 5;
+        const spread = this.game.width * 0.4;
+        for (let i = 0; i < count; i++) {
+            const ox = -spread / 2 + (spread / (count - 1)) * i;
+            const p = this.fireProjectile(this.x + ox, this.y, Math.PI / 2, 'bullet');
+            if (p) { p.color = '#ffee00'; p.speed = 220 + this.phase * 30; p.radius = 6; }
+        }
+    }
+
+    // P2: 3 cluster projectiles that split into 4 each after 0.5s
+    clusterStrike(deltaTime) {
+        const rate = this.phase === 3 ? 0.4 : 0.6;
+        const total = Math.floor(this.stateTimer / rate);
+        const prev = Math.floor((this.stateTimer - deltaTime) / rate);
+        if (total <= prev) return;
+        const target = this.ai.getTargetPosition();
+        const base = Math.atan2(target.y - this.y, target.x - this.x);
+        const count = this.phase === 3 ? 4 : 3;
+        for (let i = 0; i < count; i++) {
+            const a = base + (i - (count - 1) / 2) * 0.25;
+            const p = this.fireProjectile(this.x, this.y, a, 'bullet');
+            if (p) {
+                p.color = '#ffcc00'; p.speed = 200; p.radius = 8;
+                // Attach split timer
+                p._splitTimer = 0;
+                p._splitDone = false;
+                const origUpdate = p.update ? p.update.bind(p) : null;
+                p.update = (dt) => {
+                    if (origUpdate) origUpdate(dt);
+                    if (!p._splitDone) {
+                        p._splitTimer += dt;
+                        if (p._splitTimer >= 0.5) {
+                            p._splitDone = true;
+                            for (let j = 0; j < 4; j++) {
+                                const sa = p._angle !== undefined ? p._angle : a;
+                                const sp = this.fireProjectile(p.x, p.y, sa + (j / 4) * Math.PI * 2, 'bullet');
+                                if (sp) { sp.color = '#ffaa00'; sp.speed = 280; sp.radius = 4; }
+                            }
+                            p.markedForDeletion = true;
+                        }
+                    }
+                };
+            }
+        }
+        if (this.game.screenShake) this.game.screenShake.trigger(8, 0.15);
+    }
+
+    // P3: 8 simultaneous diagonal rain streams from top in different angles
+    monsoonBarrage(deltaTime) {
+        const rate = this.phase === 3 ? 0.08 : 0.12;
+        const total = Math.floor(this.stateTimer / rate);
+        const prev = Math.floor((this.stateTimer - deltaTime) / rate);
+        if (total <= prev) return;
+        const streams = this.phase === 3 ? 8 : 6;
+        for (let i = 0; i < streams; i++) {
+            const srcX = (this.game.width / (streams - 1)) * i;
+            const dropAngle = Math.PI / 2 + Math.sin(this.stateTimer * 0.8 + i) * 0.4;
+            const p = this.fireProjectile(srcX, 0, dropAngle, 'bullet');
+            if (p) { p.color = i % 2 === 0 ? '#ffee00' : '#ffaa00'; p.speed = 240 + this.phase * 20; p.radius = 5; }
+        }
+    }
+    fireProjectile(x, y, angle, type) {
+        const p = new Projectile(this.game, x, y, angle, type === 'boss_missile' ? 'missile' : type, 'enemy');
+        p.source = 'boss';
+
+        if (type === 'boss_missile') {
+            p.speed = 180;        // was 250 — slower, more dodgeable
+            p.maxSpeed = 420;     // was 600
+            p.acceleration = 200; // was 300
+            p.damage = this.level >= 15 ? 2.0 : 1.5;
+            p.lifetime = 5.0;
+            p.isHoming = false;
+            p.color = '#ff0000';
+            p.radius = 10;
+        } else if (type === 'missile') {
+            p.speed = 130;
+            p.maxSpeed = 320;
+            p.acceleration = 150;
+            p.damage = this.level >= 20 ? 1.2 : 0.8;
+            p.lifetime = 4.0;
+            p.isHoming = false;
+        } else {
+            p.speed = 280 + (this.level * 4); // was 350+(level*5) — ~20% slower
+            p.damage = Math.max(1, Math.floor(this.level / 5));
+        }
+        this.game.projectiles.push(p);
+        return p;
+    }
+
+    takeDamage(amount) {
+        if (this.isInvulnerable) return false;
+        this.health -= amount;
+        // Track hits for AI accuracy adaptation
+        if (this.ai) this.ai.hitsLanded++;
+        if (this.health <= 0) {
+            this.health = 0;
+            // ─ Death burst: 12 explosions in a ring ────────────────────────
+            if (!this._deathBurstFired) {
+                this._deathBurstFired = true;
+                for (let i = 0; i < 12; i++) {
+                    const ra = (i / 12) * Math.PI * 2;
+                    const dist = 50 + (i % 3) * 30;
+                    this.game.particles.push(new Explosion(
+                        this.game,
+                        this.x + Math.cos(ra) * dist,
+                        this.y + Math.sin(ra) * dist,
+                        i % 2 === 0 ? '#ffffff' : this.color
+                    ));
+                }
+                if (this.game.screenShake) this.game.screenShake.trigger(80, 1.2);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        // ── Phantom blink (invisible during blinkDash) ────────
+        if (this.isBlinking) {
+            ctx.globalAlpha = 0.08 + Math.abs(Math.sin(this.game.lastTime * 0.04)) * 0.15;
+        }
+
+        // ── Pulsing phase aura ring ───────────────────────────
+        const auraColors = ['#00ff88', '#ff8800', '#ff2222'];
+        const auraColor = auraColors[this.phase - 1] || '#00ff88';
+        const auraPulse = 0.35 + Math.abs(Math.sin(this.game.lastTime * (this.phase === 3 ? 0.012 : 0.005))) * 0.55;
+        const auraR = this.radius + 14 + Math.abs(Math.sin(this.game.lastTime * 0.004)) * 8;
+        ctx.save();
+        ctx.globalAlpha = auraPulse * (this.isBlinking ? 0.2 : 1.0);
+        ctx.shadowBlur = 40;
+        ctx.shadowColor = auraColor;
+        ctx.strokeStyle = auraColor;
+        ctx.lineWidth = this.phase === 3 ? 3.5 : 2.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, auraR, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+
+        // ── Force Field visual ────────────────────────────────
+        if (this.forceFieldActive) {
+            // NOTE: _updateForceField() is called solely from update() - do NOT call it here.
+            const ffPhase = (this.forceFieldTimer / this.forceFieldDuration);
+            const ffRadius = this.radius + 15 + Math.sin(this.game.lastTime * 0.015) * 5;
+            ctx.save();
+            ctx.globalAlpha = 0.7 - ffPhase * 0.5;
+            ctx.shadowBlur = 60;
+            ctx.shadowColor = '#00f3ff';
+            ctx.strokeStyle = '#00f3ff';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(0, 0, ffRadius, 0, Math.PI * 2);
+            ctx.stroke();
+            // Hexagonal inner pattern
+            ctx.globalAlpha = 0.3;
+            ctx.strokeStyle = '#aaffff';
+            ctx.lineWidth = 1.5;
+            for (let i = 0; i < 6; i++) {
+                ctx.beginPath();
+                const a = (i / 6) * Math.PI * 2 + this.game.lastTime * 0.003;
+                ctx.moveTo(0, 0);
+                ctx.lineTo(Math.cos(a) * ffRadius * 0.9, Math.sin(a) * ffRadius * 0.9);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        // ── Beam charging visual ──────────────────────────────
+        if (this.beamCharging) {
+            const chargeProgress = this.beamTimer / this.beamChargeTime;
+            ctx.save();
+            ctx.globalAlpha = chargeProgress * 0.8;
+            ctx.shadowBlur = 80 * chargeProgress;
+            ctx.shadowColor = '#ffffff';
+            ctx.strokeStyle = '#ffaa00';
+            ctx.lineWidth = 3;
+            for (let i = 0; i < 3; i++) {
+                const r = (1 - chargeProgress) * (this.radius + 30 + i * 15);
+                ctx.beginPath();
+                ctx.arc(0, 0, r, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        // ── Beam active visual ─────────────────────────────────
+        if (this.beamActive) {
+            ctx.save();
+            ctx.globalAlpha = 0.95;
+            ctx.rotate(this.beamAngle - this.angle); // beam angle in local space
+            const beamLen = Math.max(this.game.width, this.game.height) * 1.5;
+            // Outer glow
+            const grd = ctx.createLinearGradient(0, 0, beamLen, 0);
+            grd.addColorStop(0, 'rgba(255,255,255,1)');
+            grd.addColorStop(0.2, 'rgba(255,100,0,0.9)');
+            grd.addColorStop(1, 'rgba(255,0,0,0)');
+            ctx.fillStyle = grd;
+            ctx.fillRect(0, -18, beamLen, 36);
+            // Core
+            ctx.fillStyle = 'rgba(255,255,255,0.95)';
+            ctx.fillRect(0, -6, beamLen, 12);
+            ctx.restore();
+        }
+
+        ctx.rotate(this.angle);
+
+        // Core Glow
+        ctx.shadowBlur = this.rageMode ? 80 : (this.phase === 2 ? 60 : 40);
+        ctx.shadowColor = this.rageMode ? '#ffffff' : this.color;
+
+        // Shield ring if invulnerable
+        if (this.isInvulnerable) {
+            ctx.shadowColor = '#00f3ff';
+            ctx.shadowBlur = 80;
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#00f3ff';
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius + 10, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // 3D Realistic Sprite Rendering
+        const sprite = this.game.assets.get('boss');
+        if (sprite) {
+            const size = this.radius * 2.5;
+            ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
+        } else {
+            this.drawModel(ctx);
+        }
+
+        ctx.restore();
+
+        // ── Boss HUD overlay ───────────────────────────────────
+        this._drawHUD(ctx);
+    }
+
+    _drawHUD(ctx) {
+        // Boss phase + strategy indicator (drawn in screen space below boss)
+        const hudX = this.x;
+        const hudY = this.y + this.radius + 22;
+
+        ctx.save();
+        ctx.globalAlpha = 0.85;
+
+        // Phase label
+        const phaseColors = ['#00ff88', '#ffaa00', '#ff4444'];
+        const phaseColor = phaseColors[this.phase - 1] || '#ffffff';
+        ctx.font = 'bold 11px "Segoe UI", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = phaseColor;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = phaseColor;
+
+        const phaseLabel = this.rageMode ? '⚡ RAGE MODE ⚡' : `PHASE ${this.phase}`;
+        ctx.fillText(phaseLabel, hudX, hudY);
+
+        // Personality label
+        const persColors = { Phantom: '#aa00ff', Titan: '#ff6600', Berserker: '#ff2222', Tactician: '#00ccff', Swarmlord: '#ffee00' };
+        ctx.globalAlpha = 0.75;
+        ctx.font = '9px monospace';
+        ctx.fillStyle = persColors[this.personality] || '#ffffff';
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = ctx.fillStyle;
+        ctx.fillText(`[${this.personality || 'BOSS'}]`, hudX, hudY + 13);
+
+        // Strategy label (phase 2+)
+        if (this.phase >= 2) {
+            const stratLabels = { 'standard': 'STANDARD', 'counter-dodge': '⟲ COUNTER', 'suppress': '▶▶ SUPPRESS', 'overwhelm': '❯❯❯ OVERWHELM' };
+            ctx.globalAlpha = 0.45;
+            ctx.font = '8px monospace';
+            ctx.fillStyle = '#aaaaff';
+            ctx.shadowBlur = 0;
+            ctx.fillText(stratLabels[this.ai.strategy] || '', hudX, hudY + 23);
+        }
+
+        ctx.restore();
+    }
+
+    drawModel(ctx) {
+        ctx.save();
+        ctx.rotate(this.tilt);
+
+        switch (this.modelIndex) {
+            case 0: this.drawModelSleek(ctx); break;
+            case 1: this.drawModelHeavy(ctx); break;
+            case 2: this.drawModelTriangle(ctx); break;
+            case 3: this.drawModelStealth(ctx); break;
+            case 4: this.drawModelCarrier(ctx); break;
+            default: this.drawModelSleek(ctx);
+        }
+
+        // Cockpit
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.ellipse(30, 0, 15, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Cockpit inner glow
+        ctx.shadowBlur = 12; ctx.shadowColor = this.color;
+        ctx.strokeStyle = this.color; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.ellipse(30, 0, 7, 4, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Animated thruster bloom behind the ship
+        const t = this.game.lastTime * 0.001;
+        const thrustLen = this.state === 'dashing' ? 85 : (this.state === 'repositioning' ? 55 : 32);
+        const thrustWidth = 7 + Math.abs(Math.sin(t * 12)) * 4;
+        const thrustGrad = ctx.createLinearGradient(0, 0, -thrustLen, 0);
+        thrustGrad.addColorStop(0, 'rgba(255,255,255,0.95)');
+        thrustGrad.addColorStop(0.4, this.color + 'bb');
+        thrustGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.save();
+        ctx.shadowBlur = 18 + Math.sin(t * 8) * 6;
+        ctx.shadowColor = this.color;
+        ctx.fillStyle = thrustGrad;
+        ctx.beginPath();
+        ctx.moveTo(-55, -thrustWidth);
+        ctx.lineTo(-55 - thrustLen, 0);
+        ctx.lineTo(-55, thrustWidth);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        ctx.restore();
+    }
+
+    drawModelSleek(ctx) {
+        // PHANTOM — sleek stealth jet with purple wing-tip lights
+        const grad = ctx.createLinearGradient(-80, 0, 80, 0);
+        grad.addColorStop(0, '#111'); grad.addColorStop(0.5, this.color); grad.addColorStop(1, '#fff');
+        ctx.fillStyle = grad; ctx.strokeStyle = this.color; ctx.lineWidth = 1.5;
+        ctx.shadowBlur = 8; ctx.shadowColor = this.color;
+        ctx.beginPath();
+        ctx.moveTo(100, 0); ctx.lineTo(55, 12); ctx.lineTo(-40, 16); ctx.lineTo(-80, 8);
+        ctx.lineTo(-80, -8); ctx.lineTo(-40, -16); ctx.lineTo(55, -12);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(30, 14); ctx.lineTo(-40, 90); ctx.lineTo(-80, 90); ctx.lineTo(-60, 14); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(30, -14); ctx.lineTo(-40, -90); ctx.lineTo(-80, -90); ctx.lineTo(-60, -14); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-50, 14); ctx.lineTo(-70, 38); ctx.lineTo(-80, 38); ctx.lineTo(-65, 14); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-50, -14); ctx.lineTo(-70, -38); ctx.lineTo(-80, -38); ctx.lineTo(-65, -14); ctx.closePath(); ctx.fill(); ctx.stroke();
+        // Circuit data-stream lines (pulsing purple)
+        ctx.shadowBlur = 0;
+        const cp = 0.2 + Math.abs(Math.sin(this.game.lastTime * 0.003)) * 0.6;
+        ctx.strokeStyle = `rgba(170,0,255,${cp})`; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(20, 12); ctx.lineTo(20, -12); ctx.moveTo(-20, 15); ctx.lineTo(-20, -15); ctx.stroke();
+        // Wing-tip glowing orbs (purple)
+        const wt = this.game.lastTime * 0.006;
+        const wPulse = 0.55 + Math.abs(Math.sin(wt)) * 0.45;
+        ctx.shadowBlur = 22; ctx.shadowColor = '#cc00ff';
+        ctx.fillStyle = `rgba(180,0,255,${wPulse})`;
+        ctx.beginPath(); ctx.arc(-80, 90, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-80, -90, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(220,130,255,${wPulse * 0.65})`;
+        ctx.beginPath(); ctx.arc(-80, 38, 3.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-80, -38, 3.5, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+    }
+
+    drawModelHeavy(ctx) {
+        // TITAN — bulky dreadnought with orange cannon lights
+        const grad = ctx.createLinearGradient(-120, 0, 120, 0);
+        grad.addColorStop(0, '#110000'); grad.addColorStop(0.5, this.color); grad.addColorStop(1, '#ffffff');
+        ctx.fillStyle = grad; ctx.strokeStyle = this.color; ctx.lineWidth = 1.5;
+        ctx.shadowBlur = 8; ctx.shadowColor = this.color;
+        ctx.beginPath();
+        ctx.moveTo(115, 0); ctx.lineTo(70, 25); ctx.lineTo(-50, 30); ctx.lineTo(-120, 18);
+        ctx.lineTo(-120, -18); ctx.lineTo(-50, -30); ctx.lineTo(70, -25);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(30, 26); ctx.lineTo(-20, 80); ctx.lineTo(-60, 80); ctx.lineTo(-30, 26); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(30, -26); ctx.lineTo(-20, -80); ctx.lineTo(-60, -80); ctx.lineTo(-30, -26); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(60, 24); ctx.lineTo(20, 55); ctx.lineTo(-20, 55); ctx.lineTo(0, 24); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(60, -24); ctx.lineTo(20, -55); ctx.lineTo(-20, -55); ctx.lineTo(0, -24); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(-40, -22, 70, 44);
+        ctx.strokeStyle = 'rgba(255,255,255,0.30)'; ctx.lineWidth = 2; ctx.strokeRect(-40, -22, 70, 44);
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.beginPath(); ctx.moveTo(-60, 28); ctx.lineTo(-110, 70); ctx.lineTo(-80, 55); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-60, -28); ctx.lineTo(-110, -70); ctx.lineTo(-80, -55); ctx.closePath(); ctx.fill();
+        // Glowing wing cannon muzzle lights (orange, pulsing)
+        const ht = 0.5 + Math.abs(Math.sin(this.game.lastTime * 0.008)) * 0.5;
+        ctx.shadowBlur = 24; ctx.shadowColor = '#ff6600';
+        ctx.fillStyle = `rgba(255,110,0,${ht})`;
+        ctx.beginPath(); ctx.arc(-118, 12, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-118, -12, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-58, 28, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-58, -28, 5, 0, Math.PI * 2); ctx.fill();
+        // Wing-tip glowing orbs (orange)
+        const wt2 = this.game.lastTime * 0.005;
+        ctx.shadowBlur = 26; ctx.shadowColor = '#ff6600';
+        ctx.fillStyle = `rgba(255,140,0,${0.6 + Math.abs(Math.sin(wt2)) * 0.4})`;
+        ctx.beginPath(); ctx.arc(-60, 80, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-60, -80, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(255,180,60,${0.5 + Math.abs(Math.sin(wt2 + 1)) * 0.4})`;
+        ctx.beginPath(); ctx.arc(-20, 55, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-20, -55, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+    }
+
+    drawModelTriangle(ctx) {
+        // BERSERKER — aggressive delta wing with red rage lights
+        const grad = ctx.createLinearGradient(-100, 0, 100, 0);
+        grad.addColorStop(0, '#111'); grad.addColorStop(0.5, this.color); grad.addColorStop(1, '#eee');
+        ctx.fillStyle = grad; ctx.strokeStyle = this.color; ctx.lineWidth = 1.5;
+        ctx.shadowBlur = 10; ctx.shadowColor = '#ff2200';
+        ctx.beginPath();
+        ctx.moveTo(110, 0); ctx.lineTo(-80, 100); ctx.lineTo(-60, 0); ctx.lineTo(-80, -100);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.beginPath(); ctx.moveTo(40, 0); ctx.lineTo(-40, 0); ctx.lineTo(-60, -25); ctx.closePath(); ctx.fill();
+        // Rage center stripe
+        ctx.strokeStyle = '#ff4400'; ctx.lineWidth = 2; ctx.globalAlpha = 0.6;
+        ctx.beginPath(); ctx.moveTo(50, 0); ctx.lineTo(-50, 0); ctx.stroke();
+        ctx.globalAlpha = 1.0;
+        ctx.fillStyle = this.color; ctx.globalAlpha = 0.5;
+        ctx.fillRect(-20, 20, 15, 30); ctx.fillRect(-20, -50, 15, 30);
+        ctx.globalAlpha = 1.0;
+        // Wing-tip trail orbs (red-orange, strobe in phase 3)
+        const bt = this.game.lastTime * 0.009;
+        const bPulse = this.phase === 3 ? (Math.abs(Math.sin(bt * 3)) > 0.5 ? 1.0 : 0.15) : (0.5 + Math.abs(Math.sin(bt)) * 0.5);
+        ctx.shadowBlur = 28; ctx.shadowColor = '#ff2200';
+        ctx.fillStyle = `rgba(255,50,0,${bPulse})`;
+        ctx.beginPath(); ctx.arc(-80, 100, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-80, -100, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(255,150,0,${bPulse * 0.7})`;
+        ctx.beginPath(); ctx.arc(-20, 50, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-20, -50, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+    }
+
+    drawModelStealth(ctx) {
+        // TACTICIAN — angular stealth bomber with cyan data-stream lights
+        ctx.fillStyle = '#0a0a0a';
+        ctx.strokeStyle = this.color; ctx.lineWidth = 2.5;
+        ctx.shadowBlur = 12; ctx.shadowColor = this.color;
+        ctx.beginPath();
+        ctx.moveTo(120, 0); ctx.lineTo(20, 45); ctx.lineTo(-90, 110); ctx.lineTo(-60, 30);
+        ctx.lineTo(-100, 0); ctx.lineTo(-60, -30); ctx.lineTo(-90, -110); ctx.lineTo(20, -45);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.shadowBlur = 0;
+        // Data-stream circuit lines (cyan, pulsing)
+        const sp = 0.2 + Math.abs(Math.sin(this.game.lastTime * 0.004)) * 0.65;
+        ctx.strokeStyle = `rgba(0,200,255,${sp})`; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(40, 20); ctx.lineTo(-40, 20); ctx.moveTo(40, -20); ctx.lineTo(-40, -20); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-10, 20); ctx.lineTo(-10, -20); ctx.moveTo(60, 0); ctx.lineTo(20, 0); ctx.stroke();
+        // Wing-tip glowing orbs (cyan-blue)
+        const st = this.game.lastTime * 0.007;
+        const sPulse = 0.5 + Math.abs(Math.sin(st)) * 0.5;
+        ctx.shadowBlur = 24; ctx.shadowColor = '#00ccff';
+        ctx.fillStyle = `rgba(0,210,255,${sPulse})`;
+        ctx.beginPath(); ctx.arc(-90, 110, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-90, -110, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(0,160,255,${sPulse * 0.6})`;
+        ctx.beginPath(); ctx.arc(-60, 30, 3.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-60, -30, 3.5, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+    }
+
+    drawModelCarrier(ctx) {
+        // SWARMLORD — wide carrier with yellow pulsing launch bays
+        const grad = ctx.createLinearGradient(-130, 0, 100, 0);
+        grad.addColorStop(0, '#222'); grad.addColorStop(0.5, this.color); grad.addColorStop(1, '#999');
+        ctx.fillStyle = grad; ctx.strokeStyle = this.color; ctx.lineWidth = 1.5;
+        ctx.shadowBlur = 8; ctx.shadowColor = this.color;
+        ctx.beginPath();
+        ctx.moveTo(90, 35); ctx.lineTo(90, -35); ctx.lineTo(-130, -55); ctx.lineTo(-130, 55);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillRect(-100, 55, 60, 45); ctx.fillRect(-100, -100, 60, 45);
+        ctx.strokeRect(-100, 55, 60, 45); ctx.strokeRect(-100, -100, 60, 45);
+        ctx.shadowBlur = 0;
+        // Pulsing launch bay lights (animated cyan)
+        const ct2 = this.game.lastTime * 0.006;
+        const bpulse = 0.4 + Math.abs(Math.sin(ct2)) * 0.6;
+        ctx.shadowBlur = 16; ctx.shadowColor = '#00f3ff';
+        ctx.fillStyle = `rgba(0,243,255,${bpulse})`;
+        for (let i = 0; i < 3; i++) {
+            ctx.fillRect(-80 + i * 25, 65, 10, 25);
+            ctx.fillRect(-80 + i * 25, -90, 10, 25);
+        }
+        // Wing-tip glowing orbs (yellow-green)
+        const wt3 = this.game.lastTime * 0.005;
+        const wPulse3 = 0.6 + Math.abs(Math.sin(wt3)) * 0.4;
+        ctx.shadowBlur = 30; ctx.shadowColor = '#ffee00';
+        ctx.fillStyle = `rgba(255,230,0,${wPulse3})`;
+        ctx.beginPath(); ctx.arc(-130, 55, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-130, -55, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(255,200,0,${wPulse3 * 0.6})`;
+        ctx.beginPath(); ctx.arc(-100, 80, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-100, -80, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0; ctx.globalAlpha = 1.0;
+    }
+}

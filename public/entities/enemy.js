@@ -386,6 +386,11 @@ export class Enemy {
             this.brain.flankSide = Math.sin(this.getNumericId() * 7.3 + 1) > 0 ? 1 : -1;
             this.brain.flanking = true;
         }
+
+        // Stagger firing timer so enemies don't all shoot at once
+        if (this.shootTimer !== undefined) {
+            this.shootTimer = -(Math.abs(Math.sin(this.getNumericId() * 12.3)) * 2.0);
+        }
     }
 
     // Helper to extract numeric ID from string (e.g., 'enemy_42' -> 42) to prevent NaN in Math functions
@@ -565,6 +570,15 @@ export class Enemy {
             const moveAngle = getMoveAngle(directAngle);
             this.x += Math.cos(moveAngle) * effectiveSpeed * deltaTime;
             this.y += Math.sin(moveAngle) * effectiveSpeed * deltaTime;
+        }
+
+        // Soft clamp: keep enemies on screen once they enter
+        const m = this.radius;
+        if (this.x > -m && this.x < this.game.width + m) {
+            this.x = Math.max(m, Math.min(this.game.width - m, this.x));
+        }
+        if (this.y > -m && this.y < this.game.height + m) {
+            this.y = Math.max(m, Math.min(this.game.height - m, this.y));
         }
 
         // Shooter Logic (only shooter, sniper, launcher, and pulsar can attack)
