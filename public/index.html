@@ -137,6 +137,14 @@
             <div id="warp-overlay"></div>
             <div id="impact-overlay"></div>
 
+            <div id="achievement-toast" class="hidden">
+                <div class="toast-icon">🏆</div>
+                <div class="toast-content">
+                    <div class="toast-title">ACHIEVEMENT UNLOCKED</div>
+                    <div id="toast-name">First Blood</div>
+                </div>
+            </div>
+
             <div id="start-screen" class="screen active">
                 <h1 class="title glitch" data-text="COSMIC STRIKE">COSMIC STRIKE</h1>
                 <p class="subtitle">NEON SURVIVAL</p>
@@ -144,6 +152,7 @@
                 <div class="menu-buttons">
                     <button id="start-btn" class="neon-btn">INITIATE SEQUENCE</button>
                     <button id="store-btn" class="neon-btn">ARMORY</button>
+                    <button id="achievements-menu-btn" class="neon-btn">ACHIEVEMENTS</button>
                     <button id="leaderboard-btn" class="neon-btn">LEADERBOARD</button>
                     <button id="collab-btn" class="neon-btn">COLLABORATE</button>
                 </div>
@@ -168,6 +177,15 @@
                     <!-- Cards will be injected by JS -->
                 </div>
                 <button id="back-btn" class="neon-btn">BACK</button>
+            </div>
+
+            <div id="achievements-screen" class="screen">
+                <h2>ACHIEVEMENTS</h2>
+                <div id="coins-display-achievements">COINS: 0</div>
+                <div id="achievement-list">
+                    <!-- Cards will be injected by JS -->
+                </div>
+                <button id="back-from-achievements-btn" class="neon-btn">BACK</button>
             </div>
 
             <div id="pause-menu" class="screen">

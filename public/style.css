@@ -266,7 +266,7 @@ h1 {
         letter-spacing: 3px;
         margin-bottom: 1rem;
     }
-    
+
     h2 {
         font-size: 1.8rem;
     }
@@ -295,7 +295,8 @@ h1 {
         font-size: 1.1rem;
         margin-top: 1rem;
         min-width: 180px;
-        min-height: 44px; /* iOS minimum touch target */
+        min-height: 44px;
+        /* iOS minimum touch target */
     }
 }
 
@@ -317,6 +318,23 @@ h1 {
     background: rgba(0, 0, 0, 0.6);
     border: 2px solid rgba(0, 243, 255, 0.4);
     box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
+}
+
+#store-screen,
+#pause-menu,
+#settings-menu,
+#game-over-screen,
+#leaderboard-screen,
+#collab-screen,
+#achievements-screen {
+    background: rgba(10, 10, 20, 0.95);
+    border: 2px solid var(--neon-blue);
+    box-shadow: 0 0 20px var(--neon-blue), inset 0 0 20px var(--neon-blue);
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-radius: 10px;
 }
 
 .collab-section {
@@ -387,6 +405,39 @@ h1 {
     }
 }
 
+/* --- Store & Achievements Shared Styles --- */
+#coins-display-store,
+#coins-display-achievements {
+    font-size: 2rem;
+    color: var(--neon-pink);
+    margin-bottom: 2rem;
+    text-shadow: 0 0 10px var(--neon-pink);
+}
+
+#ship-grid,
+#achievement-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    width: 90vw;
+    max-width: 1200px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+/* Mobile grid optimization */
+@media screen and (max-width: 900px) {
+
+    #ship-grid,
+    #achievement-list {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 10px;
+        padding: 10px;
+        max-height: 50vh;
+    }
+}
+
 #store-screen {
     overflow-y: auto;
     padding: 20px;
@@ -447,6 +498,11 @@ h1 {
     margin-bottom: 10px;
 }
 
+.leaderboard-score {
+    color: var(--neon-green);
+    font-weight: bold;
+}
+
 .action-btn {
     padding: 10px 20px;
     border: 1px solid var(--neon-blue);
@@ -482,6 +538,7 @@ h1 {
 
 /* Mobile coins display optimization */
 @media screen and (max-width: 900px) {
+
     #total-coins-display,
     #coins-display-store {
         font-size: 1rem;
@@ -729,7 +786,7 @@ h1 {
         flex-wrap: nowrap;
         align-items: flex-start;
     }
-    
+
     #hud-left {
         display: grid;
         grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -1226,7 +1283,7 @@ screen and (max-width: 1024px) {
         margin: 0.5rem 0;
         line-height: 1.3;
     }
-    
+
     .controls-hint p {
         margin: 5px 0;
     }
@@ -1384,7 +1441,7 @@ screen and (max-width: 1024px) {
     #rotate-message h2 {
         font-size: 1.5rem;
     }
-    
+
     #rotate-message p {
         font-size: 0.9rem;
     }
@@ -1421,27 +1478,27 @@ screen and (max-width: 1024px) {
         left: 5px;
         right: 5px;
     }
-    
+
     /* Adjust store screen for mobile */
     #store-screen {
         padding: 10px;
     }
-    
+
     #ship-grid {
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
         gap: 10px;
         width: 95%;
         padding-bottom: 30px;
     }
-    
+
     .ship-card {
         padding: 10px;
     }
-    
+
     .ship-card h3 {
         font-size: 1rem;
     }
-    
+
     .ship-stats {
         font-size: 0.7rem;
     }
@@ -1558,14 +1615,16 @@ screen and (max-width: 1024px) {
         opacity: 0.8;
     }
 }
+
 /* Mobile Performance Optimizations */
 @media screen and (max-width: 900px) {
+
     /* Reduce visual effects for better performance on mobile */
     #scanlines {
         background-size: 100% 6px;
         opacity: 0.5;
     }
-    
+
     #vignette {
         opacity: 0.7;
     }
@@ -1576,11 +1635,11 @@ screen and (max-width: 1024px) {
     h1 {
         font-size: 2rem;
     }
-    
+
     .subtitle {
         font-size: 0.9rem;
     }
-    
+
     .neon-btn {
         font-size: 1rem;
         padding: 10px 25px;
@@ -1634,7 +1693,7 @@ body {
     width: 90%;
     text-align: center;
     box-shadow: 0 0 50px rgba(0, 243, 255, 0.6),
-                inset 0 0 30px rgba(0, 243, 255, 0.1);
+        inset 0 0 30px rgba(0, 243, 255, 0.1);
     animation: modalSlideIn 0.5s ease-out;
 }
 
@@ -1643,6 +1702,7 @@ body {
         opacity: 0;
         transform: translateY(-50px) scale(0.9);
     }
+
     to {
         opacity: 1;
         transform: translateY(0) scale(1);
@@ -1794,6 +1854,174 @@ body {
     font-weight: bold;
 }
 
+/* --- Achievement Specific Styles --- */
+.achievement-card {
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid var(--neon-blue);
+    padding: 15px;
+    text-align: left;
+    transition: all 0.3s;
+    box-shadow: 0 0 5px var(--neon-blue);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.achievement-card.completed {
+    border-color: var(--neon-green);
+    box-shadow: 0 0 10px var(--neon-green);
+}
+
+.achievement-card.claimed {
+    opacity: 0.6;
+    border-color: #555;
+    box-shadow: none;
+}
+
+.achievement-title {
+    font-size: 1.2rem;
+    color: #fff;
+    margin-bottom: 5px;
+    text-shadow: 0 0 5px var(--neon-blue);
+}
+
+.achievement-card.completed .achievement-title {
+    text-shadow: 0 0 5px var(--neon-green);
+}
+
+.achievement-desc {
+    font-size: 0.8rem;
+    color: #aaa;
+    margin-bottom: 10px;
+}
+
+.achievement-reward {
+    font-size: 0.9rem;
+    color: var(--neon-pink);
+    text-shadow: 0 0 5px var(--neon-pink);
+    margin-bottom: 10px;
+}
+
+.achievement-progress-bg {
+    width: 100%;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+
+.achievement-progress-fill {
+    height: 100%;
+    background: var(--neon-blue);
+    width: 0%;
+    transition: width 0.3s;
+}
+
+.achievement-card.completed .achievement-progress-fill {
+    background: var(--neon-green);
+}
+
+.achievement-text {
+    font-size: 0.8rem;
+    text-align: right;
+    color: #fff;
+    margin-bottom: 10px;
+}
+
+.claim-btn {
+    background: transparent;
+    border: 1px solid var(--neon-green);
+    color: var(--neon-green);
+    padding: 8px;
+    font-family: inherit;
+    cursor: pointer;
+    box-shadow: 0 0 5px var(--neon-green), inset 0 0 5px var(--neon-green);
+    text-transform: uppercase;
+    transition: all 0.2s;
+    width: 100%;
+}
+
+.claim-btn:hover {
+    background: var(--neon-green);
+    color: #000;
+}
+
+/* --- In-Game Toast Notification --- */
+#achievement-toast {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(10, 10, 20, 0.95);
+    border: 2px solid var(--neon-pink);
+    box-shadow: 0 0 20px var(--neon-pink), inset 0 0 10px var(--neon-pink);
+    padding: 15px 25px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    z-index: 1000;
+    pointer-events: none;
+    /* Don't block clicks */
+    animation: toast-slide-down 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+#achievement-toast.hidden {
+    display: none;
+}
+
+#achievement-toast.fade-out {
+    animation: toast-fade-out 0.5s forwards;
+}
+
+.toast-icon {
+    font-size: 2rem;
+    text-shadow: 0 0 10px var(--neon-pink);
+}
+
+.toast-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.toast-title {
+    font-size: 0.8rem;
+    color: #aaa;
+    letter-spacing: 2px;
+}
+
+#toast-name {
+    font-size: 1.2rem;
+    color: #fff;
+    font-weight: bold;
+    text-shadow: 0 0 10px var(--neon-pink);
+}
+
+@keyframes toast-slide-down {
+    0% {
+        top: -100px;
+        opacity: 0;
+    }
+
+    100% {
+        top: 20px;
+        opacity: 1;
+    }
+}
+
+@keyframes toast-fade-out {
+    0% {
+        top: 20px;
+        opacity: 1;
+    }
+
+    100% {
+        top: 0px;
+        opacity: 0;
+    }
+}
+
 
 .leaderboard-empty {
     text-align: center;
@@ -1808,6 +2036,7 @@ body {
 
 /* Mobile responsive for leaderboard */
 @media screen and (max-width: 900px) {
+
     .leaderboard-header,
     .leaderboard-entry {
         grid-template-columns: 60px 1fr 110px;
@@ -1815,12 +2044,12 @@ body {
         padding: 10px;
         font-size: 0.9em;
     }
-    
+
     #leaderboard-container {
         padding: 15px;
         margin: 10px;
     }
-    
+
     #player-name-input {
         width: 200px !important;
         font-size: 14px !important;

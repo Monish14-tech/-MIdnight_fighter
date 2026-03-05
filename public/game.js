@@ -7,6 +7,7 @@ import { ScreenShake, Nebula, CosmicDust, Planet, Asteroid } from './utils.js?v=
 import { PowerUp } from './entities/powerup.js?v=4';
 import { LeaderboardManager } from './leaderboard.js?v=4';
 import { SocketIONetplay } from './socketio-netplay.js?v=4';
+import { AchievementManager } from './achievements.js?v=4';
 
 class AssetLoader {
     constructor() {
@@ -138,6 +139,9 @@ export class Game {
         this.gameOver = false;
         this.isRunning = false;
         this.fromPauseMenu = false; // Track if armory opened from pause
+
+        // Achievements & Ranks
+        this.achievementManager = new AchievementManager(this);
 
         // Level System
         this.currentLevel = 1;
@@ -922,6 +926,11 @@ export class Game {
         if (leaveRoomBtn) leaveRoomBtn.style.display = this.onlineCoop ? 'inline-block' : 'none';
 
         this.updatePlayerHudInfo();
+
+        // Update games played achievement
+        if (this.achievementManager) {
+            this.achievementManager.addStat('games', 1);
+        }
 
         requestAnimationFrame(this.loop);
     }
