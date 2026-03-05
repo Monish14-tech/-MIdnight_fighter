@@ -207,37 +207,40 @@ export class Enemy {
         // HP Scaling: +1 HP every 5 levels
         const hpBonus = Math.floor((level - 1) / 5);
 
+        // Dynamic Health scaling based on Player's equipped ship DPS
+        const powerScale = this.game.getPlayerPowerMultiplier ? this.game.getPlayerPowerMultiplier() : 1;
+
         if (this.type === 'chaser') {
             this.speed = (150 + Math.random() * 50) * speedMultiplier;
             this.color = '#ff3333'; // Neon Red
             this.radius = 12;
             this.points = 100;
-            this.health = 1 + hpBonus; // Was 3
+            this.health = Math.max(1, Math.floor((1 + hpBonus) * powerScale)); // Was 3
         } else if (this.type === 'heavy') {
             this.speed = 80 * speedMultiplier;
             this.color = '#ffaa00'; // Neon Orange
             this.radius = 25;
             this.points = 300;
-            this.health = 5 + hpBonus; // Was 10. 5 allows for ~2-3 hits with stronger weapons or 5 with basic.
+            this.health = Math.max(1, Math.floor((5 + hpBonus) * powerScale)); // Was 10
         } else if (this.type === 'shooter') {
             this.speed = 100 * speedMultiplier;
             this.color = '#ff00ff'; // Neon Pink
             this.radius = 15;
             this.points = 200;
-            this.health = 2 + hpBonus; // Was 2
+            this.health = Math.max(1, Math.floor((2 + hpBonus) * powerScale)); // Was 2
             this.shootTimer = 0;
         } else if (this.type === 'swarm') {
             this.speed = 220 * speedMultiplier;
             this.color = '#ff7a6b';
             this.radius = 9;
             this.points = 80;
-            this.health = 1;
+            this.health = Math.max(1, Math.floor(1 * powerScale));
         } else if (this.type === 'sniper') {
             this.speed = 120 * speedMultiplier;
             this.color = '#6bd6ff';
             this.radius = 14;
             this.points = 250;
-            this.health = 2 + hpBonus;
+            this.health = Math.max(1, Math.floor((2 + hpBonus) * powerScale));
             this.shootTimer = 0;
             // Snipers back off more as levels increase
             this.preferredRange = 260 + Math.min((level - 1) * 8, 200);
@@ -246,7 +249,7 @@ export class Enemy {
             this.color = '#a97bff';
             this.radius = 18;
             this.points = 220;
-            this.health = 3 + hpBonus;
+            this.health = Math.max(1, Math.floor((3 + hpBonus) * powerScale));
             this.splitOnDeath = true;
             this.splitCount = 2;
             this.splitType = 'swarm';

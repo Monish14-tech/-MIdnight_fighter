@@ -725,6 +725,18 @@ export class Game {
         return SHIP_DATA[type] || SHIP_DATA['default'];
     }
 
+    getPlayerPowerMultiplier() {
+        // Calculate a multiplier based on the currently equipped ship's DPS
+        // Default ship DPS: damage (3) / fireRate (0.12) = 25
+        const ship = this.getShipStats(this.selectedShip);
+        const playerDps = ship.damage / ship.fireRate;
+        const baseDps = 25;
+
+        // Scale conservatively so upgrading still feels powerful (x^0.85 curve)
+        const rawMultiplier = playerDps / baseDps;
+        return Math.max(1, Math.pow(rawMultiplier, 0.85));
+    }
+
     getMaxEnemiesOnScreen() {
         const level = this.currentLevel || 1;
         // Balanced concurrent caps for challenge without frustration (Max 35)

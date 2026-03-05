@@ -201,7 +201,16 @@ export class Boss {
 
         // Stats scale with level
         const levelScale = 1 + (level - 1) * 0.2; // Scale from 1.0 at level 1 to 1.8 at level 5, 3.8 at level 20
-        this.maxHealth = Math.floor(180 * levelScale); // Slightly increased
+
+        // Tier System (Spike every 5 levels)
+        this.bossTier = Math.floor((level - 1) / 5);
+        const tierMultiplier = Math.pow(1.5, this.bossTier);
+
+        // Player Power Multiplier
+        const powerScale = this.game.getPlayerPowerMultiplier ? this.game.getPlayerPowerMultiplier() : 1;
+
+        // Base HP drastically increased (180 -> 500)
+        this.maxHealth = Math.floor(500 * levelScale * tierMultiplier * powerScale);
         this.health = this.maxHealth;
         this.points = Math.floor(1500 * levelScale);
         this.coinReward = Math.floor(200 * level * 0.8); // Balanced linear reward
@@ -228,8 +237,9 @@ export class Boss {
 
         this.angle = Math.PI / 2;
         this.velocity = { x: 0, y: 0 };
-        this.speed = 150 + (levelScale * 10);
-        this.rotationSpeed = 2.0;
+        // Speed and rotation also scale with tier spikes
+        this.speed = (150 + (levelScale * 10)) * (1 + (this.bossTier * 0.15));
+        this.rotationSpeed = 2.0 * (1 + (this.bossTier * 0.2));
 
         // ── State Machine ─────────────────────────────────────
         this.state = 'entering';
@@ -449,7 +459,12 @@ export class Boss {
         const margin = 70;
         this.y = Math.max(margin, Math.min(this.game.height - margin, this.y));
 
-        const idleDuration = this.phase === 3 ? 0.1 : (this.phase === 2 ? 0.15 : 0.2);
+        let idleDuration = this.phase === 3 ? 0.1 : (this.phase === 2 ? 0.15 : 0.2);
+        // Tier Aggression: Significantly cut downtime at higher tiers
+        if (this.bossTier > 0) {
+            idleDuration = Math.max(0.02, idleDuration - (this.bossTier * 0.03));
+        }
+
         if (this.stateTimer > idleDuration) {
             this.state = 'attacking';
             this.stateTimer = 0;
@@ -501,7 +516,13 @@ export class Boss {
         }
 
         // Much shorter attack windows — constant pressure
-        const base = this.phase === 3 ? 0.7 : (this.phase === 2 ? 1.0 : 1.3);
+        let base = this.phase === 3 ? 0.7 : (this.phase === 2 ? 1.0 : 1.3);
+
+        // Tier Aggression: Shrink attack windows to force faster repositioning/variety
+        if (this.bossTier > 0) {
+            base = Math.max(0.3, base - (this.bossTier * 0.15));
+        }
+
         const attackDuration = this.currentAttack === 'spiral' ? base * 1.2 : base;
         if (this.stateTimer > attackDuration) {
             this.state = 'repositioning';
