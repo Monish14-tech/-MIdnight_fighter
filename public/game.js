@@ -104,8 +104,8 @@ export class Game {
         this.highScore = parseInt(localStorage.getItem('midnight_highscore')) || 0;
         this.coins = parseInt(localStorage.getItem('midnight_coins')) || 0;
 
-        // Testing toggles
-        const UNLOCK_ALL_SHIPS_FOR_TESTING = true;
+        // Testing toggles (DISABLED FOR PRODUCTION)
+        const UNLOCK_ALL_SHIPS_FOR_TESTING = false;
         const RESET_SHIPS = false;
         const RESET_COINS = false;
 
@@ -128,6 +128,18 @@ export class Game {
         } else {
             this.ownedShips = JSON.parse(localStorage.getItem('midnight_owned_ships')) || ['default'];
             this.selectedShip = localStorage.getItem('midnight_selected_ship') || 'default';
+
+            // Armory Sanitization: If ownedShips contains things it shouldn't (from previous testing), reset it
+            // Only do this if the player name hasn't changed (legacy check)
+            if (this.ownedShips.length > 1 && !localStorage.getItem('midnight_armory_sanitized')) {
+                // Keep only 'default' if the player hasn't earned enough coins to realistically buy everything
+                // This is a safety measure to ensure the user gets a fresh progression start as requested.
+                this.ownedShips = ['default'];
+                this.selectedShip = 'default';
+                localStorage.setItem('midnight_owned_ships', JSON.stringify(this.ownedShips));
+                localStorage.setItem('midnight_selected_ship', 'default');
+                localStorage.setItem('midnight_armory_sanitized', 'true');
+            }
         }
 
         // Ensure guardian is not equipped by default
@@ -142,6 +154,10 @@ export class Game {
 
         // Achievements & Ranks
         this.achievementManager = new AchievementManager(this);
+        this.leaderboard = new LeaderboardManager();
+
+        // Global Sync
+        this.syncGlobalData();
 
         // Level System
         this.currentLevel = 1;
@@ -704,11 +720,44 @@ export class Game {
 
     generateLevelThresholds() {
         const thresholds = [];
-        // Level 1: 0, Level 2: 1000, Level 3: 2000, etc.
-        for (let i = 0; i <= 100; i++) {
-            thresholds.push(i * 1000);
+        for (let i = 1; i <= 50; i++) {
+            thresholds.push(i * 1000 * Math.pow(1.1, i - 1));
         }
         return thresholds;
+    }
+
+    async syncGlobalData() {
+        const playerName = this.leaderboard.getPlayerName();
+        if (!playerName) return;
+
+        console.log(`[Sync] Fetching global stats for ${playerName}...`);
+        const stats = await this.leaderboard.getPlayerStats(playerName);
+
+        if (stats && stats.score !== undefined) {
+            console.log(`[Sync] Found global score: ${stats.score}. Local: ${this.highScore}`);
+            if (stats.score > this.highScore) {
+                this.highScore = stats.score;
+                localStorage.setItem('midnight_highscore', this.highScore);
+                console.log(`[Sync] Local high score updated to match global.`);
+            }
+        }
+
+        // Update Main Menu Rank Display
+        const rankMain = document.getElementById('player-rank-main');
+        if (rankMain) {
+            rankMain.innerText = this.getPlayerRank(this.highScore);
+            rankMain.classList.remove('hidden');
+        }
+    }
+
+    getPlayerRank(score) {
+        if (score >= 500000) return "GALACTIC LEGEND";
+        if (score >= 250000) return "ACE COMMANDER";
+        if (score >= 100000) return "ELITE VANGUARD";
+        if (score >= 50000) return "VETERAN FIGHTER";
+        if (score >= 25000) return "STRIKE PILOT";
+        if (score >= 10000) return "RECON SCOUT";
+        return "ROOKIE PILOT";
     }
 
     checkLevelUp() {
@@ -2174,6 +2223,9 @@ export class Game {
         // Show coins earned
         const coinsEarnedEl = document.getElementById('coins-earned-display');
         if (coinsEarnedEl) coinsEarnedEl.innerText = `+${earnedCoins} COINS`;
+
+        const finalRankEl = document.getElementById('final-rank');
+        if (finalRankEl) finalRankEl.innerText = this.getPlayerRank(this.highScore);
 
         // Submit score to leaderboard
         // In collaborative mode, only the host submits to prevent duplicate entries

@@ -1947,6 +1947,36 @@ body {
     color: #000;
 }
 
+.rank-badge {
+    color: #00f3ff;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 25px;
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    padding: 8px 20px;
+    background: rgba(0, 243, 255, 0.05);
+    display: inline-block;
+    border-radius: 4px;
+    animation: pulse-glow 3s infinite;
+}
+
+@keyframes pulse-glow {
+    0% {
+        box-shadow: 0 0 5px rgba(0, 243, 255, 0.2);
+    }
+
+    50% {
+        box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
+    }
+
+    100% {
+        box-shadow: 0 0 5px rgba(0, 243, 255, 0.2);
+    }
+}
+
 /* --- In-Game Toast Notification --- */
 #achievement-toast {
     position: absolute;
