@@ -135,3 +135,55 @@ export class AfterburnerTrail {
         ctx.restore();
     }
 }
+
+export class FloatingText {
+    constructor(game, x, y, text, color = '#ffffff') {
+        this.game = game;
+        this.x = x;
+        this.y = y;
+        this.text = text;
+        this.color = color;
+        this.markedForDeletion = false;
+        this.life = 1.5; // 1.5 seconds default life
+        this.maxLife = this.life;
+        this.vy = -30; // Float upwards
+    }
+
+    update(deltaTime) {
+        this.y += this.vy * deltaTime;
+        this.life -= deltaTime;
+        if (this.life <= 0) {
+            this.markedForDeletion = true;
+        }
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, this.life / this.maxLife);
+        ctx.fillStyle = this.color;
+
+        // Scale up then down effect
+        let scale = 1;
+        if (this.life > this.maxLife - 0.2) {
+            scale = 1 + ((this.maxLife - this.life) / 0.2) * 0.5; // Pop in
+        } else if (this.life < 0.5) {
+            scale = this.life / 0.5; // Fade out
+        }
+
+        ctx.translate(this.x, this.y);
+        ctx.scale(scale, scale);
+
+        ctx.font = 'bold 20px Courier New';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Outline
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
+        ctx.strokeText(this.text, 0, 0);
+
+        ctx.fillText(this.text, 0, 0);
+
+        ctx.restore();
+    }
+}

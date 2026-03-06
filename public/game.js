@@ -1,7 +1,7 @@
 import { InputHandler } from './input.js?v=4';
 import { Player } from './entities/player.js?v=4';
 import { Enemy } from './entities/enemy.js?v=4';
-import { Explosion } from './entities/particle.js?v=4';
+import { Explosion, FloatingText } from './entities/particle.js?v=4';
 import { AudioController } from './audio.js?v=4';
 import { ScreenShake, Nebula, CosmicDust, Planet, Asteroid } from './utils.js?v=4';
 import { PowerUp } from './entities/powerup.js?v=4';
@@ -1561,8 +1561,8 @@ export class Game {
                     for (let i = 0; i < spawnCount; i++) {
                         if (this.enemies.length < maxOnScreen &&
                             this.enemiesSpawned < this.enemiesForLevel) {
-                            this.spawnEnemy();
-                            this.enemiesSpawned++;
+                            const enemy = this.spawnEnemy();
+                            this.enemiesSpawned += (enemy ? enemy.weight : 1);
                         }
                     }
                     this.enemyTimer = 0;
@@ -1738,6 +1738,46 @@ export class Game {
         this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
         if (this.audio) this.audio.explosion();
 
+        // ── Combo-Based Economy (Floating Text & Coin Drops) ──
+        if (useCombo && this.comboMultiplier > 1) {
+            // Visual text
+            const textOptions = ['Good!', 'Great!', 'Awesome!', 'Unstoppable!', 'Godlike!'];
+            const tIndex = Math.min(textOptions.length - 1, Math.floor(this.comboMultiplier - 1));
+            this.particles.push(new FloatingText(this, enemy.x, enemy.y, `x${this.comboMultiplier} ${textOptions[tIndex]}`));
+
+            // Coin Drops
+            // Higher multiplier = better chance and better coins
+            const dropChance = 0.1 + (this.comboMultiplier * 0.05); // 1.5x = 17.5% chance. 5x = 35% chance
+
+            if (this.random() < dropChance) {
+                let coinType = 'bronze';
+                if (this.comboMultiplier >= 4) coinType = 'platinum';
+                else if (this.comboMultiplier >= 3) coinType = 'gold';
+                else if (this.comboMultiplier >= 2) coinType = 'silver';
+
+                // You will need a spawnCoin logic or currency logic here 
+                // For now, let's just directly award currency based on the visual value
+                let coinValue = 1;
+                if (coinType === 'silver') coinValue = 5;
+                if (coinType === 'gold') coinValue = 25;
+                if (coinType === 'platinum') coinValue = 100;
+
+                // Directly award (Assuming you have a currency tracker, else use score)
+                // For visual flair right now, we can just award massive score or if a coin entity exists, spawn it.
+                // Assuming no coin entity exists yet, we'll give raw Currency/Points and a visual text:
+                this.score += coinValue * 50; // Bonus points for now
+                if (this.achievementManager) {
+                    // If you have a coins system, add it here.
+                    // this.achievementManager.addStat('coins', coinValue);
+                }
+
+                const cColor = coinType === 'platinum' ? '#e5e4e2' :
+                    coinType === 'gold' ? '#ffd700' :
+                        coinType === 'silver' ? '#c0c0c0' : '#cd7f32';
+                this.particles.push(new FloatingText(this, enemy.x, enemy.y - 20, `+${coinValue} COIN`, cColor));
+            }
+        }
+
         // Passive: trigger on-kill effects for all players
         this.getPlayers().forEach(p => { if (p.onEnemyKill) p.onEnemyKill(); });
 
@@ -1782,6 +1822,7 @@ export class Game {
         const enemy = new Enemy(this, type, forcedX, forcedY);
         enemy.remoteId = 'enemy_' + (this.entityCounter++);
         this.enemies.push(enemy);
+        return enemy;
     }
 
     getAvailableEnemyTypes(level) {
@@ -2017,8 +2058,63 @@ export class Game {
     }
 
     spawnPowerUpAt(x, y) {
-        const types = ['speed', 'slowmo', 'invulnerability', 'health_recover', 'shield', 'double_damage', 'rapid_fire'];
-        const type = types[Math.floor(this.random() * types.length)];
+        let type = 'speed';
+
+        // ── Context-Aware Power-up Drops (Mercy System) ──
+        if (this.player && this.player.health > 0) {
+            const hpRatio = this.player.health / this.player.maxHealth;
+
+            // Build weighted pool
+            const pool = [];
+
+            // Base weights
+            let wHealth = 1;
+            let wShield = 1;
+            let wOffense = 2; // double_damage, rapid_fire
+            let wUtility = 1; // speed, slowmo, invulnerability
+
+            // Context Modifiers
+            if (hpRatio <= 0.35) {
+                // Critical HP: Huge boost to survival items
+                wHealth = 8;
+                wShield = 5;
+                wOffense = 0.5;
+            } else if (hpRatio >= 0.9) {
+                // Full HP: Don't drop health
+                wHealth = 0;
+                wOffense = 4;
+            }
+
+            // If they don't have offensive buffs, give them a chance
+            const hasOffense = this.player.doubleDamageTimer > 0 || this.player.rapidFireTimer > 0;
+            if (!hasOffense && hpRatio > 0.35) {
+                wOffense += 3;
+            }
+
+            // Fill pool based on weights
+            for (let i = 0; i < wHealth; i++) pool.push('health_recover');
+            for (let i = 0; i < wShield; i++) pool.push('shield');
+
+            for (let i = 0; i < wOffense; i++) {
+                pool.push('double_damage');
+                pool.push('rapid_fire');
+            }
+
+            for (let i = 0; i < wUtility; i++) {
+                pool.push('speed');
+                pool.push('slowmo');
+                pool.push('invulnerability');
+            }
+
+            if (pool.length > 0) {
+                type = pool[Math.floor(this.random() * pool.length)];
+            }
+        } else {
+            // Fallback purely random
+            const types = ['speed', 'slowmo', 'invulnerability', 'health_recover', 'shield', 'double_damage', 'rapid_fire'];
+            type = types[Math.floor(this.random() * types.length)];
+        }
+
         const pu = new PowerUp(this, type, x, y);
 
         // Assign symmetric network ID
@@ -2132,7 +2228,6 @@ export class Game {
                     }
                 }
             } else {
-                // Enemy vs Player logic omitted here but remains in file
                 // Enemy vs Player
                 const players = this.getPlayers();
                 players.forEach(player => {
@@ -2151,6 +2246,27 @@ export class Game {
                         if (died) this.handleGameOver();
                     }
                 });
+
+                // Enemy vs Enemy (Friendly Fire)
+                if (!proj.markedForDeletion) {
+                    this.enemies.forEach(enemy => {
+                        // Don't let an enemy shoot itself instantly, and boss projectiles don't hurt enemies for balance
+                        if (enemy.markedForDeletion || proj.markedForDeletion || proj.source === 'boss') return;
+                        // Avoid immediate self-collision by checking if the projectile just spawned near the enemy
+                        const dx = proj.x - enemy.x;
+                        const dy = proj.y - enemy.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        // Only collide if it's actually hitting them and not inside them (newly spawned)
+                        if (dist < enemy.radius + proj.radius && dist > 15) {
+                            proj.markedForDeletion = true;
+                            // Friendly fire does 50% damage to prevent accidental full-clears of the board
+                            const dead = enemy.takeDamage(Math.max(1, Math.floor((proj.damage || 1) * 0.5)));
+                            if (dead) {
+                                this.handleEnemyDefeat(enemy, false); // No combo points for friendly fire
+                            }
+                        }
+                    });
+                }
             }
         });
     }

@@ -406,6 +406,26 @@ export class Enemy {
         // Final calculated Collision Damage
         this.damage = Math.max(1, Math.floor(baseDamage * playerScale.damageScale));
 
+        // Wave Budget Weight
+        const typeWeights = {
+            'chaser': 1, 'heavy': 3, 'shooter': 2, 'swarm': 0.5, 'sniper': 2, 'splitter': 3,
+            'phantom': 3, 'titan': 5, 'wraith': 4, 'vortex': 5, 'bomber': 3, 'interceptor': 2,
+            'decoy': 2, 'launcher': 3, 'shielder': 4, 'pulsar': 3, 'blade': 2, 'tractor': 3,
+            'mirror': 3, 'swarmer': 1
+        };
+        this.weight = typeWeights[this.type] || 1;
+
+        // High-threat enemies get a telegraphing spawn warning
+        if (this.weight >= 3 && this.spawnLevel >= 3) {
+            this.isSpawning = true;
+            this.spawnTimer = 1.5;
+            this.invulnTimer = 0.5; // Brief invulnerability after spawning
+        } else {
+            this.isSpawning = false;
+            this.spawnTimer = 0;
+            this.invulnTimer = 0;
+        }
+
         // ── Attach EnemyBrain for smart AI ──────────────────────
         this.maxStartingHealth = this.health;
         this.brain = new EnemyBrain(this);
@@ -433,6 +453,20 @@ export class Enemy {
     update(deltaTime) {
         if (!this.game.player) return;
 
+        if (this.invulnTimer > 0) this.invulnTimer -= deltaTime;
+
+        if (this.isSpawning) {
+            this.spawnTimer -= deltaTime;
+            if (this.spawnTimer <= 0) {
+                this.isSpawning = false;
+                // Add a warping particle burst to signify entering play
+                for (let i = 0; i < 10; i++) {
+                    this.game.particles.push(new Explosion(this.game, this.x, this.y, '#ffffff'));
+                }
+            }
+            return; // Skip normal movement and AI while telegraphing spawn
+        }
+
         // ── EnemyBrain tick ──────────────────────────────────────
         if (this.brain) this.brain.update(deltaTime);
 
@@ -442,6 +476,28 @@ export class Enemy {
         const dist = Math.hypot(dx, dy);
         const directAngle = Math.atan2(dy, dx);
         this.angle = directAngle; // default; types may override below
+
+        // ── Boids Separation (Flocking) ──────────────────────────
+        // Push away from nearby enemies to prevent stacking
+        let sepX = 0;
+        let sepY = 0;
+        let neighbors = 0;
+        const sepRadius = this.radius * 2.5; // Distance to maintain
+
+        this.game.enemies.forEach(other => {
+            if (other === this || other.markedForDeletion || other.isSpawning) return;
+            const odx = this.x - other.x;
+            const ody = this.y - other.y;
+            const odist = Math.hypot(odx, ody);
+
+            if (odist < sepRadius && odist > 0) {
+                // Closer neighbors push harder
+                const pushStrength = (sepRadius - odist) / sepRadius;
+                sepX += (odx / odist) * pushStrength;
+                sepY += (ody / odist) * pushStrength;
+                neighbors++;
+            }
+        });
 
         // Apply slow motion if player has the power-up
         let effectiveSpeed = this.speed;
@@ -464,22 +520,22 @@ export class Enemy {
             const leadAngle = this.brain ? this.brain.getLeadAngle() : directAngle;
             this.angle = leadAngle;
             const moveAngle = getMoveAngle(leadAngle);
-            this.x += Math.cos(moveAngle) * effectiveSpeed * deltaTime;
-            this.y += Math.sin(moveAngle) * effectiveSpeed * deltaTime;
+            this.x += (Math.cos(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
+            this.y += (Math.sin(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
 
         } else if (this.type === 'swarm') {
             // ★ Coordinated pincer — split into two groups from opposite angles
             const pincerAngle = directAngle + (Math.PI / 2.2) * (this.brain ? this.brain.flankSide : 1);
             this.angle = directAngle;
-            this.x += Math.cos(pincerAngle) * effectiveSpeed * deltaTime;
-            this.y += Math.sin(pincerAngle) * effectiveSpeed * deltaTime;
+            this.x += (Math.cos(pincerAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
+            this.y += (Math.sin(pincerAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
 
         } else if (this.type === 'swarmer') {
             // ★ Coordinated pincer (same mechanic for larger swarmer)
             const pincerAngle = directAngle + (Math.PI / 2.5) * (this.brain ? this.brain.flankSide : 1);
             this.angle = directAngle;
-            this.x += Math.cos(pincerAngle) * effectiveSpeed * deltaTime;
-            this.y += Math.sin(pincerAngle) * effectiveSpeed * deltaTime;
+            this.x += (Math.cos(pincerAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
+            this.y += (Math.sin(pincerAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
 
         } else if (this.type === 'sniper') {
             // ★ Smart range control + strafe
@@ -492,8 +548,8 @@ export class Enemy {
                 // Strafe sideways using brain orbit tangent
                 moveAngle = this.brain ? this.brain.getOrbitAngle(directAngle) : directAngle + Math.PI / 2;
             }
-            this.x += Math.cos(moveAngle) * effectiveSpeed * deltaTime;
-            this.y += Math.sin(moveAngle) * effectiveSpeed * deltaTime;
+            this.x += (Math.cos(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
+            this.y += (Math.sin(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
 
         } else if (this.type === 'interceptor') {
             // ★ Dash toward predicted position when player is moving fast
@@ -510,21 +566,21 @@ export class Enemy {
             // Aim at predicted position
             const interceptAngle = this.brain ? this.brain.getLeadAngle() : directAngle;
             this.angle = interceptAngle;
-            this.x += Math.cos(interceptAngle) * effectiveSpeed * deltaTime;
-            this.y += Math.sin(interceptAngle) * effectiveSpeed * deltaTime;
+            this.x += (Math.cos(interceptAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
+            this.y += (Math.sin(interceptAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
 
         } else if (this.type === 'heavy') {
             // ★ Zigzag approach — harder to hit
             const zigzag = Math.sin(this.game.lastTime * 0.002 + this.getNumericId()) * 0.6;
             const moveAngle = directAngle + zigzag;
-            this.x += Math.cos(moveAngle) * effectiveSpeed * deltaTime;
-            this.y += Math.sin(moveAngle) * effectiveSpeed * deltaTime;
+            this.x += (Math.cos(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
+            this.y += (Math.sin(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
 
         } else if (this.type === 'tractor') {
             // ★ Orbit player while pulling
             const orbitAngle = this.brain ? this.brain.getOrbitAngle(directAngle) : directAngle;
-            this.x += Math.cos(orbitAngle) * effectiveSpeed * deltaTime;
-            this.y += Math.sin(orbitAngle) * effectiveSpeed * deltaTime;
+            this.x += (Math.cos(orbitAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
+            this.y += (Math.sin(orbitAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
             // Pull force
             if (dist < this.tractorRange) {
                 player.x += Math.cos(directAngle) * this.tractorPull * deltaTime;
@@ -535,8 +591,8 @@ export class Enemy {
             // ★ Attacks the player's LANDING ZONE — aims where player will stop
             const landAngle = this.brain ? this.brain.getLeadAngle() : directAngle;
             this.angle = landAngle;
-            this.x += Math.cos(landAngle) * effectiveSpeed * deltaTime;
-            this.y += Math.sin(landAngle) * effectiveSpeed * deltaTime;
+            this.x += (Math.cos(landAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
+            this.y += (Math.sin(landAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
             this.slashTimer -= deltaTime;
 
         } else if (this.type === 'phantom') {
@@ -567,26 +623,26 @@ export class Enemy {
             } else {
                 this.isPhasing = false;
             }
-            this.x += Math.cos(moveAngle) * effectiveSpeed * deltaTime;
-            this.y += Math.sin(moveAngle) * effectiveSpeed * deltaTime;
+            this.x += (Math.cos(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
+            this.y += (Math.sin(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
 
         } else if (this.type === 'mirror') {
             this.rotation = (this.rotation + 180 * deltaTime) % 360;
             const moveAngle = getMoveAngle(directAngle);
-            this.x += Math.cos(moveAngle) * effectiveSpeed * deltaTime;
-            this.y += Math.sin(moveAngle) * effectiveSpeed * deltaTime;
+            this.x += (Math.cos(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
+            this.y += (Math.sin(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
 
         } else if (this.type === 'pulsar') {
             this.pulseTimer -= deltaTime;
             const moveAngle = getMoveAngle(directAngle);
-            this.x += Math.cos(moveAngle) * effectiveSpeed * deltaTime;
-            this.y += Math.sin(moveAngle) * effectiveSpeed * deltaTime;
+            this.x += (Math.cos(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
+            this.y += (Math.sin(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
 
         } else if (this.type === 'launcher') {
             // ★ Strafe sideways while keeping firing range
             if (dist > 250) {
-                this.x += Math.cos(directAngle) * effectiveSpeed * deltaTime;
-                this.y += Math.sin(directAngle) * effectiveSpeed * deltaTime;
+                this.x += (Math.cos(directAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
+                this.y += (Math.sin(directAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
             } else {
                 // Strafe
                 const strafeAngle = directAngle + Math.PI / 2;
@@ -597,8 +653,8 @@ export class Enemy {
         } else {
             // Generic brain-aware movement
             const moveAngle = getMoveAngle(directAngle);
-            this.x += Math.cos(moveAngle) * effectiveSpeed * deltaTime;
-            this.y += Math.sin(moveAngle) * effectiveSpeed * deltaTime;
+            this.x += (Math.cos(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
+            this.y += (Math.sin(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
         }
 
         // Soft clamp: keep enemies on screen once they enter
@@ -736,6 +792,29 @@ export class Enemy {
     }
 
     draw(ctx) {
+        if (this.isSpawning) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            // Draw a flashing warning indicator
+            const flash = Math.abs(Math.sin((this.spawnTimer || 0) * 10));
+            ctx.globalAlpha = 0.3 + flash * 0.7;
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius + 15 - (this.spawnTimer * 10), 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.fillStyle = '#ff0000';
+            ctx.font = 'bold 24px Courier New';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#ff0000';
+            ctx.fillText('!', 0, 0);
+            ctx.restore();
+            return;
+        }
+
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(this.angle);
