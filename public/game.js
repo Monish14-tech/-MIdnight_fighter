@@ -754,21 +754,43 @@ export class Game {
         const ship = this.getShipStats(this.selectedShip);
         const baseShip = SHIP_DATA['default'];
 
-        // Base DPS = 3 / 0.12 = 25
-        const baseDps = baseShip.damage / baseShip.fireRate;
-        const playerDps = ship.damage / ship.fireRate;
+        // 1. Primary Gun DPS
+        const getBulletMult = (type) => {
+            if (type === 'spread') return 2.2; // 3 bullets but harder to land all
+            if (type === 'explosive') return 1.5; // Area damage
+            if (type === 'piercing') return 1.3; // Multi-hit potential
+            if (type === 'railgun') return 1.0; // Raw damage is already high
+            return 1.0;
+        };
 
-        // Calculate individual multipliers
-        // Scale conservatively so upgrading still feels powerful (e.g., exponent < 1.0)
+        const baseGunDps = (baseShip.damage * getBulletMult(baseShip.bulletType)) / baseShip.fireRate;
+        const playerGunDps = (ship.damage * getBulletMult(ship.bulletType)) / ship.fireRate;
 
-        const dpsMultiplier = Math.pow(playerDps / baseDps, 0.85);
+        // 2. Missile DPS (Base damage is 5)
+        const baseMissileDps = (baseShip.missileCount * 5) / baseShip.missileCooldown;
+        const playerMissileDps = (ship.missileCount * 5) / ship.missileCooldown;
+
+        // 3. Passive Ability Weight
+        let passiveWeight = 1.0;
+        if (ship.specialAbility === 'kill_heal') passiveWeight += 0.2;
+        if (ship.specialAbility === 'phase_dodge') passiveWeight += 0.3;
+        if (ship.specialAbility === 'score_triple') passiveWeight += 0.1;
+        if (ship.specialAbility === 'all_passives') passiveWeight += 1.0;
+        if (ship.invincible) passiveWeight += 0.5;
+
+        // 4. Combined Scaling
+        const totalBasePower = baseGunDps + baseMissileDps;
+        const totalPlayerPower = (playerGunDps + playerMissileDps) * passiveWeight;
+
+        // Scale conservatively so upgrades still feel powerful but don't trivialize bosses
+        const powerMultiplier = Math.pow(totalPlayerPower / totalBasePower, 0.75);
         const speedMultiplier = Math.pow(ship.speed / baseShip.speed, 0.7);
         const survivabilityMultiplier = Math.pow(ship.hp / baseShip.hp, 0.8);
 
         return {
-            hpScale: Math.max(1, dpsMultiplier),           // Enemy health scales with player DPS
-            damageScale: Math.max(1, survivabilityMultiplier), // Enemy damage scales with player HP
-            speedScale: Math.max(1, speedMultiplier)       // Enemy speed scales with player speed
+            hpScale: Math.max(1, powerMultiplier),           // Boss HP scales with player power
+            damageScale: Math.max(1, survivabilityMultiplier), // Boss damage scales with player HP
+            speedScale: Math.max(1, speedMultiplier)       // Boss speed scales with player speed
         };
     }
 
