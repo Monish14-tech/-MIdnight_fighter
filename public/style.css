@@ -2421,76 +2421,11 @@ body {
     font-size: 0.9rem;
 }
 
-/* Store Prestige Ship Card */
-.prestige-ship {
-    position: relative;
-    overflow: hidden;
-}
-
-.prestige-badge {
-    position: absolute;
-    top: -12px;
-    right: -30px;
-    background: #ff00ff;
-    color: #fff;
-    font-size: 0.7rem;
-    font-weight: bold;
-    padding: 20px 30px 5px 30px;
-    transform: rotate(45deg);
-    box-shadow: 0 0 10px #ff00ff;
-    z-index: 10;
-    letter-spacing: 1px;
-}
-
-.lock-note {
-    font-size: 0.75rem;
-    color: #ff4444;
-    margin-top: 5px;
-    text-align: center;
-}
-
-/* Monetization & Premium Styles */
-.gold-btn {
-    background: linear-gradient(135deg, #ffd700, #ff8c00) !important;
-    border-color: #fff !important;
-    color: #000 !important;
-    font-weight: 900 !important;
-    text-shadow: none !important;
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.5) !important;
-}
-
-.gold-btn:hover {
-    box-shadow: 0 0 35px rgba(255, 215, 0, 0.9), inset 0 0 15px rgba(255, 255, 255, 0.8) !important;
-    transform: scale(1.05) translateY(-2px) !important;
-}
-
-.ad-btn {
-    background: linear-gradient(135deg, #00f3ff, #aa44ff) !important;
-    border-color: #fff !important;
-    animation: ad-pulse 2s infinite ease-in-out;
-}
-
-@keyframes ad-pulse {
-
-    0%,
-    100% {
-        transform: scale(1);
-        box-shadow: 0 0 10px rgba(170, 68, 255, 0.5);
-    }
-
-    50% {
-        transform: scale(1.02);
-        box-shadow: 0 0 25px rgba(170, 68, 255, 0.8);
-    }
-}
-
 .store-footer {
     display: flex;
     justify-content: center;
-    gap: 15px;
     width: 100%;
     margin-top: 20px;
-    flex-wrap: wrap;
 }
 
 .highlight-text {

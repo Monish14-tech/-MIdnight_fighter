@@ -479,18 +479,7 @@ export class Game {
             rankBadge.addEventListener('click', () => this.openRankInfo());
         }
 
-        // Monetization Listeners
-        const supportBtn = document.getElementById('support-btn');
-        if (supportBtn) supportBtn.onclick = () => this.handleSupport();
 
-        const donateStoreBtn = document.getElementById('donate-store-btn');
-        if (donateStoreBtn) donateStoreBtn.onclick = () => this.handleSupport();
-
-        const freeCoinsBtn = document.getElementById('free-coins-btn');
-        if (freeCoinsBtn) freeCoinsBtn.onclick = () => this.watchAdForCoins();
-
-        const reviveBtn = document.getElementById('revive-btn');
-        if (reviveBtn) reviveBtn.onclick = () => this.handleReviveWithAd();
 
         const collabCreateBtn = document.getElementById('collab-create-btn');
         if (collabCreateBtn) {
@@ -2749,39 +2738,24 @@ export class Game {
             btn.className = 'action-btn';
 
             if (ship.achievementLocked) {
-                // Prestige ship — check if achievement is completed
+                // Check if achievement is completed
                 const isAchUnlocked = this.achievementManager
                     ? (this.achievementManager.claimed.includes(ship.achievementLocked) ||
                         this.achievementManager.completedButUnclaimed.includes(ship.achievementLocked))
                     : this.ownedShips.includes(key);
 
-                // Add prestige badge to card
-                const prestigeBadge = document.createElement('div');
-                prestigeBadge.className = 'prestige-badge';
-                prestigeBadge.innerHTML = '👑 VIP PRESTIGE';
-                card.insertBefore(prestigeBadge, card.firstChild);
-                card.classList.add('prestige-ship');
-                card.style.borderColor = ship.color;
-                card.style.boxShadow = `0 0 16px ${ship.color}66`;
-
                 if (this.selectedShip === key) {
-                    btn.innerText = '✦ EQUIPPED';
+                    btn.innerText = 'EQUIPPED';
                     btn.disabled = true;
                 } else if (this.ownedShips.includes(key) || isAchUnlocked) {
-                    btn.innerText = '✦ EQUIP';
+                    btn.innerText = 'EQUIP';
                     btn.onclick = () => this.selectShip(key);
                     // Ensure it's in ownedShips
                     if (!this.ownedShips.includes(key)) this.ownedShips.push(key);
                 } else {
-                    btn.innerText = '🔒 LOCKED';
+                    btn.innerText = 'LOCKED';
                     btn.disabled = true;
                     btn.title = `Complete achievement: ${ship.achievementLocked.replace(/_/g, ' ').toUpperCase()}`;
-
-                    // Show lock requirement
-                    const lockNote = document.createElement('div');
-                    lockNote.className = 'lock-note';
-                    lockNote.innerHTML = `🔒 VIP: Complete <b>${ship.achievementLocked.replace(/_/g, ' ').toUpperCase()}</b>`;
-                    card.appendChild(lockNote);
                 }
             } else if (this.selectedShip === key) {
                 btn.innerText = 'EQUIPPED';
@@ -2790,16 +2764,6 @@ export class Game {
                 btn.innerText = 'EQUIP';
                 btn.onclick = () => this.selectShip(key);
             } else {
-                // Highlight expensive ships as PREMIUM
-                if (ship.price >= 1000000) {
-                    const premiumBadge = document.createElement('div');
-                    premiumBadge.className = 'prestige-badge';
-                    premiumBadge.style.background = '#00f3ff';
-                    premiumBadge.style.boxShadow = '0 0 10px #00f3ff';
-                    premiumBadge.innerHTML = '💎 PREMIUM';
-                    card.insertBefore(premiumBadge, card.firstChild);
-                }
-
                 btn.innerText = `BUY ⬡ ${ship.price.toLocaleString()}`;
                 if (this.coins < ship.price) {
                     btn.disabled = true;
@@ -3061,68 +3025,5 @@ export class Game {
         this.updatePlayerHudInfo();
     }
 
-    // ── Monetization Methods ──────────────────────────────────────────────
-    handleSupport() {
-        if (this.audio) this.audio.powerUp();
-        window.open('https://ko-fi.com/midnightfighter', '_blank'); // Placeholder donation link
-    }
 
-    watchAdForCoins() {
-        const btn = document.getElementById('free-coins-btn');
-        if (btn.disabled) return;
-
-        btn.disabled = true;
-        btn.innerText = 'WATCHING AD... ⏳';
-
-        if (this.audio) this.audio.dash();
-
-        // Simulate ad delay
-        setTimeout(() => {
-            const reward = 500;
-            this.coins += reward;
-            localStorage.setItem('midnight_coins', this.coins);
-            if (this.audio) this.audio.powerUp();
-
-            alert(`Thanks for watching! +${reward} ⬡ COINS added.`);
-
-            btn.disabled = false;
-            btn.innerText = 'WATCH AD (+500 ⬡)';
-            this.renderStore();
-        }, 3000);
-    }
-
-    handleReviveWithAd() {
-        if (this.revivedThisRun) {
-            alert('Already revived once this mission!');
-            return;
-        }
-
-        const btn = document.getElementById('revive-btn');
-        btn.disabled = true;
-        btn.innerText = 'WATCHING AD... ⏳';
-
-        setTimeout(() => {
-            this.revivedThisRun = true;
-            this.gameOver = false;
-            this.isRunning = true;
-
-            if (this.player) {
-                this.player.currentHealth = this.player.maxHealth;
-                this.player.invulnerableTimer = 3.0; // Extra protection on spawn
-                this.player.markedForDeletion = false;
-            }
-
-            // Hide game over screen
-            if (this.gameOverScreen) this.gameOverScreen.classList.remove('active');
-            if (this.hud) this.hud.style.display = 'block';
-
-            // Special effect
-            this.triggerImpact(0.2, 0.8);
-            if (this.audio) this.audio.powerUp();
-
-            btn.disabled = false;
-            btn.innerText = 'REVIVE (WATCH AD)';
-            btn.style.display = 'none'; // Hide after use
-        }, 3000);
-    }
 }
