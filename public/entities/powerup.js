@@ -27,7 +27,7 @@ export class PowerUp {
             'rapid_fire': { color: '#ffff00', icon: '≋', label: 'RAPID FIRE' },
             'nuke': { color: '#ff6600', icon: '☢', label: 'NUKE' },
             'ghost': { color: '#aaaaff', icon: '◌', label: 'GHOST' },
-            'ammo_refill': { color: '#00ffcc', icon: '⬆✦', label: 'AMMO REFILL' },
+            'emp': { color: '#00ccff', icon: '⚡', label: 'E.M.P. BLAST' },
         };
         const cfg = TYPES[type] || { color: '#ffffff', icon: '?', label: 'UNKNOWN' };
         this.color = cfg.color;

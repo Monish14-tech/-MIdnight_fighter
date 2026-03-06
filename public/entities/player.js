@@ -2002,8 +2002,10 @@ export class Player {
             case 'ghost':
                 this.ghostTimer = 4.0; // Phase through enemy contact for 4s
                 break;
-            case 'ammo_refill':
-                this.missileTimer = 0; // Instant missile reload
+            case 'emp':
+                if (this.game && typeof this.game.triggerEMP === 'function') {
+                    this.game.triggerEMP();
+                }
                 break;
             case 'nuke':
                 // Screen-clear handled in game.js checkPowerUpCollisions
@@ -2019,11 +2021,17 @@ export class Player {
     }
 
     findNearestEnemy(range) {
-        // Disable auto-targeting when boss is present
-        if (this.game.boss) return null;
-
         let nearest = null;
         let minDist = range;
+
+        // Check boss first if it exists (bosses have infinite tracking range, but closer enemies take priority)
+        if (this.game.boss && !this.game.boss.markedForDeletion) {
+            const dx = this.game.boss.x - this.x;
+            const dy = this.game.boss.y - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            minDist = dist;
+            nearest = this.game.boss;
+        }
 
         this.game.enemies.forEach(enemy => {
             const dx = enemy.x - this.x;

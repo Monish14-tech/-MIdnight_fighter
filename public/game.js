@@ -479,6 +479,19 @@ export class Game {
             rankBadge.addEventListener('click', () => this.openRankInfo());
         }
 
+        // Monetization Listeners
+        const supportBtn = document.getElementById('support-btn');
+        if (supportBtn) supportBtn.onclick = () => this.handleSupport();
+
+        const donateStoreBtn = document.getElementById('donate-store-btn');
+        if (donateStoreBtn) donateStoreBtn.onclick = () => this.handleSupport();
+
+        const freeCoinsBtn = document.getElementById('free-coins-btn');
+        if (freeCoinsBtn) freeCoinsBtn.onclick = () => this.watchAdForCoins();
+
+        const reviveBtn = document.getElementById('revive-btn');
+        if (reviveBtn) reviveBtn.onclick = () => this.handleReviveWithAd();
+
         const collabCreateBtn = document.getElementById('collab-create-btn');
         if (collabCreateBtn) {
             collabCreateBtn.addEventListener('click', () => this.createCollaborateRoom());
@@ -1109,6 +1122,7 @@ export class Game {
         }
         this.isRunning = true;
         this.gameOver = false;
+        this.revivedThisRun = false;
         this.isPaused = false;
         this.score = 0;
         this.currentLevel = 1; // Reset to level 1 on new game
@@ -1618,12 +1632,20 @@ export class Game {
             }
 
             // Entity Updates
-            this.enemies.forEach(e => e.update(dt));
+            if (this.empTimer > 0) {
+                this.empTimer -= dt;
+                // Draw only: enemies and boss logic skipped while frozen
+            } else {
+                this.enemies.forEach(e => e.update(dt));
+                if (this.boss) {
+                    this.boss.update(dt);
+                }
+            }
+
             this.projectiles.forEach(p => p.update(dt));
             this.powerups.forEach(p => p.update(dt));
 
             if (this.boss) {
-                this.boss.update(dt);
                 this.updateBossUI();
             }
 
@@ -2085,7 +2107,7 @@ export class Game {
             'speed', 'slowmo', 'invulnerability',
             'health_recover', 'health_boost',
             'shield', 'double_damage', 'rapid_fire',
-            'nuke', 'ghost', 'ammo_refill'
+            'nuke', 'ghost', 'emp'
         ];
         const type = types[Math.floor(this.random() * types.length)];
         const pu = new PowerUp(this, type);
@@ -2100,8 +2122,8 @@ export class Game {
         let type = 'speed';
 
         // ── Context-Aware Power-up Drops (Mercy System) ──
-        if (this.player && this.player.health > 0) {
-            const hpRatio = this.player.health / this.player.maxHealth;
+        if (this.player && this.player.currentHealth > 0) {
+            const hpRatio = this.player.currentHealth / this.player.maxHealth;
 
             // Build weighted pool
             const pool = [];
@@ -2347,6 +2369,23 @@ export class Game {
         }
     }
 
+    triggerEMP() {
+        this.triggerImpact(0.5, 0.9); // Huge flash effect
+        if (this.audio && typeof this.audio.powerUp === 'function') this.audio.powerUp();
+
+        // Freeze logic
+        this.empTimer = 5.0;
+
+        // Clear all enemy projectiles
+        this.projectiles = this.projectiles.filter(p => p.side !== 'enemy');
+
+        if (this.player) {
+            // Visual text
+            // We need to import FloatingText in game.js if not already, but it's imported at top.
+            this.particles.push(new FloatingText(this, this.player.x, this.player.y - 40, 'E.M.P. BLAST!', '#00ffff'));
+        }
+    }
+
     handleBossDefeat() {
         if (!this.boss) return;
 
@@ -2459,8 +2498,17 @@ export class Game {
             const pct = (this.player.currentHealth / this.player.maxHealth) * 100;
             healthFill.style.width = pct + '%';
 
+            // Expand health bar container based on max health
+            const healthBar = document.getElementById('health-bar');
+            if (healthBar) {
+                // Base width is 80px for 10 maxHealth
+                const baseMaxHealth = 10;
+                const newWidth = Math.max(100, (this.player.maxHealth / baseMaxHealth) * 100);
+                healthBar.style.width = newWidth + 'px';
 
-
+                // Also update the numerical HP text inside the container if we can target it
+                // We'll just leave it to expand naturally for now. The ratio gives immediate feedback.
+            }
         }
 
         if (healthFillP2) {
@@ -2710,7 +2758,7 @@ export class Game {
                 // Add prestige badge to card
                 const prestigeBadge = document.createElement('div');
                 prestigeBadge.className = 'prestige-badge';
-                prestigeBadge.innerHTML = '⬡ PRESTIGE';
+                prestigeBadge.innerHTML = '👑 VIP PRESTIGE';
                 card.insertBefore(prestigeBadge, card.firstChild);
                 card.classList.add('prestige-ship');
                 card.style.borderColor = ship.color;
@@ -2732,7 +2780,7 @@ export class Game {
                     // Show lock requirement
                     const lockNote = document.createElement('div');
                     lockNote.className = 'lock-note';
-                    lockNote.innerHTML = `🔒 Complete: <b>${ship.achievementLocked.replace(/_/g, ' ').toUpperCase()}</b>`;
+                    lockNote.innerHTML = `🔒 VIP: Complete <b>${ship.achievementLocked.replace(/_/g, ' ').toUpperCase()}</b>`;
                     card.appendChild(lockNote);
                 }
             } else if (this.selectedShip === key) {
@@ -2742,6 +2790,16 @@ export class Game {
                 btn.innerText = 'EQUIP';
                 btn.onclick = () => this.selectShip(key);
             } else {
+                // Highlight expensive ships as PREMIUM
+                if (ship.price >= 1000000) {
+                    const premiumBadge = document.createElement('div');
+                    premiumBadge.className = 'prestige-badge';
+                    premiumBadge.style.background = '#00f3ff';
+                    premiumBadge.style.boxShadow = '0 0 10px #00f3ff';
+                    premiumBadge.innerHTML = '💎 PREMIUM';
+                    card.insertBefore(premiumBadge, card.firstChild);
+                }
+
                 btn.innerText = `BUY ⬡ ${ship.price.toLocaleString()}`;
                 if (this.coins < ship.price) {
                     btn.disabled = true;
@@ -3001,5 +3059,70 @@ export class Game {
         }
 
         this.updatePlayerHudInfo();
+    }
+
+    // ── Monetization Methods ──────────────────────────────────────────────
+    handleSupport() {
+        if (this.audio) this.audio.powerUp();
+        window.open('https://ko-fi.com/midnightfighter', '_blank'); // Placeholder donation link
+    }
+
+    watchAdForCoins() {
+        const btn = document.getElementById('free-coins-btn');
+        if (btn.disabled) return;
+
+        btn.disabled = true;
+        btn.innerText = 'WATCHING AD... ⏳';
+
+        if (this.audio) this.audio.dash();
+
+        // Simulate ad delay
+        setTimeout(() => {
+            const reward = 500;
+            this.coins += reward;
+            localStorage.setItem('midnight_coins', this.coins);
+            if (this.audio) this.audio.powerUp();
+
+            alert(`Thanks for watching! +${reward} ⬡ COINS added.`);
+
+            btn.disabled = false;
+            btn.innerText = 'WATCH AD (+500 ⬡)';
+            this.renderStore();
+        }, 3000);
+    }
+
+    handleReviveWithAd() {
+        if (this.revivedThisRun) {
+            alert('Already revived once this mission!');
+            return;
+        }
+
+        const btn = document.getElementById('revive-btn');
+        btn.disabled = true;
+        btn.innerText = 'WATCHING AD... ⏳';
+
+        setTimeout(() => {
+            this.revivedThisRun = true;
+            this.gameOver = false;
+            this.isRunning = true;
+
+            if (this.player) {
+                this.player.currentHealth = this.player.maxHealth;
+                this.player.invulnerableTimer = 3.0; // Extra protection on spawn
+                this.player.markedForDeletion = false;
+            }
+
+            // Hide game over screen
+            if (this.gameOverScreen) this.gameOverScreen.classList.remove('active');
+            if (this.hud) this.hud.style.display = 'block';
+
+            // Special effect
+            this.triggerImpact(0.2, 0.8);
+            if (this.audio) this.audio.powerUp();
+
+            btn.disabled = false;
+            btn.innerText = 'REVIVE (WATCH AD)';
+            btn.style.display = 'none'; // Hide after use
+        }, 3000);
     }
 }
