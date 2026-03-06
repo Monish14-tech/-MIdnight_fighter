@@ -833,24 +833,6 @@ export class Game {
         const root = document.documentElement;
         root.style.setProperty('--rank-color', rankColor);
         root.style.setProperty('--rank-glow', rankColor + '88');
-
-        // Apply to title glow and neon buttons
-        const title = document.querySelector('.title.glitch');
-        if (title) {
-            title.style.textShadow = `0 0 20px ${rankColor}, 0 0 60px ${rankColor}66, 0 0 80px ${rankColor}33`;
-            title.style.color = '#ffffff';
-        }
-
-        // Apply to neon buttons border glow
-        document.querySelectorAll('.neon-btn').forEach(btn => {
-            btn.style.borderColor = rankColor;
-            btn.style.boxShadow = `0 0 8px ${rankColor}88, inset 0 0 8px ${rankColor}22`;
-        });
-
-        // Apply to HUD elements
-        document.querySelectorAll('.score-container, .dash-container, .health-container').forEach(el => {
-            el.style.borderColor = rankColor + '66';
-        });
     }
 
     // Refresh the rank badge display on start screen
