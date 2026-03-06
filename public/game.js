@@ -44,39 +44,39 @@ class AssetLoader {
 export const SHIP_DATA = {
     // ── Tier 0: Starter ──────────────────────────────────────────────────────
     'default': { name: 'INTERCEPTOR', price: 0, hp: 5, speed: 450, damage: 3, fireRate: 0.12, missileCooldown: 1.5, missileCount: 2, color: '#00f3ff', bulletType: 'normal', desc: 'Standard issue. Reliable & fast.' },
-    // ── Tier 1: Early (~500-2500 coins) ──────────────────────────────────────
-    'scout': { name: 'RAZORBACK', price: 500, hp: 5, speed: 600, damage: 3, fireRate: 0.10, missileCooldown: 1.2, missileCount: 2, color: '#ffff00', bulletType: 'spread', desc: 'Blazing speed. Fan spread.' },
-    'phantom': { name: 'PHANTOM', price: 900, hp: 6, speed: 550, damage: 3, fireRate: 0.08, missileCooldown: 1.0, missileCount: 2, color: '#9900ff', bulletType: 'spread', desc: 'Nimble spread fighter.' },
-    'rapid': { name: 'STORM BRINGER', price: 1400, hp: 6, speed: 450, damage: 3, fireRate: 0.06, missileCooldown: 1.0, missileCount: 3, color: '#aa00ff', bulletType: 'normal', desc: 'Hyper fire rate. Dual missiles.' },
-    'fighter': { name: 'CRIMSON FURY', price: 2000, hp: 8, speed: 460, damage: 5, fireRate: 0.12, missileCooldown: 1.5, missileCount: 3, color: '#ff0055', bulletType: 'normal', desc: 'High damage. Extra HP.' },
-    'pulse': { name: 'NEON PULSE', price: 2500, hp: 8, speed: 500, damage: 5, fireRate: 0.04, missileCooldown: 1.2, missileCount: 3, color: '#00ffff', bulletType: 'normal', desc: 'Extreme fire rate. Neon core.' },
-    // ── Tier 2: Mid (~4000-10000 coins) ──────────────────────────────────────
-    'quantum': { name: 'QUANTUM GHOST', price: 4000, hp: 10, speed: 650, damage: 16, fireRate: 0.05, missileCooldown: 1.0, missileCount: 4, color: '#39ff14', bulletType: 'railgun', desc: 'Quantum entity. Hyper velocity.' },
-    'void': { name: 'VOID STALKER', price: 5500, hp: 10, speed: 500, damage: 12, fireRate: 0.20, missileCooldown: 1.5, missileCount: 4, color: '#4400ff', bulletType: 'railgun', desc: 'Experimental railgun. Shadow walk.' },
-    'solar': { name: 'SOLAR FLARE', price: 6500, hp: 10, speed: 460, damage: 8, fireRate: 0.12, missileCooldown: 1.5, missileCount: 4, color: '#ffcc00', bulletType: 'explosive', desc: 'Explosive solar rounds.' },
-    'bomber': { name: 'DOOMSDAY', price: 7500, hp: 10, speed: 420, damage: 8, fireRate: 0.10, missileCooldown: 1.5, missileCount: 5, color: '#ff6600', bulletType: 'explosive', desc: 'Triple missile barrage.' },
-    'tank': { name: 'V.G. TITAN', price: 9000, hp: 14, speed: 400, damage: 8, fireRate: 0.12, missileCooldown: 1.8, missileCount: 4, color: '#00ff44', bulletType: 'piercing', desc: 'Heavy armor. Piercing shots. Heals on kill.' },
-    'laser_drone': { name: 'LASER DRONE', price: 10000, hp: 10, speed: 480, damage: 6, fireRate: 0.03, missileCooldown: 1.2, missileCount: 4, color: '#ff00cc', bulletType: 'laser', desc: 'Sustained laser pulses. High DPS.' },
-    // ── Tier 3: Upper-Mid (~14000-25000 coins) ────────────────────────────────
-    'wraith': { name: 'COSMIC WRAITH', price: 14000, hp: 12, speed: 600, damage: 20, fireRate: 0.05, missileCooldown: 1.0, missileCount: 5, color: '#cc44ff', bulletType: 'railgun', desc: 'Void phantom. Reality breaker.' },
-    'vanguard': { name: 'VANGUARD', price: 18000, hp: 12, speed: 480, damage: 8, fireRate: 0.06, missileCooldown: 1.2, missileCount: 5, color: '#00ffcc', bulletType: 'piercing', desc: 'Elite piercing fighter.' },
-    'eclipse': { name: 'ECLIPSE SERAPH', price: 22000, hp: 14, speed: 500, damage: 12, fireRate: 0.05, missileCooldown: 1.0, missileCount: 6, color: '#66ccff', bulletType: 'piercing', desc: 'Angel core. Enhanced hull.' },
-    'shadowblade': { name: 'SHADOWBLADE', price: 25000, hp: 14, speed: 560, damage: 15, fireRate: 0.06, missileCooldown: 1.2, missileCount: 6, color: '#5522aa', bulletType: 'piercing', desc: 'Silent assassin. Stealth.' },
-    'guardian': { name: 'GALAXY GUARDIAN', price: 28000, hp: 16, speed: 380, damage: 8, fireRate: 0.10, missileCooldown: 1.8, missileCount: 5, color: '#ffffff', bulletType: 'normal', desc: 'Elite protector. High HP.' },
-    // ── Tier 4: Advanced (~35000-70000 coins) ────────────────────────────────
-    'obliterator': { name: 'OBLITERATOR PRIME', price: 35000, hp: 16, speed: 440, damage: 18, fireRate: 0.06, missileCooldown: 1.2, missileCount: 7, color: '#ff3366', bulletType: 'explosive', desc: 'Siege frame. Reinforced core.' },
-    'inferno': { name: 'INFERNO KING', price: 45000, hp: 16, speed: 520, damage: 22, fireRate: 0.07, missileCooldown: 1.0, missileCount: 7, color: '#ff4500', bulletType: 'explosive', desc: 'Blazing hellfire. Pure devastation.' },
-    'juggernaut': { name: 'JUGGERNAUT', price: 55000, hp: 20, speed: 380, damage: 10, fireRate: 0.12, missileCooldown: 1.8, missileCount: 7, color: '#ff9900', bulletType: 'piercing', desc: 'God of War. Heals on kill.' },
-    'tempest': { name: 'TEMPEST LORD', price: 70000, hp: 18, speed: 500, damage: 18, fireRate: 0.06, missileCooldown: 1.1, missileCount: 8, color: '#00d9ff', bulletType: 'spread', desc: 'Lightning god. Storm incarnate.' },
-    // ── Tier 5: Elite (~90000-200000 coins) ───────────────────────────────────
-    'reaper': { name: 'VOID REAPER', price: 90000, hp: 18, speed: 550, damage: 28, fireRate: 0.05, missileCooldown: 0.9, missileCount: 8, color: '#880022', bulletType: 'explosive', desc: 'Death embodied. Final judgment.' },
-    'crimson_emperor': { name: 'CRIMSON EMPEROR', price: 120000, hp: 20, speed: 490, damage: 25, fireRate: 0.06, missileCooldown: 1.0, missileCount: 10, color: '#dc143c', bulletType: 'piercing', desc: 'Royal ruler. Absolute dominion.' },
-    'phoenix': { name: 'CELESTIAL PHOENIX', price: 160000, hp: 22, speed: 530, damage: 26, fireRate: 0.07, missileCooldown: 0.9, missileCount: 10, color: '#ffa500', bulletType: 'explosive', desc: 'Mythic firebird. Eternal rebirth.' },
-    'starborn': { name: 'STARBORN TITAN', price: 200000, hp: 22, speed: 480, damage: 18, fireRate: 0.04, missileCooldown: 0.8, missileCount: 9, color: '#99ffcc', bulletType: 'railgun', desc: 'Mythic relic. God-tier hull.' },
-    'leviathan': { name: 'LEVIATHAN ROX', price: 250000, hp: 26, speed: 460, damage: 24, fireRate: 0.08, missileCooldown: 1.2, missileCount: 10, color: '#003d82', bulletType: 'explosive', desc: 'Deep sea titan. Unstoppable.' },
-    // ── Tier 6: Legendary (~350000-500000 coins) ──────────────────────────────
-    'sentinel': { name: 'ETERNAL SENTINEL', price: 350000, hp: 30, speed: 500, damage: 32, fireRate: 0.06, missileCooldown: 0.8, missileCount: 14, color: '#e8e8e8', bulletType: 'railgun', desc: 'Ultimate guardian. Infinite power.' },
-    'nova': { name: 'NOVA ASCENDANT', price: 500000, hp: 24, speed: 580, damage: 36, fireRate: 0.04, missileCooldown: 0.6, missileCount: 16, color: '#ffeeaa', bulletType: 'railgun', desc: 'Supernova core. Reality-shattering.' },
+    // ── Tier 1: Early (~2500-18000 coins) ──────────────────────────────────────
+    'scout': { name: 'RAZORBACK', price: 2500, hp: 5, speed: 600, damage: 3, fireRate: 0.10, missileCooldown: 1.2, missileCount: 2, color: '#ffff00', bulletType: 'spread', desc: 'Blazing speed. Fan spread.' },
+    'phantom': { name: 'PHANTOM', price: 5000, hp: 6, speed: 550, damage: 3, fireRate: 0.08, missileCooldown: 1.0, missileCount: 2, color: '#9900ff', bulletType: 'spread', desc: 'Nimble spread fighter.' },
+    'rapid': { name: 'STORM BRINGER', price: 10000, hp: 6, speed: 450, damage: 3, fireRate: 0.06, missileCooldown: 1.0, missileCount: 3, color: '#aa00ff', bulletType: 'normal', desc: 'Hyper fire rate. Dual missiles.' },
+    'fighter': { name: 'CRIMSON FURY', price: 15000, hp: 8, speed: 460, damage: 5, fireRate: 0.12, missileCooldown: 1.5, missileCount: 3, color: '#ff0055', bulletType: 'normal', desc: 'High damage. Extra HP.' },
+    'pulse': { name: 'NEON PULSE', price: 25000, hp: 8, speed: 500, damage: 5, fireRate: 0.04, missileCooldown: 1.2, missileCount: 3, color: '#00ffff', bulletType: 'normal', desc: 'Extreme fire rate. Neon core.' },
+    // ── Tier 2: Mid (~50000-150000 coins) ──────────────────────────────────────
+    'quantum': { name: 'QUANTUM GHOST', price: 50000, hp: 10, speed: 650, damage: 16, fireRate: 0.05, missileCooldown: 1.0, missileCount: 4, color: '#39ff14', bulletType: 'railgun', desc: 'Quantum entity. Hyper velocity.' },
+    'void': { name: 'VOID STALKER', price: 75000, hp: 10, speed: 500, damage: 12, fireRate: 0.20, missileCooldown: 1.5, missileCount: 4, color: '#4400ff', bulletType: 'railgun', desc: 'Experimental railgun. Shadow walk.' },
+    'solar': { name: 'SOLAR FLARE', price: 100000, hp: 10, speed: 460, damage: 8, fireRate: 0.12, missileCooldown: 1.5, missileCount: 4, color: '#ffcc00', bulletType: 'explosive', desc: 'Explosive solar rounds.' },
+    'bomber': { name: 'DOOMSDAY', price: 150000, hp: 10, speed: 420, damage: 8, fireRate: 0.10, missileCooldown: 1.5, missileCount: 5, color: '#ff6600', bulletType: 'explosive', desc: 'Triple missile barrage.' },
+    'tank': { name: 'V.G. TITAN', price: 250000, hp: 14, speed: 400, damage: 8, fireRate: 0.12, missileCooldown: 1.8, missileCount: 4, color: '#00ff44', bulletType: 'piercing', desc: 'Heavy armor. Piercing shots. Heals on kill.' },
+    'laser_drone': { name: 'LASER DRONE', price: 400000, hp: 10, speed: 480, damage: 6, fireRate: 0.03, missileCooldown: 1.2, missileCount: 4, color: '#ff00cc', bulletType: 'laser', desc: 'Sustained laser pulses. High DPS.' },
+    // ── Tier 3: Upper-Mid (~750000-2500000 coins) ────────────────────────────────
+    'wraith': { name: 'COSMIC WRAITH', price: 750000, hp: 12, speed: 600, damage: 20, fireRate: 0.05, missileCooldown: 1.0, missileCount: 5, color: '#cc44ff', bulletType: 'railgun', desc: 'Void phantom. Reality breaker.' },
+    'vanguard': { name: 'VANGUARD', price: 1200000, hp: 12, speed: 480, damage: 8, fireRate: 0.06, missileCooldown: 1.2, missileCount: 5, color: '#00ffcc', bulletType: 'piercing', desc: 'Elite piercing fighter.' },
+    'eclipse': { name: 'ECLIPSE SERAPH', price: 2500000, hp: 14, speed: 500, damage: 12, fireRate: 0.05, missileCooldown: 1.0, missileCount: 6, color: '#66ccff', bulletType: 'piercing', desc: 'Angel core. Enhanced hull.' },
+    'shadowblade': { name: 'SHADOWBLADE', price: 5000000, hp: 14, speed: 560, damage: 15, fireRate: 0.06, missileCooldown: 1.2, missileCount: 6, color: '#5522aa', bulletType: 'piercing', desc: 'Silent assassin. Stealth.' },
+    'guardian': { name: 'GALAXY GUARDIAN', price: 10000000, hp: 16, speed: 380, damage: 8, fireRate: 0.10, missileCooldown: 1.8, missileCount: 5, color: '#ffffff', bulletType: 'normal', desc: 'Elite protector. High HP.' },
+    // ── Tier 4: Advanced (~25M-75M coins) ────────────────────────────────
+    'obliterator': { name: 'OBLITERATOR PRIME', price: 25000000, hp: 16, speed: 440, damage: 18, fireRate: 0.06, missileCooldown: 1.2, missileCount: 7, color: '#ff3366', bulletType: 'explosive', desc: 'Siege frame. Reinforced core.' },
+    'inferno': { name: 'INFERNO KING', price: 50000000, hp: 16, speed: 520, damage: 22, fireRate: 0.07, missileCooldown: 1.0, missileCount: 7, color: '#ff4500', bulletType: 'explosive', desc: 'Blazing hellfire. Pure devastation.' },
+    'juggernaut': { name: 'JUGGERNAUT', price: 75000000, hp: 20, speed: 380, damage: 10, fireRate: 0.12, missileCooldown: 1.8, missileCount: 7, color: '#ff9900', bulletType: 'piercing', desc: 'God of War. Heals on kill.' },
+    'tempest': { name: 'TEMPEST LORD', price: 100000000, hp: 18, speed: 500, damage: 18, fireRate: 0.06, missileCooldown: 1.1, missileCount: 8, color: '#00d9ff', bulletType: 'spread', desc: 'Lightning god. Storm incarnate.' },
+    // ── Tier 5: Elite (~150M-500M coins) ───────────────────────────────────
+    'reaper': { name: 'VOID REAPER', price: 150000000, hp: 18, speed: 550, damage: 28, fireRate: 0.05, missileCooldown: 0.9, missileCount: 8, color: '#880022', bulletType: 'explosive', desc: 'Death embodied. Final judgment.' },
+    'crimson_emperor': { name: 'CRIMSON EMPEROR', price: 200000000, hp: 20, speed: 490, damage: 25, fireRate: 0.06, missileCooldown: 1.0, missileCount: 10, color: '#dc143c', bulletType: 'piercing', desc: 'Royal ruler. Absolute dominion.' },
+    'phoenix': { name: 'CELESTIAL PHOENIX', price: 250000000, hp: 22, speed: 530, damage: 26, fireRate: 0.07, missileCooldown: 0.9, missileCount: 10, color: '#ffa500', bulletType: 'explosive', desc: 'Mythic firebird. Eternal rebirth.' },
+    'starborn': { name: 'STARBORN TITAN', price: 350000000, hp: 22, speed: 480, damage: 18, fireRate: 0.04, missileCooldown: 0.8, missileCount: 9, color: '#99ffcc', bulletType: 'railgun', desc: 'Mythic relic. God-tier hull.' },
+    'leviathan': { name: 'LEVIATHAN ROX', price: 500000000, hp: 26, speed: 460, damage: 24, fireRate: 0.08, missileCooldown: 1.2, missileCount: 10, color: '#003d82', bulletType: 'explosive', desc: 'Deep sea titan. Unstoppable.' },
+    // ── Tier 6: Legendary (Achievement-Locked ONLY now or super high) ──────────────
+    'sentinel': { name: 'ETERNAL SENTINEL', price: 750000000, hp: 30, speed: 500, damage: 32, fireRate: 0.06, missileCooldown: 0.8, missileCount: 14, color: '#e8e8e8', bulletType: 'railgun', desc: 'Ultimate guardian. Infinite power.' },
+    'nova': { name: 'NOVA ASCENDANT', price: 1000000000, hp: 24, speed: 580, damage: 36, fireRate: 0.04, missileCooldown: 0.6, missileCount: 16, color: '#ffeeaa', bulletType: 'railgun', desc: 'Supernova core. Reality-shattering.' },
 
     // ── PRESTIGE TIER: Achievement-locked only — cannot be purchased ──────────
     // Unlock condition shown in parentheses. Price is 0 (free once unlocked).
@@ -826,6 +826,27 @@ export class Game {
     }
 
     async syncGlobalData() {
+        // 1. Check Data Version from Server
+        try {
+            const versionRes = await fetch(`${this.leaderboard.apiUrl}/version`);
+            const versionData = await versionRes.json();
+            if (versionData.success) {
+                const serverVersion = versionData.version;
+                const localVersion = parseInt(localStorage.getItem('midnight_game_version')) || 1;
+
+                if (serverVersion > localVersion) {
+                    console.log(`🚨 GAME DATA RESET DETECTED (Server: ${serverVersion}, Local: ${localVersion})`);
+                    this.resetProgress();
+                    localStorage.setItem('midnight_game_version', serverVersion);
+                    // Refresh page to ensure total state reset
+                    window.location.reload();
+                    return;
+                }
+            }
+        } catch (e) {
+            console.warn('[Sync] Failed to check game version:', e);
+        }
+
         const playerName = this.leaderboard.getPlayerName();
         if (!playerName) return;
 
@@ -843,6 +864,23 @@ export class Game {
 
         // Update Main Menu Rank Display
         this.refreshRankDisplay();
+    }
+
+    resetProgress() {
+        console.warn('🗑️  Clearing all local progress data...');
+        const keysToClear = [
+            'midnight_highscore',
+            'midnight_coins',
+            'midnight_owned_ships',
+            'midnight_selected_ship',
+            'midnight_stats',
+            'midnight_claimed_achievements',
+            'midnight_unclaimed_achievements',
+            'midnight_player_name',
+            'midnight_playerName',
+            'midnight_armory_sanitized'
+        ];
+        keysToClear.forEach(key => localStorage.removeItem(key));
     }
 
     getPlayerRank(score) {
@@ -1744,10 +1782,7 @@ export class Game {
 
         // ── Combo-Based Economy (Floating Text & Coin Drops) ──
         if (useCombo && this.comboMultiplier > 1) {
-            // Visual text
-            const textOptions = ['Good!', 'Great!', 'Awesome!', 'Unstoppable!', 'Godlike!'];
-            const tIndex = Math.min(textOptions.length - 1, Math.floor(this.comboMultiplier - 1));
-            this.particles.push(new FloatingText(this, enemy.x, enemy.y, `x${this.comboMultiplier} ${textOptions[tIndex]}`));
+            // Visual text: Removed descriptive text popups as per user request
 
             // Coin Drops
             // Higher multiplier = better chance and better coins

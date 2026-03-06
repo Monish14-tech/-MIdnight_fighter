@@ -25,6 +25,7 @@ const MONGO_URI1 = process.env.MONGO_URI1;         // Leaderboard database
 const DB_NAME = 'midnight_fighter';
 const COLLECTION_NAME = 'leaderboard';
 const ROOMS_COLLECTION_NAME = 'rooms';
+const METADATA_COLLECTION_NAME = 'metadata'; // For versioning
 
 // Track DB availability — game still works offline without leaderboard/co-op
 let dbAvailable = false;
@@ -41,6 +42,8 @@ let leaderboardClient;
 let roomsDb;
 let roomsCollection;
 let roomsClient;
+
+let metadataCollection;
 
 const liveRooms = new Map();
 
@@ -88,6 +91,14 @@ async function connectDB() {
         await roomsCollection.createIndex({ roomId: 1 }, { unique: true });
         await roomsCollection.createIndex({ expiresAt: 1 });
         console.log('✅ Connected to Rooms Database!');
+
+        metadataCollection = roomsDb.collection(METADATA_COLLECTION_NAME);
+        // Ensure version exists
+        const versionDoc = await metadataCollection.findOne({ key: 'dataVersion' });
+        if (!versionDoc) {
+            await metadataCollection.insertOne({ key: 'dataVersion', value: 1 });
+        }
+
         console.log('✅ All MongoDB connections established!');
         dbAvailable = true;
     } catch (error) {
@@ -127,6 +138,46 @@ app.get('/api/leaderboard', requireDB, async (req, res) => {
             success: false,
             error: 'Failed to fetch leaderboard'
         });
+    }
+});
+
+// GET: Current game data version
+app.get('/api/version', requireDB, async (req, res) => {
+    try {
+        const doc = await metadataCollection.findOne({ key: 'dataVersion' });
+        res.json({ success: true, version: doc ? doc.value : 1 });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Failed to fetch version' });
+    }
+});
+
+// POST: Admin Reset (Clears leaderboard and increments version)
+app.post('/api/admin/reset', requireDB, async (req, res) => {
+    try {
+        console.log('🚨 GLOBAL RESET TRIGGERED!');
+        // 1. Clear leaderboard
+        await leaderboardCollection.deleteMany({});
+
+        // 2. Clear rooms (optional, but clean)
+        await roomsCollection.deleteMany({});
+
+        // 3. Increment version
+        const result = await metadataCollection.findOneAndUpdate(
+            { key: 'dataVersion' },
+            { $inc: { value: 1 } },
+            { upsert: true, returnDocument: 'after' }
+        );
+
+        const newVersion = result.value ? result.value.value : (result.value || 2);
+
+        res.json({
+            success: true,
+            message: 'Global reset successful!',
+            newVersion
+        });
+    } catch (error) {
+        console.error('Reset error:', error);
+        res.status(500).json({ success: false, error: 'Reset failed' });
     }
 });
 
