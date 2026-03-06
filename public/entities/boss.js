@@ -211,8 +211,8 @@ export class Boss {
             ? this.game.getPlayerScalingMetrics()
             : { hpScale: 1, damageScale: 1, speedScale: 1 };
 
-        // Base HP drastically increased (180 -> 500)
-        this.maxHealth = Math.floor(500 * levelScale * tierMultiplier * playerScale.hpScale);
+        // Base HP drastically increased (180 -> 1200)
+        this.maxHealth = Math.floor(1200 * levelScale * tierMultiplier * playerScale.hpScale);
         this.health = this.maxHealth;
         this.points = Math.floor(1500 * levelScale);
         this.coinReward = Math.floor(200 * level * 0.8); // Balanced linear reward
@@ -286,7 +286,7 @@ export class Boss {
 
         // Firing system — rapid-fire from the start
         this.fireTimer = 0;
-        this.fireRate = 0.28; // Balanced: gives player dodging window (was 0.08)
+        this.fireRate = 0.15; // Aggressive bullet hell (was 0.28)
 
         // ── Personality system ────────────────────────────────
         this.personality = this._getPersonality(); // based on modelIndex

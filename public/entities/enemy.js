@@ -667,15 +667,12 @@ export class Enemy {
         }
 
         // Shooter Logic (only shooter, sniper, launcher, and pulsar can attack)
-        // No enemies can shoot until first boss appears
         const level = this.game.currentLevel || 1;
         const singleMissileMode = level >= 11;
         const fireRateMultiplier = level >= 24 ? 2.5 : (level >= 15 ? 1.7 : 1.0);
         const spreadMultiplier = level >= 24 ? 0.25 : (level >= 15 ? 0.6 : 1.0);
 
-        if (!this.game.firstBossAppeared) {
-            // No shooting allowed before first boss
-        } else if (this.type === 'shooter') {
+        if (this.type === 'shooter') {
             this.shootTimer += deltaTime;
             if (this.shootTimer > (2.0 / fireRateMultiplier)) {
                 this.shootTimer = 0;
