@@ -202,50 +202,59 @@ export class Enemy {
         this.hasFiredSingleMissile = false;
 
         // Slight speed increase per difficulty level (10% per difficulty multiplier)
-        const speedMultiplier = 1 + (difficulty - 1) * 0.1;
+        const diffSpeedMultiplier = 1 + (difficulty - 1) * 0.1;
 
         // HP Scaling: +1 HP every 5 levels
         const hpBonus = Math.floor((level - 1) / 5);
 
-        // Dynamic Health scaling based on Player's equipped ship DPS
-        const powerScale = this.game.getPlayerPowerMultiplier ? this.game.getPlayerPowerMultiplier() : 1;
+        // Dynamic Enemy Scaling based on Player's equipped ship stats
+        const playerScale = this.game.getPlayerScalingMetrics
+            ? this.game.getPlayerScalingMetrics()
+            : { hpScale: 1, damageScale: 1, speedScale: 1 };
+
+        let baseDamage = 1;
 
         if (this.type === 'chaser') {
-            this.speed = (150 + Math.random() * 50) * speedMultiplier;
+            this.speed = (150 + Math.random() * 50) * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#ff3333'; // Neon Red
             this.radius = 12;
             this.points = 100;
-            this.health = Math.max(1, Math.floor((1 + hpBonus) * powerScale)); // Was 3
+            this.health = Math.max(1, Math.floor((1 + hpBonus) * playerScale.hpScale));
+            baseDamage = 1;
         } else if (this.type === 'heavy') {
-            this.speed = 80 * speedMultiplier;
+            this.speed = 80 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#ffaa00'; // Neon Orange
             this.radius = 25;
             this.points = 300;
-            this.health = Math.max(1, Math.floor((5 + hpBonus) * powerScale)); // Was 10
+            this.health = Math.max(1, Math.floor((5 + hpBonus) * playerScale.hpScale));
+            baseDamage = 4;
         } else if (this.type === 'shooter') {
-            this.speed = 100 * speedMultiplier;
+            this.speed = 100 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#ff00ff'; // Neon Pink
             this.radius = 15;
             this.points = 200;
-            this.health = Math.max(1, Math.floor((2 + hpBonus) * powerScale)); // Was 2
+            this.health = Math.max(1, Math.floor((2 + hpBonus) * playerScale.hpScale));
             this.shootTimer = 0;
+            baseDamage = 2;
         } else if (this.type === 'swarm') {
-            this.speed = 220 * speedMultiplier;
+            this.speed = 220 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#ff7a6b';
             this.radius = 9;
             this.points = 80;
-            this.health = Math.max(1, Math.floor(1 * powerScale));
+            this.health = Math.max(1, Math.floor(1 * playerScale.hpScale));
+            baseDamage = 1;
         } else if (this.type === 'sniper') {
-            this.speed = 120 * speedMultiplier;
+            this.speed = 120 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#6bd6ff';
             this.radius = 14;
             this.points = 250;
-            this.health = Math.max(1, Math.floor((2 + hpBonus) * powerScale));
+            this.health = Math.max(1, Math.floor((2 + hpBonus) * playerScale.hpScale));
             this.shootTimer = 0;
             // Snipers back off more as levels increase
             this.preferredRange = 260 + Math.min((level - 1) * 8, 200);
+            baseDamage = 2;
         } else if (this.type === 'splitter') {
-            this.speed = 140 * speedMultiplier;
+            this.speed = 140 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#a97bff';
             this.radius = 18;
             this.points = 220;
@@ -255,130 +264,147 @@ export class Enemy {
             this.splitType = 'swarm';
         } else if (this.type === 'phantom') {
             // LEVEL 6+ | Phasing specter - high speed, cannot shoot
-            this.speed = 180 * speedMultiplier;
+            this.speed = 180 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#9966ff'; // Violet/Purple
             this.radius = 15;
             this.points = 150;
-            this.health = 2 + hpBonus;
+            this.health = Math.max(1, Math.floor((2 + hpBonus) * playerScale.hpScale));
             this.phaseTimer = 0;
             this.phaseCooldown = 3.0;
+            baseDamage = 2;
         } else if (this.type === 'titan') {
             // LEVEL 11+ | Armored colossus - slow, very high health, cannot shoot
-            this.speed = 75 * speedMultiplier;
+            this.speed = 75 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#cc7722'; // Bronze
             this.radius = 28;
             this.points = 400;
-            this.health = 10 + hpBonus * 3;
+            this.health = Math.max(1, Math.floor((10 + hpBonus * 3) * playerScale.hpScale));
             this.armor = 2;
+            baseDamage = 5;
         } else if (this.type === 'wraith') {
             // LEVEL 16+ | Reality bender - fast ethereal, cannot shoot
-            this.speed = 200 * speedMultiplier;
+            this.speed = 200 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#bb66dd'; // Magenta-Purple
             this.radius = 16;
             this.points = 350;
-            this.health = 3 + hpBonus;
+            this.health = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpScale));
             this.teleportCooldown = 2.5;
             this.teleportTimer = 1.5;
+            baseDamage = 3;
         } else if (this.type === 'vortex') {
             // LEVEL 21+ | Spinning void - very slow, high health, cannot shoot
-            this.speed = 50 * speedMultiplier;
+            this.speed = 50 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#6600cc'; // Deep Purple
             this.radius = 20;
             this.points = 500;
-            this.health = 12 + hpBonus * 4;
+            this.health = Math.max(1, Math.floor((12 + hpBonus * 4) * playerScale.hpScale));
             this.spinRate = 360; // degrees per second
+            baseDamage = 5;
         } else if (this.type === 'bomber') {
             // LEVEL 3+ | Heavy explosive unit - slow, high health, explodes on death
-            this.speed = 60 * speedMultiplier;
+            this.speed = 60 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#ff6600'; // Bright Orange
             this.radius = 28;
             this.points = 350;
-            this.health = 8 + hpBonus * 2;
+            this.health = Math.max(1, Math.floor((8 + hpBonus * 2) * playerScale.hpScale));
             this.explosionRadius = 80;
             this.explosionDamage = 2;
+            baseDamage = 3;
         } else if (this.type === 'interceptor') {
             // LEVEL 4+ | Swift hunter - very fast, aggressive pursuit
-            this.speed = 280 * speedMultiplier;
+            this.speed = 280 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#00ff88'; // Bright Green
             this.radius = 10;
             this.points = 110;
-            this.health = 1 + hpBonus;
+            this.health = Math.max(1, Math.floor((1 + hpBonus) * playerScale.hpScale));
             this.dashCooldown = 3.0;
             this.dashTimer = 2.0;
+            baseDamage = 1;
         } else if (this.type === 'decoy') {
             // LEVEL 5+ | Holographic decoy - spawns multiple copies, low health
-            this.speed = 160 * speedMultiplier;
+            this.speed = 160 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#ffff00'; // Bright Yellow
             this.radius = 11;
             this.points = 90;
             this.health = 1;
             this.isDecoy = true;
             this.decoyCount = 2;
+            baseDamage = 1;
         } else if (this.type === 'launcher') {
             // LEVEL 7+ | Missile platform - shoots missiles instead of bullets
-            this.speed = 90 * speedMultiplier;
+            this.speed = 90 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#ff0099'; // Hot Pink
             this.radius = 20;
             this.points = 280;
-            this.health = 4 + hpBonus;
+            this.health = Math.max(1, Math.floor((4 + hpBonus) * playerScale.hpScale));
             this.shootTimer = 0;
             this.missileMode = true;
+            baseDamage = 2;
         } else if (this.type === 'shielder') {
             // LEVEL 8+ | Shielded defender - has protective shield
-            this.speed = 110 * speedMultiplier;
+            this.speed = 110 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#00ddff'; // Cyan
             this.radius = 19;
             this.points = 240;
-            this.health = 4 + hpBonus;
-            this.shieldHealth = 3 + hpBonus;
+            this.health = Math.max(1, Math.floor((4 + hpBonus) * playerScale.hpScale));
+            this.shieldHealth = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpScale));
             this.hasShield = true;
+            baseDamage = 2;
         } else if (this.type === 'pulsar') {
             // LEVEL 9+ | Energy pulsar - creates damaging waves
-            this.speed = 100 * speedMultiplier;
+            this.speed = 100 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#ff00ff'; // Magenta
             this.radius = 16;
             this.points = 200;
-            this.health = 3 + hpBonus;
+            this.health = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpScale));
             this.pulseTimer = 0;
             this.pulseCooldown = 2.5;
             this.pulseRadius = 60;
+            baseDamage = 2;
         } else if (this.type === 'blade') {
             // LEVEL 10+ | High-speed interceptor - fast melee strikes
-            this.speed = 260 * speedMultiplier;
+            this.speed = 260 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#ff1111'; // Bright Red
             this.radius = 13;
             this.points = 180;
-            this.health = 2 + hpBonus;
+            this.health = Math.max(1, Math.floor((2 + hpBonus) * playerScale.hpScale));
             this.slashCooldown = 1.5;
             this.slashTimer = 0;
             this.attackRange = 35;
+            baseDamage = 3;
         } else if (this.type === 'tractor') {
             // LEVEL 12+ | Gravitational puller - slow but pulls player
-            this.speed = 70 * speedMultiplier;
+            this.speed = 70 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#9900ff'; // Deep Purple
             this.radius = 24;
             this.points = 310;
-            this.health = 6 + hpBonus;
+            this.health = Math.max(1, Math.floor((6 + hpBonus) * playerScale.hpScale));
             this.tractorRange = 300;
             this.tractorPull = 50; // Force magnitude
+            baseDamage = 2;
         } else if (this.type === 'mirror') {
             // LEVEL 13+ | Reflects player fire - bounces projectiles
-            this.speed = 130 * speedMultiplier;
+            this.speed = 130 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#ccccff'; // Silver/Blue
             this.radius = 17;
             this.points = 200;
-            this.health = 3 + hpBonus;
+            this.health = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpScale));
             this.reflectChance = 0.6; // 60% chance to reflect
             this.rotation = 0;
+            baseDamage = 2;
         } else if (this.type === 'swarmer') {
             // LEVEL 14+ | Medium swarm unit - faster than chaser, medium durability
-            this.speed = 200 * speedMultiplier;
+            this.speed = 200 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#ffaa00'; // Gold/Orange
             this.radius = 10;
             this.points = 95;
-            this.health = 1 + hpBonus;
+            this.health = Math.max(1, Math.floor((1 + hpBonus) * playerScale.hpScale));
             this.swarming = true;
+            baseDamage = 1;
         }
+
+        // Final calculated Collision Damage
+        this.damage = Math.max(1, Math.floor(baseDamage * playerScale.damageScale));
 
         // ── Attach EnemyBrain for smart AI ──────────────────────
         this.maxStartingHealth = this.health;

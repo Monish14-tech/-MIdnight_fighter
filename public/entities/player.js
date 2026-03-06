@@ -336,6 +336,7 @@ export class Player {
         } else if (type === 'missile') {
             const p = new Projectile(this.game, this.x, this.y, this.angle, 'missile', this.playerId);
             this.game.projectiles.push(p);
+            if (this.game.achievementManager) this.game.achievementManager.addStat('missiles', 1);
             if (this.game.screenShake) this.game.screenShake.trigger(5, 0.2);
         }
     }
@@ -979,26 +980,39 @@ export class Player {
                 ctx.fillRect(15, -3, 10, 6); // Cannon
                 break;
 
-            case 'wraith': // COSMIC WRAITH - Double Teardrop
+            case 'wraith': // COSMIC WRAITH - Winged Jet (Purple/Dark)
                 const wraithGrad = ctx.createRadialGradient(-10, 0, 3, 10, 0, 20);
                 wraithGrad.addColorStop(0, '#9966ff');
                 wraithGrad.addColorStop(0.5, '#6633ff');
                 wraithGrad.addColorStop(1, '#220066');
                 ctx.fillStyle = wraithGrad;
+
+                // Main Fuselage
                 ctx.beginPath();
-                ctx.moveTo(-10, -22);
-                ctx.quadraticCurveTo(-18, -10, -16, 0);
-                ctx.quadraticCurveTo(-18, 10, -10, 22);
-                ctx.lineTo(-2, 10);
-                ctx.lineTo(-2, -10);
+                ctx.moveTo(35, 0);       // Nose
+                ctx.lineTo(5, 8);        // Cockpit base
+                ctx.lineTo(-20, 5);      // Tail
+                ctx.lineTo(-20, -5);
+                ctx.lineTo(5, -8);
                 ctx.closePath();
                 ctx.fill();
+                ctx.stroke();
+
+                // Aggressive Swept Forward Wings
                 ctx.beginPath();
-                ctx.moveTo(10, -22);
-                ctx.quadraticCurveTo(18, -10, 16, 0);
-                ctx.quadraticCurveTo(18, 10, 10, 22);
-                ctx.lineTo(2, 10);
-                ctx.lineTo(2, -10);
+                ctx.moveTo(10, 8);
+                ctx.lineTo(-5, 28);
+                ctx.lineTo(-15, 28);
+                ctx.lineTo(-5, 5);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(10, -8);
+                ctx.lineTo(-5, -28);
+                ctx.lineTo(-15, -28);
+                ctx.lineTo(-5, -5);
                 ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
@@ -1325,64 +1339,93 @@ export class Player {
                 ctx.fill();
                 break;
 
-            case 'tempest': // TEMPEST LORD - Spiral Polygon
+            case 'tempest': // TEMPEST LORD - Winged Jet (Blue/Cyan)
                 const tempestGrad = ctx.createRadialGradient(0, 0, 3, 0, 0, 28);
                 tempestGrad.addColorStop(0, '#00ffff');
                 tempestGrad.addColorStop(0.5, '#00aaff');
                 tempestGrad.addColorStop(1, '#0033ff');
                 ctx.fillStyle = tempestGrad;
+
+                // Sleek Fuselage
                 ctx.beginPath();
-                for (let i = 0; i < 12; i++) {
-                    const angle = i * Math.PI / 6;
-                    const r = 24 - i * 1.5;
-                    const x = Math.cos(angle) * r;
-                    const y = Math.sin(angle) * r;
-                    if (i === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                }
+                ctx.moveTo(40, 0);
+                ctx.lineTo(0, 6);
+                ctx.lineTo(-25, 4);
+                ctx.lineTo(-25, -4);
+                ctx.lineTo(0, -6);
                 ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
+
+                // Wide Glider Wings
+                ctx.beginPath();
+                ctx.moveTo(5, 6);
+                ctx.lineTo(-10, 35);
+                ctx.lineTo(-20, 35);
+                ctx.lineTo(-10, 5);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(5, -6);
+                ctx.lineTo(-10, -35);
+                ctx.lineTo(-20, -35);
+                ctx.lineTo(-10, -5);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Electric detail lines
                 ctx.strokeStyle = '#ffff00';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
-                for (let i = 0; i < 6; i++) {
-                    const angle = i * Math.PI / 3;
-                    const x = Math.cos(angle) * 16;
-                    const y = Math.sin(angle) * 16;
-                    if (i === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                }
-                ctx.closePath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(20, 0);
                 ctx.stroke();
                 break;
 
-            case 'reaper': // VOID REAPER - Curved Crescent
+            case 'reaper': // VOID REAPER - Winged Jet (Dark Crescent)
                 const reaperGrad = ctx.createRadialGradient(10, 0, 3, -10, 0, 24);
                 reaperGrad.addColorStop(0, '#1a1a1a');
                 reaperGrad.addColorStop(0.5, '#333333');
                 reaperGrad.addColorStop(1, '#000000');
                 ctx.fillStyle = reaperGrad;
+
+                // Heavy Armored Fuselage
                 ctx.beginPath();
-                ctx.moveTo(18, -18);
-                ctx.quadraticCurveTo(22, 0, 18, 18);
-                ctx.lineTo(-14, 12);
-                ctx.quadraticCurveTo(-18, 0, -14, -12);
+                ctx.moveTo(35, 0);
+                ctx.lineTo(15, 10);
+                ctx.lineTo(-30, 8);
+                ctx.lineTo(-30, -8);
+                ctx.lineTo(15, -10);
                 ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
-                ctx.strokeStyle = '#666';
-                ctx.lineWidth = 2;
+
+                // Crescent Shaped Wings
                 ctx.beginPath();
-                ctx.moveTo(14, -12);
-                ctx.quadraticCurveTo(18, 0, 14, 12);
+                ctx.moveTo(0, 10);
+                ctx.quadraticCurveTo(-10, 30, -30, 35);
+                ctx.quadraticCurveTo(-20, 20, -20, 8);
+                ctx.closePath();
+                ctx.fill();
                 ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, -10);
+                ctx.quadraticCurveTo(-10, -30, -30, -35);
+                ctx.quadraticCurveTo(-20, -20, -20, -8);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Glowing Engines
                 ctx.fillStyle = '#ff0000';
                 ctx.beginPath();
-                ctx.moveTo(-4, -2);
-                ctx.lineTo(-2, 0);
-                ctx.lineTo(-4, 2);
-                ctx.lineTo(-6, 0);
+                ctx.moveTo(-30, -5);
+                ctx.lineTo(-35, 0);
+                ctx.lineTo(-30, 5);
                 ctx.closePath();
                 ctx.fill();
                 break;
@@ -1493,6 +1536,7 @@ export class Player {
                 ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
+                // Tails
                 ctx.fillStyle = '#ffffff';
                 ctx.beginPath();
                 ctx.moveTo(0, -8);
@@ -1507,29 +1551,263 @@ export class Player {
                 ctx.fill();
                 break;
 
-            case 'leviathan': // LEVIATHAN ROX - Wave Pattern
+            case 'nemesis': // NEMESIS PRIME - Heavy Red/Black Stealth Frame
+                const nemesisGrad = ctx.createLinearGradient(-30, 0, 30, 0);
+                nemesisGrad.addColorStop(0, '#550011');
+                nemesisGrad.addColorStop(0.5, '#ff0044');
+                nemesisGrad.addColorStop(1, '#ff3366');
+                ctx.fillStyle = nemesisGrad;
+
+                // Aggressive Wide Diamond Fuselage
+                ctx.beginPath();
+                ctx.moveTo(40, 0);
+                ctx.lineTo(10, 20);
+                ctx.lineTo(-25, 25);
+                ctx.lineTo(-15, 0);
+                ctx.lineTo(-25, -25);
+                ctx.lineTo(10, -20);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Forward Canards
+                ctx.beginPath();
+                ctx.moveTo(25, 10);
+                ctx.lineTo(15, 25);
+                ctx.lineTo(10, 15);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(25, -10);
+                ctx.lineTo(15, -25);
+                ctx.lineTo(10, -15);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Corrupted Core
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(5, 0, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ff0044';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.lineWidth = 1;
+                break;
+
+            case 'phantom_x': // PHANTOM-X - Sleek Violet/Neon Railgun Platform
+                const phantomXGrad = ctx.createLinearGradient(-25, -20, 25, 20);
+                phantomXGrad.addColorStop(0, '#330066');
+                phantomXGrad.addColorStop(0.5, '#aa44ff');
+                phantomXGrad.addColorStop(1, '#dd88ff');
+                ctx.fillStyle = phantomXGrad;
+
+                // Ultra-sleek Needle + Split Wings
+                ctx.beginPath();
+                ctx.moveTo(45, 0);
+                ctx.lineTo(5, 5);
+                ctx.lineTo(-30, 12);
+                ctx.lineTo(-20, 0);
+                ctx.lineTo(-30, -12);
+                ctx.lineTo(5, -5);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Railgun Rails
+                ctx.strokeStyle = '#00ffff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(10, 3);
+                ctx.lineTo(40, 2);
+                ctx.moveTo(10, -3);
+                ctx.lineTo(40, -2);
+                ctx.stroke();
+                ctx.lineWidth = 1;
+
+                // Neon Phase Core
+                ctx.fillStyle = 'rgba(170, 68, 255, 0.8)';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#aa44ff';
+                ctx.beginPath();
+                ctx.ellipse(15, 0, 10, 2, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                break;
+
+            case 'celestial': // CELESTIAL STRIKER - Golden/White Angelic Wings
+                const celestGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, 30);
+                celestGrad.addColorStop(0, '#ffffff');
+                celestGrad.addColorStop(0.5, '#ffdd00');
+                celestGrad.addColorStop(1, '#ddaa00');
+                ctx.fillStyle = celestGrad;
+
+                // Elegant Fuselage
+                ctx.beginPath();
+                ctx.moveTo(35, 0);
+                ctx.lineTo(10, 8);
+                ctx.lineTo(-20, 5);
+                ctx.lineTo(-25, 0);
+                ctx.lineTo(-20, -5);
+                ctx.lineTo(10, -8);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Sweeping Angelic Wings
+                ctx.beginPath();
+                ctx.moveTo(10, 8);
+                ctx.lineTo(-10, 35);
+                ctx.lineTo(-25, 30);
+                ctx.lineTo(-12, 10);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(10, -8);
+                ctx.lineTo(-10, -35);
+                ctx.lineTo(-25, -30);
+                ctx.lineTo(-12, -10);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Radiant Core
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#ffdd00';
+                ctx.beginPath();
+                ctx.arc(5, 0, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                break;
+
+            case 'absolute': // THE ABSOLUTE - Pure White/Prismatic Ultimate Ship
+                const absGrad = ctx.createLinearGradient(-30, -30, 30, 30);
+                absGrad.addColorStop(0, '#ffffff');
+                absGrad.addColorStop(0.3, '#ddffff');
+                absGrad.addColorStop(0.7, '#ffddff');
+                absGrad.addColorStop(1, '#ffffdd');
+                ctx.fillStyle = absGrad;
+
+                // Divine Geometry
+                ctx.beginPath();
+                ctx.moveTo(40, 0);
+                ctx.lineTo(0, 15);
+                ctx.lineTo(-30, 30);
+                ctx.lineTo(-15, 0);
+                ctx.lineTo(-30, -30);
+                ctx.lineTo(0, -15);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.stroke();
+
+                // Floating Prisms
+                ctx.fillStyle = '#00ffff';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#ffffff';
+                ctx.beginPath();
+                ctx.moveTo(25, 15); ctx.lineTo(15, 25); ctx.lineTo(5, 15); ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(25, -15); ctx.lineTo(15, -25); ctx.lineTo(5, -15); ctx.fill();
+
+                // Infinite Core
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(0, 0, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                break;
+
+            default:
+                // Fallback to default shape if somehow missing
+                ctx.fillStyle = mainColor || '#00f3ff';
+                ctx.beginPath();
+                ctx.moveTo(35, 0);
+                ctx.lineTo(10, 6);
+                ctx.lineTo(-15, 6);
+                ctx.lineTo(-20, 0);
+                ctx.lineTo(-15, -6);
+                ctx.lineTo(10, -6);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(8, 6);
+                ctx.lineTo(-12, 22);
+                ctx.lineTo(-18, 22);
+                ctx.lineTo(-12, 6);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(8, -6);
+                ctx.lineTo(-12, -22);
+                ctx.lineTo(-18, -22);
+                ctx.lineTo(-12, -6);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                break;
+                break;
+
+            case 'leviathan': // LEVIATHAN ROX - Heavy Bomber Jet
                 const leviathanGrad = ctx.createLinearGradient(-30, -20, 30, 20);
                 leviathanGrad.addColorStop(0, '#003d82');
                 leviathanGrad.addColorStop(0.5, '#0066cc');
                 leviathanGrad.addColorStop(1, '#004400');
                 ctx.fillStyle = leviathanGrad;
+
+                // Massive Bomber Fuselage
                 ctx.beginPath();
-                ctx.moveTo(32, 0);
-                ctx.bezierCurveTo(20, 14, 0, 22, -20, 18);
-                ctx.lineTo(-26, 8);
-                ctx.lineTo(-20, 0);
-                ctx.lineTo(-26, -8);
-                ctx.bezierCurveTo(0, -22, 20, -14, 32, 0);
+                ctx.moveTo(30, 0);
+                ctx.lineTo(10, 12);
+                ctx.lineTo(-25, 12);
+                ctx.lineTo(-25, -12);
+                ctx.lineTo(10, -12);
                 ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
+
+                // Broad Straight Wings
+                ctx.beginPath();
+                ctx.moveTo(0, 12);
+                ctx.lineTo(-5, 30);
+                ctx.lineTo(-15, 30);
+                ctx.lineTo(-10, 12);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, -12);
+                ctx.lineTo(-5, -30);
+                ctx.lineTo(-15, -30);
+                ctx.lineTo(-10, -12);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Green tech accents
                 ctx.fillStyle = '#00ff88';
-                for (let i = 0; i < 4; i++) {
+                for (let i = 0; i < 3; i++) {
                     ctx.beginPath();
-                    ctx.moveTo(-16 + i * 10, 18);
-                    ctx.lineTo(-14 + i * 10, 24);
-                    ctx.lineTo(-12 + i * 10, 18);
-                    ctx.closePath();
+                    ctx.moveTo(-5 + i * 8, 8);
+                    ctx.lineTo(-2 + i * 8, 10);
+                    ctx.lineTo(-8 + i * 8, 10);
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.moveTo(-5 + i * 8, -8);
+                    ctx.lineTo(-2 + i * 8, -10);
+                    ctx.lineTo(-8 + i * 8, -10);
                     ctx.fill();
                 }
                 break;

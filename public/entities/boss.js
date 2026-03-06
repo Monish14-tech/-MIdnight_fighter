@@ -206,11 +206,13 @@ export class Boss {
         this.bossTier = Math.floor((level - 1) / 5);
         const tierMultiplier = Math.pow(1.5, this.bossTier);
 
-        // Player Power Multiplier
-        const powerScale = this.game.getPlayerPowerMultiplier ? this.game.getPlayerPowerMultiplier() : 1;
+        // Dynamic Boss Scaling based on Player's equipped ship stats
+        const playerScale = this.game.getPlayerScalingMetrics
+            ? this.game.getPlayerScalingMetrics()
+            : { hpScale: 1, damageScale: 1, speedScale: 1 };
 
         // Base HP drastically increased (180 -> 500)
-        this.maxHealth = Math.floor(500 * levelScale * tierMultiplier * powerScale);
+        this.maxHealth = Math.floor(500 * levelScale * tierMultiplier * playerScale.hpScale);
         this.health = this.maxHealth;
         this.points = Math.floor(1500 * levelScale);
         this.coinReward = Math.floor(200 * level * 0.8); // Balanced linear reward
@@ -237,9 +239,12 @@ export class Boss {
 
         this.angle = Math.PI / 2;
         this.velocity = { x: 0, y: 0 };
-        // Speed and rotation also scale with tier spikes
-        this.speed = (150 + (levelScale * 10)) * (1 + (this.bossTier * 0.15));
-        this.rotationSpeed = 2.0 * (1 + (this.bossTier * 0.2));
+        // Speed and rotation also scale with tier spikes and player's speed
+        this.speed = (150 + (levelScale * 10)) * (1 + (this.bossTier * 0.15)) * playerScale.speedScale;
+        this.rotationSpeed = 2.0 * (1 + (this.bossTier * 0.2)) * playerScale.speedScale;
+
+        // Store damage scale for collisions/attacks
+        this.damageScale = playerScale.damageScale;
 
         // ── State Machine ─────────────────────────────────────
         this.state = 'entering';
@@ -613,7 +618,7 @@ export class Boss {
                 const spread = 0.22;
                 const p1 = this.fireProjectile(this.x, this.y, pa - spread, 'bullet');
                 const p2 = this.fireProjectile(this.x, this.y, pa + spread, 'bullet');
-                [p1, p2].forEach(p => { if (p) { p.color = '#ff6600'; p.speed = 180; p.radius = 10; p.damage = 1.5; } });
+                [p1, p2].forEach(p => { if (p) { p.color = '#ff6600'; p.speed = 180; p.radius = 10; p.damage = 1.5 * this.damageScale; } });
                 break;
             }
             case 'Berserker': {
@@ -637,14 +642,16 @@ export class Boss {
                 const dropA = Math.PI / 2; // straight down
                 const p1 = this.fireProjectile(this.x - 30, this.y, dropA, 'bullet');
                 const p2 = this.fireProjectile(this.x + 30, this.y, dropA, 'bullet');
-                [p1, p2].forEach(p => { if (p) { p.color = '#ffee00'; p.speed = 260; p.radius = 5; } });
+                [p1, p2].forEach(p => { if (p) { p.color = '#ffee00'; p.speed = 260; p.radius = 5; p.damage = 1 * this.damageScale; } });
                 break;
             }
             default: {
                 const count = this.phase === 2 ? 6 : 4;
                 const sp = 0.35;
                 for (let i = 0; i < count; i++) {
-                    this.fireProjectile(this.x, this.y, pa - sp / 2 + (sp / (count - 1)) * i, 'bullet');
+                    const ang = pa - sp / 2 + (sp / (count - 1)) * i;
+                    const p = this.fireProjectile(this.x, this.y, ang, 'bullet');
+                    if (p) { p.color = '#ffff00'; p.speed = 280; p.damage = 1 * this.damageScale; }
                 }
             }
         }
@@ -912,14 +919,14 @@ export class Boss {
                 if (total > prev) {
                     const shot = new Projectile(this.game, this.x, this.y, this.beamAngle, 'bullet', 'enemy');
                     shot.speed = 900;
-                    shot.damage = 1.5;
+                    shot.damage = 1.5 * this.damageScale;
                     shot.color = '#ffffff';
                     shot.radius = 6;
                     this.game.projectiles.push(shot);
                     // Also spawn a wide beam projectile
                     const wideShot = new Projectile(this.game, this.x, this.y, this.beamAngle + 0.08, 'bullet', 'enemy');
                     wideShot.speed = 900;
-                    wideShot.damage = 1.0;
+                    wideShot.damage = 1.0 * this.damageScale;
                     wideShot.color = '#ff4400';
                     wideShot.radius = 5;
                     this.game.projectiles.push(wideShot);
@@ -1401,7 +1408,7 @@ export class Boss {
             p.speed = 180;        // was 250 — slower, more dodgeable
             p.maxSpeed = 420;     // was 600
             p.acceleration = 200; // was 300
-            p.damage = this.level >= 15 ? 2.0 : 1.5;
+            p.damage = (this.level >= 15 ? 2.0 : 1.5) * this.damageScale;
             p.lifetime = 5.0;
             p.isHoming = false;
             p.color = '#ff0000';
@@ -1410,12 +1417,12 @@ export class Boss {
             p.speed = 130;
             p.maxSpeed = 320;
             p.acceleration = 150;
-            p.damage = this.level >= 20 ? 1.2 : 0.8;
+            p.damage = (this.level >= 20 ? 1.2 : 0.8) * this.damageScale;
             p.lifetime = 4.0;
             p.isHoming = false;
         } else {
             p.speed = 280 + (this.level * 4); // was 350+(level*5) — ~20% slower
-            p.damage = Math.max(1, Math.floor(this.level / 5));
+            p.damage = Math.max(1, Math.floor(this.level / 5)) * this.damageScale;
         }
         this.game.projectiles.push(p);
         return p;
