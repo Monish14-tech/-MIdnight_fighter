@@ -71,7 +71,7 @@ export class Projectile {
         }
 
         // --- Boss Aim Assist (Mid-Range, Not perfectly accurate) ---
-        if (this.type === 'bullet' && this.side === 'player' && this.game.boss && !this.game.boss.markedForDeletion) {
+        if (this.type === 'bullet' && this.side && this.side.toString().startsWith('player') && this.game.boss && !this.game.boss.markedForDeletion) {
             const boss = this.game.boss;
             const dx = boss.x - this.x;
             const dy = boss.y - this.y;
