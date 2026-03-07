@@ -102,7 +102,15 @@ export class LeaderboardManager {
         container.innerHTML = '';
 
         leaderboard.forEach((entry, index) => {
-            const rank = index + 1;
+            // Competition Ranking Logic (1, 2, 2, 4)
+            let rank;
+            if (index > 0 && entry.score === leaderboard[index - 1].score) {
+                rank = entry._rank; // Reuse previous rank for tie
+            } else {
+                rank = index + 1;
+            }
+            entry._rank = rank; // Store for next iteration tie-check
+
             const entryDiv = document.createElement('div');
             entryDiv.className = 'leaderboard-entry';
 
