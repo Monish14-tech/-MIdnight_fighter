@@ -653,6 +653,8 @@ h1 {
 
 /* Top Players Display on Start Screen */
 #top-players-display {
+    display: none;
+    /* Hidden by default until validated as Top 5 */
     margin: 15px auto;
     max-width: 360px;
     text-align: center;
