@@ -895,8 +895,22 @@ export class Game {
                     const playerIndex = top5.findIndex(entry => entry.playerName === playerName);
                     const playerEntry = top5[playerIndex];
 
+                    // Determine rank based on score to get the correct color
+                    const rank = typeof getRankByScore === 'function' ? getRankByScore(playerEntry.score) : { color: '#ffd700' };
+
+                    if (header) {
+                        header.innerText = '★ GLOBAL LEGEND ★';
+                        header.style.color = rank.color;
+                        header.style.textShadow = `0 0 10px ${rank.color}`;
+                    }
+
                     const div = document.createElement('div');
                     div.className = 'top-player-entry';
+                    div.style.color = rank.color;
+                    div.style.borderColor = rank.color;
+                    div.style.textShadow = `0 0 5px ${rank.color}`;
+                    div.style.boxShadow = `inset 0 0 10px ${rank.color}40`;
+
                     div.innerText = `#${playerIndex + 1} ${playerEntry.playerName} ${playerEntry.score.toLocaleString()} pts`;
                     container.appendChild(div);
                 } else {
