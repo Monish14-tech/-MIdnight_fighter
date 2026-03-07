@@ -891,13 +891,14 @@ export class Game {
                         container.appendChild(h);
                     }
 
-                    top5.forEach((entry, idx) => {
-                        const div = document.createElement('div');
-                        div.className = 'top-player-entry';
-                        // Simple text format: #Rank Name Score
-                        div.innerText = `#${idx + 1} ${entry.playerName} ${entry.score.toLocaleString()} pts`;
-                        container.appendChild(div);
-                    });
+                    // Only display the player's own position, name, and score
+                    const playerIndex = top5.findIndex(entry => entry.playerName === playerName);
+                    const playerEntry = top5[playerIndex];
+
+                    const div = document.createElement('div');
+                    div.className = 'top-player-entry';
+                    div.innerText = `#${playerIndex + 1} ${playerEntry.playerName} ${playerEntry.score.toLocaleString()} pts`;
+                    container.appendChild(div);
                 } else {
                     // Hide the element if player is not in top 5
                     container.style.display = 'none';
