@@ -77,8 +77,8 @@ export class Projectile {
             const dy = boss.y - this.y;
             const dist = Math.hypot(dx, dy);
 
-            // Mid-range detection: only assist if within 600px
-            if (dist < 600) {
+            // Mid-range detection: only assist if within 1200px
+            if (dist < 1200) {
                 const targetAngle = Math.atan2(dy, dx);
                 let angleDiff = targetAngle - this.angle;
 
@@ -86,10 +86,10 @@ export class Projectile {
                 while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
                 while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
 
-                // Only assist if they aimed roughly at the boss (within ~35 degrees / 0.6 radians)
-                if (Math.abs(angleDiff) < 0.6) {
-                    // Gentle turn speed (not fully accurate, just a nudge)
-                    const assistTurnSpeed = 1.2 * deltaTime;
+                // Only assist if they aimed roughly at the boss (within ~60 degrees / 1.0 radians)
+                if (Math.abs(angleDiff) < 1.0) {
+                    // Stronger turn speed so it actually hits the boss
+                    const assistTurnSpeed = 6.0 * deltaTime;
                     if (Math.abs(angleDiff) < assistTurnSpeed) {
                         this.angle = targetAngle;
                     } else {

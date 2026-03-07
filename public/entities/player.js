@@ -2042,7 +2042,7 @@ export class Player {
                 break;
             case 'health_boost':
                 this.maxHealth = Math.min(this.maxHealth + 1, 15);
-                this.currentHealth = Math.min(this.currentHealth + 1, this.maxHealth);
+                this.currentHealth = this.maxHealth; // Refill completely
                 break;
             case 'shield':
                 this.invulnerableTimer = 6.0;

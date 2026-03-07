@@ -2454,7 +2454,7 @@ export class Game {
             if (this.player.bossKillBonusHP < maxBonusHP) {
                 this.player.bossKillBonusHP += 1;
                 this.player.maxHealth += 1;
-                this.player.currentHealth = Math.min(this.player.currentHealth + 1, this.player.maxHealth);
+                this.player.currentHealth = this.player.maxHealth; // Full heal on boss kill
             }
             if (this.player.bossKillBonusDmg < maxBonusDmg) {
                 this.player.bossKillBonusDmg += 0.5;
