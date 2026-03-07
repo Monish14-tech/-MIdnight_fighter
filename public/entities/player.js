@@ -195,14 +195,19 @@ export class Player {
         }
 
         // 360-Degree Face Direction (Aim Assist) - Only if auto-target is enabled
+        // DISABLED during boss fights
         if (!this.isDashing) {
             let targetAngleForMovement = null;
-            if (this.game.autoTargetEnabled) {
+            let isBossTarget = false;
+            // Disable auto-target completely when boss is active
+            const bossActive = this.game.boss && !this.game.boss.markedForDeletion;
+            if (this.game.autoTargetEnabled && !bossActive) {
                 const nearestEnemy = this.findNearestEnemy(700); // Increased range for auto-detection
                 if (nearestEnemy) {
                     const dx = nearestEnemy.x - this.x;
                     const dy = nearestEnemy.y - this.y;
                     targetAngleForMovement = Math.atan2(dy, dx);
+                    isBossTarget = false; // No boss targeting now
                 }
             }
 
@@ -210,7 +215,9 @@ export class Player {
             if (targetAngleForMovement !== null) {
                 const diff = targetAngleForMovement - this.angle;
                 const normalizedDiff = diff > Math.PI ? diff - Math.PI * 2 : diff < -Math.PI ? diff + Math.PI * 2 : diff;
-                this.angle += normalizedDiff * deltaTime * 4; // Reduced lock strength from 8
+                // Standard auto-aim strength for regular enemies
+                const lockStrength = 4;
+                this.angle += normalizedDiff * deltaTime * lockStrength;
             } else if (moveVec.x !== 0 || moveVec.y !== 0) {
                 const destAngle = Math.atan2(moveVec.y, moveVec.x);
                 let diff = destAngle - this.angle;
@@ -352,6 +359,46 @@ export class Player {
             this.drawShape(ctx, this.color);
             ctx.restore();
         });
+
+        // ── Draw Targeting Reticle on Locked Enemy ──
+        // Hide reticle during boss fights
+        const bossActive = this.game.boss && !this.game.boss.markedForDeletion;
+        if (this.game.autoTargetEnabled && !bossActive) {
+            const targetEnemy = this.findNearestEnemy(700);
+            if (targetEnemy) {
+                ctx.save();
+                const boxSize = 25;
+                const pulse = Math.sin(Date.now() * 0.008) * 0.3 + 0.7;
+                
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 2;
+                ctx.globalAlpha = pulse * 0.8;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#00ff00';
+                
+                // Draw corner brackets around target
+                const corners = [
+                    [-1, -1], [1, -1], [1, 1], [-1, 1]
+                ];
+                for (const [sx, sy] of corners) {
+                    ctx.beginPath();
+                    ctx.moveTo(targetEnemy.x + sx * (boxSize - 5), targetEnemy.y + sy * boxSize);
+                    ctx.lineTo(targetEnemy.x + sx * boxSize, targetEnemy.y + sy * boxSize);
+                    ctx.lineTo(targetEnemy.x + sx * boxSize, targetEnemy.y + sy * (boxSize - 5));
+                    ctx.stroke();
+                }
+                
+                // Draw crosshair center
+                ctx.beginPath();
+                ctx.moveTo(targetEnemy.x - 8, targetEnemy.y);
+                ctx.lineTo(targetEnemy.x + 8, targetEnemy.y);
+                ctx.moveTo(targetEnemy.x, targetEnemy.y - 8);
+                ctx.lineTo(targetEnemy.x, targetEnemy.y + 8);
+                ctx.stroke();
+                
+                ctx.restore();
+            }
+        }
 
         // Draw Player
         ctx.save();

@@ -44,42 +44,41 @@ class AssetLoader {
 export const SHIP_DATA = {
     // ── Tier 0: Starter ──────────────────────────────────────────────────────
     'default': { name: 'INTERCEPTOR', price: 0, hp: 5, speed: 450, damage: 3, fireRate: 0.12, missileCooldown: 1.5, missileCount: 2, color: '#00f3ff', bulletType: 'normal', desc: 'Standard issue. Reliable & fast.' },
-    // ── Tier 1: Early (~25-180 coins) ──────────────────────────────────────
-    'scout': { name: 'RAZORBACK', price: 25, hp: 5, speed: 600, damage: 3, fireRate: 0.10, missileCooldown: 1.2, missileCount: 2, color: '#ffff00', bulletType: 'spread', desc: 'Blazing speed. Fan spread.' },
-    'phantom': { name: 'PHANTOM', price: 50, hp: 6, speed: 550, damage: 3, fireRate: 0.08, missileCooldown: 1.0, missileCount: 2, color: '#9900ff', bulletType: 'spread', desc: 'Nimble spread fighter.' },
-    'rapid': { name: 'STORM BRINGER', price: 100, hp: 6, speed: 450, damage: 3, fireRate: 0.06, missileCooldown: 1.0, missileCount: 3, color: '#aa00ff', bulletType: 'normal', desc: 'Hyper fire rate. Dual missiles.' },
-    'fighter': { name: 'CRIMSON FURY', price: 150, hp: 8, speed: 460, damage: 5, fireRate: 0.12, missileCooldown: 1.5, missileCount: 3, color: '#ff0055', bulletType: 'normal', desc: 'High damage. Extra HP.' },
-    'pulse': { name: 'NEON PULSE', price: 250, hp: 8, speed: 500, damage: 5, fireRate: 0.04, missileCooldown: 1.2, missileCount: 3, color: '#00ffff', bulletType: 'normal', desc: 'Extreme fire rate. Neon core.' },
-    // ── Tier 2: Mid (~500-2500 coins) ──────────────────────────────────────
-    'quantum': { name: 'QUANTUM GHOST', price: 500, hp: 10, speed: 650, damage: 16, fireRate: 0.05, missileCooldown: 1.0, missileCount: 4, color: '#39ff14', bulletType: 'railgun', desc: 'Quantum entity. Hyper velocity.' },
-    'void': { name: 'VOID STALKER', price: 750, hp: 10, speed: 500, damage: 12, fireRate: 0.20, missileCooldown: 1.5, missileCount: 4, color: '#4400ff', bulletType: 'railgun', desc: 'Experimental railgun. Shadow walk.' },
-    'solar': { name: 'SOLAR FLARE', price: 1000, hp: 10, speed: 460, damage: 8, fireRate: 0.12, missileCooldown: 1.5, missileCount: 4, color: '#ffcc00', bulletType: 'explosive', desc: 'Explosive solar rounds.' },
-    'bomber': { name: 'DOOMSDAY', price: 1500, hp: 10, speed: 420, damage: 8, fireRate: 0.10, missileCooldown: 1.5, missileCount: 5, color: '#ff6600', bulletType: 'explosive', desc: 'Triple missile barrage.' },
-    'tank': { name: 'V.G. TITAN', price: 2500, hp: 14, speed: 400, damage: 8, fireRate: 0.12, missileCooldown: 1.8, missileCount: 4, color: '#00ff44', bulletType: 'piercing', desc: 'Heavy armor. Piercing shots. Heals on kill.' },
-    'laser_drone': { name: 'LASER DRONE', price: 4000, hp: 10, speed: 480, damage: 6, fireRate: 0.03, missileCooldown: 1.2, missileCount: 4, color: '#ff00cc', bulletType: 'laser', desc: 'Sustained laser pulses. High DPS.' },
-    // ── Tier 3: Upper-Mid (~7500-50000 coins) ────────────────────────────────
-    'wraith': { name: 'COSMIC WRAITH', price: 7500, hp: 12, speed: 600, damage: 20, fireRate: 0.05, missileCooldown: 1.0, missileCount: 5, color: '#cc44ff', bulletType: 'railgun', desc: 'Void phantom. Reality breaker.' },
-    'vanguard': { name: 'VANGUARD', price: 12000, hp: 12, speed: 480, damage: 8, fireRate: 0.06, missileCooldown: 1.2, missileCount: 5, color: '#00ffcc', bulletType: 'piercing', desc: 'Elite piercing fighter.' },
-    'eclipse': { name: 'ECLIPSE SERAPH', price: 25000, hp: 14, speed: 500, damage: 12, fireRate: 0.05, missileCooldown: 1.0, missileCount: 6, color: '#66ccff', bulletType: 'piercing', desc: 'Angel core. Enhanced hull.' },
-    'shadowblade': { name: 'SHADOWBLADE', price: 50000, hp: 14, speed: 560, damage: 15, fireRate: 0.06, missileCooldown: 1.2, missileCount: 6, color: '#5522aa', bulletType: 'piercing', desc: 'Silent assassin. Stealth.' },
-    'guardian': { name: 'GALAXY GUARDIAN', price: 100000, hp: 16, speed: 380, damage: 8, fireRate: 0.10, missileCooldown: 1.8, missileCount: 5, color: '#ffffff', bulletType: 'normal', desc: 'Elite protector. High HP.' },
-    // ── Tier 4: Advanced (~250K-750K coins) ────────────────────────────────
-    'obliterator': { name: 'OBLITERATOR PRIME', price: 250000, hp: 16, speed: 440, damage: 18, fireRate: 0.06, missileCooldown: 1.2, missileCount: 7, color: '#ff3366', bulletType: 'explosive', desc: 'Siege frame. Reinforced core.' },
-    'inferno': { name: 'INFERNO KING', price: 500000, hp: 16, speed: 520, damage: 22, fireRate: 0.07, missileCooldown: 1.0, missileCount: 7, color: '#ff4500', bulletType: 'explosive', desc: 'Blazing hellfire. Pure devastation.' },
-    'juggernaut': { name: 'JUGGERNAUT', price: 750000, hp: 20, speed: 380, damage: 10, fireRate: 0.12, missileCooldown: 1.8, missileCount: 7, color: '#ff9900', bulletType: 'piercing', desc: 'God of War. Heals on kill.' },
-    'tempest': { name: 'TEMPEST LORD', price: 1000000, hp: 18, speed: 500, damage: 18, fireRate: 0.06, missileCooldown: 1.1, missileCount: 8, color: '#00d9ff', bulletType: 'spread', desc: 'Lightning god. Storm incarnate.' },
-    // ── Tier 5: Elite (~1.5M-5M coins) ───────────────────────────────────
-    'reaper': { name: 'VOID REAPER', price: 1500000, hp: 18, speed: 550, damage: 28, fireRate: 0.05, missileCooldown: 0.9, missileCount: 8, color: '#880022', bulletType: 'explosive', desc: 'Death embodied. Final judgment.' },
-    'crimson_emperor': { name: 'CRIMSON EMPEROR', price: 2000000, hp: 20, speed: 490, damage: 25, fireRate: 0.06, missileCooldown: 1.0, missileCount: 10, color: '#dc143c', bulletType: 'piercing', desc: 'Royal ruler. Absolute dominion.' },
-    'phoenix': { name: 'CELESTIAL PHOENIX', price: 2500000, hp: 22, speed: 530, damage: 26, fireRate: 0.07, missileCooldown: 0.9, missileCount: 10, color: '#ffa500', bulletType: 'explosive', desc: 'Mythic firebird. Eternal rebirth.' },
-    'starborn': { name: 'STARBORN TITAN', price: 3500000, hp: 22, speed: 480, damage: 18, fireRate: 0.04, missileCooldown: 0.8, missileCount: 9, color: '#99ffcc', bulletType: 'railgun', desc: 'Mythic relic. God-tier hull.' },
-    'leviathan': { name: 'LEVIATHAN ROX', price: 5000000, hp: 26, speed: 460, damage: 24, fireRate: 0.08, missileCooldown: 1.2, missileCount: 10, color: '#003d82', bulletType: 'explosive', desc: 'Deep sea titan. Unstoppable.' },
-    // ── Tier 6: Legendary (Achievement-Locked ONLY now or super high) ──────────────
-    'sentinel': { name: 'ETERNAL SENTINEL', price: 7500000, hp: 30, speed: 500, damage: 32, fireRate: 0.06, missileCooldown: 0.8, missileCount: 14, color: '#e8e8e8', bulletType: 'railgun', desc: 'Ultimate guardian. Infinite power.' },
-    'nova': { name: 'NOVA ASCENDANT', price: 10000000, hp: 24, speed: 580, damage: 36, fireRate: 0.04, missileCooldown: 0.6, missileCount: 16, color: '#ffeeaa', bulletType: 'railgun', desc: 'Supernova core. Reality-shattering.' },
+    // ── Tier 1: Early ──────────────────────────────────────
+    'scout': { name: 'RAZORBACK', price: 10225, hp: 5, speed: 600, damage: 3, fireRate: 0.10, missileCooldown: 1.2, missileCount: 2, color: '#ffff00', bulletType: 'spread', desc: 'Blazing speed. Fan spread.' },
+    'phantom': { name: 'PHANTOM', price: 10450, hp: 6, speed: 550, damage: 3, fireRate: 0.08, missileCooldown: 1.0, missileCount: 2, color: '#9900ff', bulletType: 'spread', desc: 'Nimble spread fighter.' },
+    'rapid': { name: 'STORM BRINGER', price: 10750, hp: 6, speed: 450, damage: 3, fireRate: 0.06, missileCooldown: 1.0, missileCount: 3, color: '#aa00ff', bulletType: 'normal', desc: 'Hyper fire rate. Dual missiles.' },
+    'fighter': { name: 'CRIMSON FURY', price: 11200, hp: 8, speed: 460, damage: 5, fireRate: 0.12, missileCooldown: 1.5, missileCount: 3, color: '#ff0055', bulletType: 'normal', desc: 'High damage. Extra HP.' },
+    'pulse': { name: 'NEON PULSE', price: 11950, hp: 8, speed: 500, damage: 5, fireRate: 0.04, missileCooldown: 1.2, missileCount: 3, color: '#00ffff', bulletType: 'normal', desc: 'Extreme fire rate. Neon core.' },
+    // ── Tier 2: Mid ──────────────────────────────────────
+    'quantum': { name: 'QUANTUM GHOST', price: 13000, hp: 10, speed: 650, damage: 16, fireRate: 0.05, missileCooldown: 1.0, missileCount: 4, color: '#39ff14', bulletType: 'railgun', desc: 'Quantum entity. Hyper velocity.', playCountToUnlock: 50 },
+    'void': { name: 'VOID STALKER', price: 14800, hp: 10, speed: 500, damage: 12, fireRate: 0.20, missileCooldown: 1.5, missileCount: 4, color: '#4400ff', bulletType: 'railgun', desc: 'Experimental railgun. Shadow walk.', playCountToUnlock: 50 },
+    'solar': { name: 'SOLAR FLARE', price: 17500, hp: 10, speed: 460, damage: 8, fireRate: 0.12, missileCooldown: 1.5, missileCount: 4, color: '#ffcc00', bulletType: 'explosive', desc: 'Explosive solar rounds.', playCountToUnlock: 50 },
+    'bomber': { name: 'DOOMSDAY', price: 22000, hp: 10, speed: 420, damage: 8, fireRate: 0.10, missileCooldown: 1.5, missileCount: 5, color: '#ff6600', bulletType: 'explosive', desc: 'Triple missile barrage.', playCountToUnlock: 50 },
+    'tank': { name: 'V.G. TITAN', price: 28000, hp: 7, speed: 400, damage: 8, fireRate: 0.12, missileCooldown: 1.8, missileCount: 4, color: '#00ff44', bulletType: 'piercing', desc: 'Heavy armor. Piercing shots. Heals on kill.' },
+    'laser_drone': { name: 'LASER DRONE', price: 37000, hp: 10, speed: 480, damage: 6, fireRate: 0.03, missileCooldown: 1.2, missileCount: 4, color: '#ff00cc', bulletType: 'laser', desc: 'Sustained laser pulses. High DPS.', playCountToUnlock: 50 },
+    // ── Tier 3: Upper-Mid ────────────────────────────────
+    'wraith': { name: 'COSMIC WRAITH', price: 52000, hp: 6, speed: 600, damage: 20, fireRate: 0.05, missileCooldown: 1.0, missileCount: 5, color: '#cc44ff', bulletType: 'railgun', desc: 'Void phantom. Reality breaker.' },
+    'vanguard': { name: 'VANGUARD', price: 77500, hp: 6, speed: 480, damage: 8, fireRate: 0.06, missileCooldown: 1.2, missileCount: 5, color: '#00ffcc', bulletType: 'piercing', desc: 'Elite piercing fighter.' },
+    'eclipse': { name: 'ECLIPSE SERAPH', price: 122500, hp: 7, speed: 500, damage: 12, fireRate: 0.05, missileCooldown: 1.0, missileCount: 6, color: '#66ccff', bulletType: 'piercing', desc: 'Angel core. Enhanced hull.' },
+    'shadowblade': { name: 'SHADOWBLADE', price: 175000, hp: 7, speed: 560, damage: 15, fireRate: 0.06, missileCooldown: 1.2, missileCount: 6, color: '#5522aa', bulletType: 'piercing', desc: 'Silent assassin. Stealth.' },
+    'guardian': { name: 'GALAXY GUARDIAN', price: 250000, hp: 8, speed: 380, damage: 8, fireRate: 0.10, missileCooldown: 1.8, missileCount: 5, color: '#ffffff', bulletType: 'normal', desc: 'Elite protector. High HP.' },
+    // ── Tier 4: Advanced ────────────────────────────────
+    'obliterator': { name: 'OBLITERATOR PRIME', price: 385000, hp: 8, speed: 440, damage: 18, fireRate: 0.06, missileCooldown: 1.2, missileCount: 7, color: '#ff3366', bulletType: 'explosive', desc: 'Siege frame. Reinforced core.' },
+    'inferno': { name: 'INFERNO KING', price: 610000, hp: 8, speed: 520, damage: 22, fireRate: 0.07, missileCooldown: 1.0, missileCount: 7, color: '#ff4500', bulletType: 'explosive', desc: 'Blazing hellfire. Pure devastation.' },
+    'juggernaut': { name: 'JUGGERNAUT', price: 910000, hp: 10, speed: 380, damage: 10, fireRate: 0.12, missileCooldown: 1.8, missileCount: 7, color: '#ff9900', bulletType: 'piercing', desc: 'God of War. Heals on kill.', playCountToUnlock: 100 },
+    'tempest': { name: 'TEMPEST LORD', price: 1360000, hp: 9, speed: 500, damage: 18, fireRate: 0.06, missileCooldown: 1.1, missileCount: 8, color: '#00d9ff', bulletType: 'spread', desc: 'Lightning god. Storm incarnate.', playCountToUnlock: 100 },
+    // ── Tier 5: Elite ───────────────────────────────────
+    'reaper': { name: 'VOID REAPER', price: 1810000, hp: 9, speed: 550, damage: 28, fireRate: 0.05, missileCooldown: 0.9, missileCount: 8, color: '#880022', bulletType: 'explosive', desc: 'Death embodied. Final judgment.', playCountToUnlock: 100 },
+    'crimson_emperor': { name: 'CRIMSON EMPEROR', price: 2710000, hp: 10, speed: 490, damage: 25, fireRate: 0.06, missileCooldown: 1.0, missileCount: 10, color: '#dc143c', bulletType: 'piercing', desc: 'Royal ruler. Absolute dominion.', playCountToUnlock: 100 },
+    'phoenix': { name: 'CELESTIAL PHOENIX', price: 3760000, hp: 11, speed: 530, damage: 26, fireRate: 0.07, missileCooldown: 0.9, missileCount: 10, color: '#ffa500', bulletType: 'explosive', desc: 'Mythic firebird. Eternal rebirth.', playCountToUnlock: 100 },
+    'starborn': { name: 'STARBORN TITAN', price: 5260000, hp: 11, speed: 480, damage: 18, fireRate: 0.04, missileCooldown: 0.8, missileCount: 9, color: '#99ffcc', bulletType: 'railgun', desc: 'Mythic relic. God-tier hull.', playCountToUnlock: 100 },
+    'leviathan': { name: 'LEVIATHAN ROX', price: 7510000, hp: 13, speed: 460, damage: 24, fireRate: 0.08, missileCooldown: 1.2, missileCount: 10, color: '#003d82', bulletType: 'explosive', desc: 'Deep sea titan. Unstoppable.', playCountToUnlock: 100 },
+    // ── Tier 6: Legendary ──────────────────────────────
+    'sentinel': { name: 'ETERNAL SENTINEL', price: 11260000, hp: 15, speed: 500, damage: 32, fireRate: 0.06, missileCooldown: 0.8, missileCount: 14, color: '#e8e8e8', bulletType: 'railgun', desc: 'Ultimate guardian. Infinite power.', playCountToUnlock: 100 },
+    'nova': { name: 'NOVA ASCENDANT', price: 13510000, hp: 12, speed: 580, damage: 36, fireRate: 0.04, missileCooldown: 0.6, missileCount: 16, color: '#ffeeaa', bulletType: 'railgun', desc: 'Supernova core. Reality-shattering.', playCountToUnlock: 100 },
 
-    // ── PRESTIGE TIER: Achievement-locked only — cannot be purchased ──────────
-    // Unlock condition shown in parentheses. Price is 0 (free once unlocked).
+    // ── PRESTIGE TIER: Achievement-locked only — cannot be purchased (hidden from armory) ──────────
     'nemesis': {
         name: 'NEMESIS PRIME', price: 0,
         hp: 28, speed: 620, damage: 40, fireRate: 0.04, missileCooldown: 0.7, missileCount: 12,
@@ -133,6 +132,7 @@ export class Game {
         // Persistence
         this.highScore = parseInt(localStorage.getItem('midnight_highscore')) || 0;
         this.coins = parseInt(localStorage.getItem('midnight_coins')) || 0;
+        this.playCount = parseInt(localStorage.getItem('midnight_play_count')) || 0;
 
         // Testing toggles (DISABLED FOR PRODUCTION)
         const UNLOCK_ALL_SHIPS_FOR_TESTING = false;
@@ -780,19 +780,20 @@ export class Game {
         if (ship.specialAbility === 'all_passives') passiveWeight += 1.0;
         if (ship.invincible) passiveWeight += 0.5;
 
-        // 4. Combined Scaling
+        // 4. Combined Scaling — more aggressive so high-tier jets don't trivialize content
         const totalBasePower = baseGunDps + baseMissileDps;
         const totalPlayerPower = (playerGunDps + playerMissileDps) * passiveWeight;
 
-        // Scale conservatively so upgrades still feel powerful but don't trivialize bosses
-        const powerMultiplier = Math.pow(totalPlayerPower / totalBasePower, 0.75);
-        const speedMultiplier = Math.pow(ship.speed / baseShip.speed, 0.7);
-        const survivabilityMultiplier = Math.pow(ship.hp / baseShip.hp, 0.8);
+        // Exponent 0.90 (near-linear) ensures boss HP/damage keeps pace with player DPS
+        const powerMultiplier = Math.pow(totalPlayerPower / totalBasePower, 0.90);
+        const speedMultiplier = Math.pow(ship.speed / baseShip.speed, 0.80);
+        const survivabilityMultiplier = Math.pow(ship.hp / baseShip.hp, 0.85);
 
         return {
-            hpScale: Math.max(1, powerMultiplier),           // Boss HP scales with player power
-            damageScale: Math.max(1, survivabilityMultiplier), // Boss damage scales with player HP
-            speedScale: Math.max(1, speedMultiplier)       // Boss speed scales with player speed
+            hpScale: Math.max(1, powerMultiplier),           // Boss HP scales with player DPS
+            // Damage scales with both player HP (survivability) AND player DPS — big DPS = tougher boss attacks
+            damageScale: Math.max(1, Math.max(survivabilityMultiplier, powerMultiplier * 0.6)),
+            speedScale: Math.max(1, speedMultiplier)         // Boss speed scales with player speed
         };
     }
 
@@ -1791,42 +1792,8 @@ export class Game {
         this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
         if (this.audio) this.audio.explosion();
 
-        // ── Combo-Based Economy (Floating Text & Coin Drops) ──
-        if (useCombo && this.comboMultiplier > 1) {
-            // Visual text: Removed descriptive text popups as per user request
-
-            // Coin Drops
-            // Higher multiplier = better chance and better coins
-            const dropChance = 0.1 + (this.comboMultiplier * 0.05); // 1.5x = 17.5% chance. 5x = 35% chance
-
-            if (this.random() < dropChance) {
-                let coinType = 'bronze';
-                if (this.comboMultiplier >= 4) coinType = 'platinum';
-                else if (this.comboMultiplier >= 3) coinType = 'gold';
-                else if (this.comboMultiplier >= 2) coinType = 'silver';
-
-                // You will need a spawnCoin logic or currency logic here 
-                // For now, let's just directly award currency based on the visual value
-                let coinValue = 1;
-                if (coinType === 'silver') coinValue = 5;
-                if (coinType === 'gold') coinValue = 25;
-                if (coinType === 'platinum') coinValue = 100;
-
-                // Directly award (Assuming you have a currency tracker, else use score)
-                // For visual flair right now, we can just award massive score or if a coin entity exists, spawn it.
-                // Assuming no coin entity exists yet, we'll give raw Currency/Points and a visual text:
-                this.score += coinValue * 50; // Bonus points for now
-                if (this.achievementManager) {
-                    // If you have a coins system, add it here.
-                    // this.achievementManager.addStat('coins', coinValue);
-                }
-
-                const cColor = coinType === 'platinum' ? '#e5e4e2' :
-                    coinType === 'gold' ? '#ffd700' :
-                        coinType === 'silver' ? '#c0c0c0' : '#cd7f32';
-                this.particles.push(new FloatingText(this, enemy.x, enemy.y - 20, `+${coinValue} COIN`, cColor));
-            }
-        }
+        // ── Combo-Based Economy ──
+        // Removed combo coin drops as per user request
 
         // Passive: trigger on-kill effects for all players
         this.getPlayers().forEach(p => { if (p.onEnemyKill) p.onEnemyKill(); });
@@ -2544,6 +2511,10 @@ export class Game {
         if (this.gameOver) return; // Prevent multiple calls
         this.gameOver = true;
 
+        // Increment play count
+        this.playCount += 1;
+        localStorage.setItem('midnight_play_count', this.playCount);
+
         // Stats for achievements
         if (this.achievementManager) {
             this.achievementManager.addStat('games', 1);
@@ -2558,15 +2529,16 @@ export class Game {
         }
         // Do NOT set isRunning to false, so particles can animate
 
-        // Score multiplier for prestige ship: celestial / absolute = ×3
+        // Calculate Coins BEFORE prestige multiplier (prevents exponential coin abuse)
+        // 1 coin per 150 score — designed for ~50-200 coins per average game
+        const earnedCoins = Math.floor(this.score / 150);
+        this.coins += earnedCoins;
+
+        // Score multiplier for prestige ship: affects leaderboard only, NOT coins
         const shipData = SHIP_DATA[this.selectedShip];
         if (shipData?.specialAbility === 'score_triple' || shipData?.specialAbility === 'all_passives') {
             this.score = Math.floor(this.score * 3);
         }
-
-        // Calculate Coins (1 coin per 100 score)
-        const earnedCoins = Math.floor(this.score / 100);
-        this.coins += earnedCoins;
         localStorage.setItem('midnight_coins', this.coins);
 
         // Track total coins for coin achievements
@@ -2683,6 +2655,20 @@ export class Game {
         }
     }
 
+    // Get previous ship in progression tree (prerequisite)
+    getPreviousShip(shipKey) {
+        const shipOrder = [
+            'default', 'scout', 'phantom', 'rapid', 'fighter', 'pulse',
+            'quantum', 'void', 'solar', 'bomber', 'tank', 'laser_drone',
+            'wraith', 'vanguard', 'eclipse', 'shadowblade', 'guardian',
+            'obliterator', 'inferno', 'juggernaut', 'tempest',
+            'reaper', 'crimson_emperor', 'phoenix', 'starborn', 'leviathan',
+            'sentinel', 'nova'
+        ];
+        const idx = shipOrder.indexOf(shipKey);
+        return idx > 0 ? shipOrder[idx - 1] : null;
+    }
+
     renderStore() {
         const grid = document.getElementById('ship-grid');
         const coinsDisplay = document.getElementById('coins-display-store');
@@ -2690,7 +2676,15 @@ export class Game {
         coinsDisplay.innerText = `COINS: ${this.coins}`;
         document.getElementById('total-coins-display').innerText = `COINS: ${this.coins}`;
 
-        for (const [key, ship] of Object.entries(SHIP_DATA)) {
+        // Sort ships by HP (excluding prestige/achievement-locked ships) and then by price
+        const sortedShips = Object.entries(SHIP_DATA)
+            .filter(([key, ship]) => !ship.achievementLocked) // Skip prestige ships
+            .sort((a, b) => {
+                const hpDiff = a[1].hp - b[1].hp; // Sort by HP first
+                return hpDiff !== 0 ? hpDiff : a[1].price - b[1].price; // Then by price if HP is same
+            });
+
+        for (const [key, ship] of sortedShips) {
             const card = document.createElement('div');
             card.className = `ship-card ${this.ownedShips.includes(key) ? 'owned' : ''} ${this.selectedShip === key ? 'selected' : ''}`;
 
@@ -2737,38 +2731,36 @@ export class Game {
             const btn = document.createElement('button');
             btn.className = 'action-btn';
 
-            if (ship.achievementLocked) {
-                // Check if achievement is completed
-                const isAchUnlocked = this.achievementManager
-                    ? (this.achievementManager.claimed.includes(ship.achievementLocked) ||
-                        this.achievementManager.completedButUnclaimed.includes(ship.achievementLocked))
-                    : this.ownedShips.includes(key);
-
-                if (this.selectedShip === key) {
-                    btn.innerText = 'EQUIPPED';
-                    btn.disabled = true;
-                } else if (this.ownedShips.includes(key) || isAchUnlocked) {
-                    btn.innerText = 'EQUIP';
-                    btn.onclick = () => this.selectShip(key);
-                    // Ensure it's in ownedShips
-                    if (!this.ownedShips.includes(key)) this.ownedShips.push(key);
-                } else {
-                    btn.innerText = 'LOCKED';
-                    btn.disabled = true;
-                    btn.title = `Complete achievement: ${ship.achievementLocked.replace(/_/g, ' ').toUpperCase()}`;
-                }
-            } else if (this.selectedShip === key) {
+            if (this.selectedShip === key) {
                 btn.innerText = 'EQUIPPED';
                 btn.disabled = true;
             } else if (this.ownedShips.includes(key)) {
                 btn.innerText = 'EQUIP';
                 btn.onclick = () => this.selectShip(key);
             } else {
-                btn.innerText = `BUY ⬡ ${ship.price.toLocaleString()}`;
-                if (this.coins < ship.price) {
+                // Check if previous ship is owned (linear progression)
+                const prevShip = this.getPreviousShip(key);
+                const hasPrerequisite = !prevShip || this.ownedShips.includes(prevShip);
+
+                // Check play count requirement
+                const playCountReq = ship.playCountToUnlock || 0;
+                const hasPlayCount = this.playCount >= playCountReq;
+
+                if (!hasPrerequisite) {
+                    btn.innerText = 'LOCKED';
+                    btn.disabled = true;
+                    const prevName = SHIP_DATA[prevShip]?.name || 'previous ship';
+                    btn.title = `Unlock ${prevName} first`;
+                } else if (!hasPlayCount) {
+                    btn.innerText = 'LOCKED';
+                    btn.disabled = true;
+                    btn.title = `Requires ${playCountReq} playtimes (${this.playCount}/${playCountReq})`;
+                } else if (this.coins < ship.price) {
+                    btn.innerText = `BUY ⬡ ${ship.price.toLocaleString()}`;
                     btn.disabled = true;
                     btn.title = `Need ${(ship.price - this.coins).toLocaleString()} more coins`;
                 } else {
+                    btn.innerText = `BUY ⬡ ${ship.price.toLocaleString()}`;
                     btn.onclick = () => this.buyShip(key);
                 }
             }
@@ -2779,6 +2771,21 @@ export class Game {
 
     buyShip(type) {
         const ship = SHIP_DATA[type];
+
+        // Check prerequisite (must own previous ship)
+        const prevShip = this.getPreviousShip(type);
+        if (prevShip && !this.ownedShips.includes(prevShip)) {
+            const prevName = SHIP_DATA[prevShip]?.name || 'previous ship';
+            alert(`⚠️ You must unlock ${prevName} first!`);
+            return;
+        }
+
+        // Check play count requirement
+        const playCountReq = ship.playCountToUnlock || 0;
+        if (this.playCount < playCountReq) {
+            alert(`⚠️ This ship requires ${playCountReq} playtimes to unlock. You have ${this.playCount}/${playCountReq}.`);
+            return;
+        }
 
         if (this.coins >= ship.price) {
             this.coins -= ship.price;
