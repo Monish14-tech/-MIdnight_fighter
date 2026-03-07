@@ -667,53 +667,15 @@ h1 {
 }
 
 .top-player-entry {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
+    display: block;
     padding: 6px 12px;
     margin: 4px 0;
     background: rgba(0, 0, 0, 0.4);
     border-radius: 5px;
     font-size: 0.8rem;
-}
-
-.top-player-entry.top-1 {
-    color: #FFD700;
-    text-shadow: 0 0 10px #FFD700, 0 0 20px #FFD700;
-    border: 1px solid rgba(255, 215, 0, 0.4);
-    animation: glowGold 2s ease-in-out infinite alternate;
-}
-
-.top-player-entry.top-2 {
-    color: #C0C0C0;
-    text-shadow: 0 0 10px #C0C0C0;
-    border: 1px solid rgba(192, 192, 192, 0.3);
-    animation: glowSilver 2s ease-in-out infinite alternate;
-}
-
-.top-player-entry.top-3 {
-    color: #CD7F32;
-    text-shadow: 0 0 10px #CD7F32;
-    border: 1px solid rgba(205, 127, 50, 0.3);
-    animation: glowBronze 2s ease-in-out infinite alternate;
-}
-
-.top-player-badge {
-    font-weight: bold;
-    font-size: 1rem;
-    min-width: 30px;
-}
-
-.top-player-name {
-    flex: 1;
-    text-align: left;
-    font-weight: bold;
-}
-
-.top-player-score {
-    font-size: 0.75rem;
-    opacity: 0.8;
+    color: #00f3ff;
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    text-shadow: 0 0 5px rgba(0, 243, 255, 0.5);
 }
 
 .ship-card.owned {

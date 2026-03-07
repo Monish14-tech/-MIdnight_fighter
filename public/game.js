@@ -868,28 +868,40 @@ export class Game {
         // Update Main Menu Rank Display
         this.refreshRankDisplay();
 
-        // Populate Top 3 Global Players on Start Screen
+        // Populate Top 5 Global Players on Start Screen (ONLY if player is in top 5)
         try {
-            const top3 = await this.leaderboard.fetchLeaderboard(3);
+            const top5 = await this.leaderboard.fetchLeaderboard(5);
             const container = document.getElementById('top-players-display');
-            if (container && top3.length > 0) {
-                // Keep the header, clear existing entries
-                const header = container.querySelector('h3');
-                container.innerHTML = '';
-                if (header) container.appendChild(header);
-                else { const h = document.createElement('h3'); h.innerText = '★ GLOBAL LEGENDS ★'; container.appendChild(h); }
+            if (container && top5.length > 0) {
+                // Check if the current player is in the top 5
+                const isPlayerInTop5 = top5.some(entry => entry.playerName === playerName);
 
-                top3.forEach((entry, idx) => {
-                    const div = document.createElement('div');
-                    div.className = `top-player-entry top-${idx + 1}`;
-                    const badgeSymbols = ['#1', '#2', '#3'];
-                    div.innerHTML = `
-                        <span class="top-player-badge">${badgeSymbols[idx]}</span>
-                        <span class="top-player-name">${entry.playerName}</span>
-                        <span class="top-player-score">${entry.score.toLocaleString()} pts</span>
-                    `;
-                    container.appendChild(div);
-                });
+                if (isPlayerInTop5) {
+                    container.style.display = 'block'; // Ensure it's visible
+
+                    // Keep the header, clear existing entries
+                    const header = container.querySelector('h3');
+                    container.innerHTML = '';
+                    if (header) {
+                        header.innerText = '★ GLOBAL LEGEND ★';
+                        container.appendChild(header);
+                    } else {
+                        const h = document.createElement('h3');
+                        h.innerText = '★ GLOBAL LEGEND ★';
+                        container.appendChild(h);
+                    }
+
+                    top5.forEach((entry, idx) => {
+                        const div = document.createElement('div');
+                        div.className = 'top-player-entry';
+                        // Simple text format: #Rank Name Score
+                        div.innerText = `#${idx + 1} ${entry.playerName} ${entry.score.toLocaleString()} pts`;
+                        container.appendChild(div);
+                    });
+                } else {
+                    // Hide the element if player is not in top 5
+                    container.style.display = 'none';
+                }
             }
         } catch (e) {
             console.warn('[Sync] Failed to fetch top players:', e);
