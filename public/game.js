@@ -867,6 +867,33 @@ export class Game {
 
         // Update Main Menu Rank Display
         this.refreshRankDisplay();
+
+        // Populate Top 3 Global Players on Start Screen
+        try {
+            const top3 = await this.leaderboard.fetchLeaderboard(3);
+            const container = document.getElementById('top-players-display');
+            if (container && top3.length > 0) {
+                // Keep the header, clear existing entries
+                const header = container.querySelector('h3');
+                container.innerHTML = '';
+                if (header) container.appendChild(header);
+                else { const h = document.createElement('h3'); h.innerText = '★ GLOBAL LEGENDS ★'; container.appendChild(h); }
+
+                top3.forEach((entry, idx) => {
+                    const div = document.createElement('div');
+                    div.className = `top-player-entry top-${idx + 1}`;
+                    const badgeSymbols = ['#1', '#2', '#3'];
+                    div.innerHTML = `
+                        <span class="top-player-badge">${badgeSymbols[idx]}</span>
+                        <span class="top-player-name">${entry.playerName}</span>
+                        <span class="top-player-score">${entry.score.toLocaleString()} pts</span>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+        } catch (e) {
+            console.warn('[Sync] Failed to fetch top players:', e);
+        }
     }
 
     resetProgress() {
@@ -1615,8 +1642,18 @@ export class Game {
                 }
 
                 this.powerupTimer += dt;
-                if (this.powerupTimer > this.powerupInterval && this.powerups.length < 3) {
-                    this.spawnPowerUp();
+                // During boss fights, spawn power-ups more frequently (every 8s)
+                const powerupCooldown = this.boss ? 8.0 : this.powerupInterval;
+                if (this.powerupTimer > powerupCooldown && this.powerups.length < (this.boss ? 5 : 3)) {
+                    if (this.boss) {
+                        // Guaranteed mercy drop during boss fight
+                        this.spawnPowerUpAt(
+                            this.random() * this.width * 0.8 + this.width * 0.1,
+                            this.random() * this.height * 0.8 + this.height * 0.1
+                        );
+                    } else {
+                        this.spawnPowerUp();
+                    }
                     this.powerupTimer = 0;
                 }
             }
@@ -2078,31 +2115,50 @@ export class Game {
         let type = 'speed';
 
         // ── Context-Aware Power-up Drops (Mercy System) ──
-        if (this.player && this.player.currentHealth > 0) {
+        if (this.player) {
             const hpRatio = this.player.currentHealth / this.player.maxHealth;
+            const isBossFight = !!this.boss; // Detect boss fight
 
-            // Build weighted pool
-            const pool = [];
-
-            // Base weights
             let wHealth = 1;
             let wShield = 1;
-            let wOffense = 2; // double_damage, rapid_fire
-            let wUtility = 1; // speed, slowmo, invulnerability
+            let wOffense = 2;
+            let wUtility = 1;
+            let wEmp = 0;
+            let wMaxHeal = 0;
 
-            // Context Modifiers
-            if (hpRatio <= 0.35) {
-                // Critical HP: Huge boost to survival items
-                wHealth = 8;
-                wShield = 5;
-                wOffense = 0.5;
-            } else if (hpRatio >= 0.9) {
-                // Full HP: Don't drop health
+            // Initialize pool for weighted random selection
+            const pool = [];
+
+            if (isBossFight) {
+                // Boss fight mercy: heavy bias toward survivability
+                wHealth = 5;
+                wShield = 4;
+                wEmp = 3;
+                wMaxHeal = 2;
+                wOffense = 1;
+                wUtility = 2;
+            } else if (hpRatio < 0.35) {
+                wHealth = 6;
+                wShield = 4;
+                wOffense = 1;
+                wUtility = 1;
+            } else if (hpRatio < 0.6) {
+                wHealth = 3;
+                wShield = 2;
+                wOffense = 2;
+                wUtility = 1;
+            } else if (hpRatio >= 1.0) {
                 wHealth = 0;
                 wOffense = 4;
             }
 
-            // If they don't have offensive buffs, give them a chance
+            // Boss fight + critical HP = maximum mercy
+            if (isBossFight && hpRatio < 0.35) {
+                wHealth = 8;
+                wShield = 5;
+                wMaxHeal = 4;
+            }
+
             const hasOffense = this.player.doubleDamageTimer > 0 || this.player.rapidFireTimer > 0;
             if (!hasOffense && hpRatio > 0.35) {
                 wOffense += 3;
@@ -2111,6 +2167,8 @@ export class Game {
             // Fill pool based on weights
             for (let i = 0; i < wHealth; i++) pool.push('health_recover');
             for (let i = 0; i < wShield; i++) pool.push('shield');
+            for (let i = 0; i < wEmp; i++) pool.push('emp');
+            for (let i = 0; i < wMaxHeal; i++) pool.push('health_boost');
 
             for (let i = 0; i < wOffense; i++) {
                 pool.push('double_damage');
@@ -2358,6 +2416,25 @@ export class Game {
         // Save coins
         localStorage.setItem('midnight_coins', this.coins);
 
+        // ── Post-Boss Stat Upgrade ──
+        // Grant permanent stat boosts per boss kill (capped)
+        if (this.player) {
+            const maxBonusHP = 15; // Max bonus HP from boss kills
+            const maxBonusDmg = 5; // Max bonus damage from boss kills
+            if (!this.player.bossKillBonusHP) this.player.bossKillBonusHP = 0;
+            if (!this.player.bossKillBonusDmg) this.player.bossKillBonusDmg = 0;
+
+            if (this.player.bossKillBonusHP < maxBonusHP) {
+                this.player.bossKillBonusHP += 1;
+                this.player.maxHealth += 1;
+                this.player.currentHealth = Math.min(this.player.currentHealth + 1, this.player.maxHealth);
+            }
+            if (this.player.bossKillBonusDmg < maxBonusDmg) {
+                this.player.bossKillBonusDmg += 0.5;
+                this.player.damage += 0.5;
+            }
+        }
+
         const bossPos = { x: this.boss.x, y: this.boss.y };
         this.boss = null;
 
@@ -2367,9 +2444,9 @@ export class Game {
         const enemyCounter = document.getElementById('enemy-counter');
         if (enemyCounter) enemyCounter.style.display = 'block';
 
-        // Cinematic Finisher - Show Reward
+        // Cinematic Finisher - Show Reward + Stat Boost
         const rewardText = document.createElement('div');
-        rewardText.innerText = `+${loot} COINS`;
+        rewardText.innerHTML = `+${loot} COINS<br><span style="font-size:1.5rem;color:#00ff88;">⬆ +1 HP  ⬆ +0.5 DMG</span>`;
         rewardText.style.position = 'absolute';
         rewardText.style.top = '50%';
         rewardText.style.left = '50%';
@@ -2379,6 +2456,7 @@ export class Game {
         rewardText.style.fontWeight = 'bold';
         rewardText.style.textShadow = '0 0 20px #ffd700';
         rewardText.style.zIndex = '30';
+        rewardText.style.textAlign = 'center';
         rewardText.style.animation = 'fadeOut 3s forwards';
         document.body.appendChild(rewardText);
         setTimeout(() => rewardText.remove(), 3000);
@@ -2676,17 +2754,30 @@ export class Game {
         coinsDisplay.innerText = `COINS: ${this.coins}`;
         document.getElementById('total-coins-display').innerText = `COINS: ${this.coins}`;
 
-        // Sort ships by HP (excluding prestige/achievement-locked ships) and then by price
+        // Show ALL ships — including prestige/achievement-locked ones
         const sortedShips = Object.entries(SHIP_DATA)
-            .filter(([key, ship]) => !ship.achievementLocked) // Skip prestige ships
             .sort((a, b) => {
-                const hpDiff = a[1].hp - b[1].hp; // Sort by HP first
-                return hpDiff !== 0 ? hpDiff : a[1].price - b[1].price; // Then by price if HP is same
+                // Prestige ships go to the end
+                if (a[1].prestige && !b[1].prestige) return 1;
+                if (!a[1].prestige && b[1].prestige) return -1;
+                const hpDiff = a[1].hp - b[1].hp;
+                return hpDiff !== 0 ? hpDiff : a[1].price - b[1].price;
             });
 
         for (const [key, ship] of sortedShips) {
+            const isPrestige = !!ship.prestige;
+            const isAchievementUnlocked = isPrestige && this.achievementManager?.isAchievementCompleted?.(ship.achievementLocked);
+
             const card = document.createElement('div');
-            card.className = `ship-card ${this.ownedShips.includes(key) ? 'owned' : ''} ${this.selectedShip === key ? 'selected' : ''}`;
+            card.className = `ship-card ${this.ownedShips.includes(key) ? 'owned' : ''} ${this.selectedShip === key ? 'selected' : ''} ${isPrestige ? 'prestige' : ''}`;
+
+            // Prestige Badge Overlay
+            if (isPrestige) {
+                const prestigeTag = document.createElement('div');
+                prestigeTag.className = 'prestige-tag';
+                prestigeTag.innerText = '⬡ PRESTIGE';
+                card.appendChild(prestigeTag);
+            }
 
             // Visual Preview (Canvas)
             const canvas = document.createElement('canvas');
@@ -2694,13 +2785,23 @@ export class Game {
             canvas.height = 100;
             const ctx = canvas.getContext('2d');
 
-            // Draw dummy ship for preview
             ctx.translate(50, 50);
-            ctx.rotate(-Math.PI / 2); // Point up
+            ctx.rotate(-Math.PI / 2);
             const mockGame = { width: 100, height: 100 };
             const dummyPlayer = new Player(mockGame, key);
 
-            // 3D Realistic Sprite Preview
+            // Prestige glow aura
+            if (isPrestige) {
+                ctx.save();
+                ctx.shadowColor = ship.color;
+                ctx.shadowBlur = 25;
+                ctx.beginPath();
+                ctx.arc(0, 0, 35, 0, Math.PI * 2);
+                ctx.fillStyle = `${ship.color}22`;
+                ctx.fill();
+                ctx.restore();
+            }
+
             const sprite = this.assets.get(key === 'default' ? 'interceptor' : key);
             if (sprite) {
                 const size = 60;
@@ -2713,17 +2814,20 @@ export class Game {
 
             const title = document.createElement('h3');
             title.innerText = ship.name;
+            if (isPrestige) title.style.color = ship.color;
             card.appendChild(title);
 
             const stats = document.createElement('div');
             stats.className = 'ship-stats';
             const dashStatus = ship.dash === false ? 'NO' : 'YES';
+            // Show special ability for prestige ships
+            const abilityText = ship.specialAbility ? `<br><span style="color:${ship.color}; font-weight:bold;">⚡ ${ship.specialAbility.replace('_', ' ').toUpperCase()}</span>` : '';
             stats.innerHTML = `
                 HP: ${ship.hp}<br>
                 SPD: ${ship.speed}<br>
                 DMG: ${ship.damage}<br>
                 DASH: ${dashStatus}<br>
-                RATE: ${(1 / ship.fireRate).toFixed(1)}/s<br>
+                RATE: ${(1 / ship.fireRate).toFixed(1)}/s${abilityText}<br>
                 <span style="color:#aaa; font-style:italic; font-size:0.75rem">${ship.desc}</span>
             `;
             card.appendChild(stats);
@@ -2737,22 +2841,34 @@ export class Game {
             } else if (this.ownedShips.includes(key)) {
                 btn.innerText = 'EQUIP';
                 btn.onclick = () => this.selectShip(key);
+            } else if (isPrestige) {
+                // Prestige ships: show achievement requirement
+                if (isAchievementUnlocked) {
+                    btn.innerText = '✦ CLAIM FREE';
+                    btn.style.color = ship.color;
+                    btn.style.borderColor = ship.color;
+                    btn.onclick = () => this.buyShip(key);
+                } else {
+                    const achName = ship.achievementLocked?.replace(/_/g, ' ').toUpperCase() || 'UNKNOWN';
+                    btn.innerText = `🔒 ${achName}`;
+                    btn.disabled = true;
+                    btn.title = `Complete the "${achName}" achievement to unlock`;
+                    btn.style.color = '#ff4466';
+                }
             } else {
-                // Check if previous ship is owned (linear progression)
+                // Regular ships: always show price
                 const prevShip = this.getPreviousShip(key);
                 const hasPrerequisite = !prevShip || this.ownedShips.includes(prevShip);
-
-                // Check play count requirement
                 const playCountReq = ship.playCountToUnlock || 0;
                 const hasPlayCount = this.playCount >= playCountReq;
 
                 if (!hasPrerequisite) {
-                    btn.innerText = 'LOCKED';
-                    btn.disabled = true;
                     const prevName = SHIP_DATA[prevShip]?.name || 'previous ship';
+                    btn.innerText = `⬡ ${ship.price.toLocaleString()}`;
+                    btn.disabled = true;
                     btn.title = `Unlock ${prevName} first`;
                 } else if (!hasPlayCount) {
-                    btn.innerText = 'LOCKED';
+                    btn.innerText = `⬡ ${ship.price.toLocaleString()}`;
                     btn.disabled = true;
                     btn.title = `Requires ${playCountReq} playtimes (${this.playCount}/${playCountReq})`;
                 } else if (this.coins < ship.price) {

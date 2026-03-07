@@ -53,6 +53,8 @@ export class Player {
 
         // Visuals
         this.color = stats.color;
+        this.prestige = Boolean(stats.prestige);
+        this.specialAbility = stats.specialAbility || null;
         this.angle = 0;
         this.trail = [];
         this.afterburnerTimer = 0;
@@ -369,13 +371,13 @@ export class Player {
                 ctx.save();
                 const boxSize = 25;
                 const pulse = Math.sin(Date.now() * 0.008) * 0.3 + 0.7;
-                
+
                 ctx.strokeStyle = '#00ff00';
                 ctx.lineWidth = 2;
                 ctx.globalAlpha = pulse * 0.8;
                 ctx.shadowBlur = 15;
                 ctx.shadowColor = '#00ff00';
-                
+
                 // Draw corner brackets around target
                 const corners = [
                     [-1, -1], [1, -1], [1, 1], [-1, 1]
@@ -387,7 +389,7 @@ export class Player {
                     ctx.lineTo(targetEnemy.x + sx * boxSize, targetEnemy.y + sy * (boxSize - 5));
                     ctx.stroke();
                 }
-                
+
                 // Draw crosshair center
                 ctx.beginPath();
                 ctx.moveTo(targetEnemy.x - 8, targetEnemy.y);
@@ -395,7 +397,7 @@ export class Player {
                 ctx.moveTo(targetEnemy.x, targetEnemy.y - 8);
                 ctx.lineTo(targetEnemy.x, targetEnemy.y + 8);
                 ctx.stroke();
-                
+
                 ctx.restore();
             }
         }
@@ -431,9 +433,18 @@ export class Player {
             ctx.shadowBlur = 35;
             ctx.globalAlpha = 0.7;
         } else {
-            // Normal cyan glow
-            ctx.shadowBlur = 25;
-            ctx.shadowColor = this.color;
+            // Check for prestige ship — special permanent glow
+            const shipInfo = this.game.constructor.name === 'Object' ? null : (typeof SHIP_DATA !== 'undefined' ? SHIP_DATA : null);
+            const isPrestige = this.prestige || false;
+            if (isPrestige) {
+                const pulse = Math.sin(Date.now() * 0.003) * 0.4 + 0.6;
+                ctx.shadowBlur = 30 + pulse * 15;
+                ctx.shadowColor = this.color;
+            } else {
+                // Normal cyan glow
+                ctx.shadowBlur = 25;
+                ctx.shadowColor = this.color;
+            }
         }
 
         // 3D Realistic Sprite Rendering
