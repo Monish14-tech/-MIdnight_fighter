@@ -70,35 +70,6 @@ export class Projectile {
             }
         }
 
-        // --- Boss Aim Assist (Mid-Range, Not perfectly accurate) ---
-        if (this.type === 'bullet' && this.side && this.side.toString().startsWith('player') && this.game.boss && !this.game.boss.markedForDeletion) {
-            const boss = this.game.boss;
-            const dx = boss.x - this.x;
-            const dy = boss.y - this.y;
-            const dist = Math.hypot(dx, dy);
-
-            // Mid-range detection: only assist if within 1200px
-            if (dist < 1200) {
-                const targetAngle = Math.atan2(dy, dx);
-                let angleDiff = targetAngle - this.angle;
-
-                // Normalize angle to -PI to PI
-                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-
-                // Only assist if they aimed roughly at the boss (within ~60 degrees / 1.0 radians)
-                if (Math.abs(angleDiff) < 1.0) {
-                    // Stronger turn speed so it actually hits the boss
-                    const assistTurnSpeed = 6.0 * deltaTime;
-                    if (Math.abs(angleDiff) < assistTurnSpeed) {
-                        this.angle = targetAngle;
-                    } else {
-                        this.angle += Math.sign(angleDiff) * assistTurnSpeed;
-                    }
-                }
-            }
-        }
-
         this.x += Math.cos(this.angle) * this.speed * deltaTime;
         this.y += Math.sin(this.angle) * this.speed * deltaTime;
 

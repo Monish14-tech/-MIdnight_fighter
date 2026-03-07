@@ -285,18 +285,40 @@ export class Player {
             const noseX = this.x + Math.cos(this.angle) * 20;
             const noseY = this.y + Math.sin(this.angle) * 20;
 
+            let shootAngle = this.angle;
+
+            // --- Boss Firing Aim Assist ---
+            if (this.game.boss && !this.game.boss.markedForDeletion) {
+                const dx = this.game.boss.x - this.x;
+                const dy = this.game.boss.y - this.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist < 1200) {
+                    const bossAngle = Math.atan2(dy, dx);
+                    let angleDiff = bossAngle - this.angle;
+
+                    while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                    while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+
+                    // If aimed roughly at the boss within ~45 degrees, snap aim directly to it
+                    if (Math.abs(angleDiff) < 0.8) {
+                        shootAngle = bossAngle;
+                    }
+                }
+            }
+
             if (this.bulletType === 'spread') {
                 // Fire 3 bullets in a fan
                 const count = 3;
                 for (let i = 0; i < count; i++) {
                     const offset = (i - (count - 1) / 2) * 0.22;
-                    const p = new Projectile(this.game, noseX, noseY, this.angle + offset, 'bullet', this.playerId);
+                    const p = new Projectile(this.game, noseX, noseY, shootAngle + offset, 'bullet', this.playerId);
                     p.damage = this.bulletDamage || 1;
                     this.game.projectiles.push(p);
                 }
             } else if (this.bulletType === 'railgun') {
                 // Single high-speed high-damage piercing shot
-                const p = new Projectile(this.game, noseX, noseY, this.angle, 'bullet', this.playerId);
+                const p = new Projectile(this.game, noseX, noseY, shootAngle, 'bullet', this.playerId);
                 p.speed = 2600;
                 p.damage = this.bulletDamage || 5;
                 p.radius = 7;
@@ -304,21 +326,21 @@ export class Player {
                 p.color = '#ffffff';
                 this.game.projectiles.push(p);
             } else if (this.bulletType === 'explosive') {
-                const p = new Projectile(this.game, noseX, noseY, this.angle, 'bullet', this.playerId);
+                const p = new Projectile(this.game, noseX, noseY, shootAngle, 'bullet', this.playerId);
                 p.damage = this.bulletDamage || 2;
                 p.explosive = true;
                 p.color = '#ffcc00';
                 p.radius = 6;
                 this.game.projectiles.push(p);
             } else if (this.bulletType === 'piercing') {
-                const p = new Projectile(this.game, noseX, noseY, this.angle, 'bullet', this.playerId);
+                const p = new Projectile(this.game, noseX, noseY, shootAngle, 'bullet', this.playerId);
                 p.damage = this.bulletDamage || 1;
                 p.piercing = true;
                 p.color = '#00ff88';
                 this.game.projectiles.push(p);
             } else if (this.bulletType === 'laser') {
                 // Rapid-fire laser pulses: thin, fast, piercing, short-lived
-                const p = new Projectile(this.game, noseX, noseY, this.angle, 'bullet', this.playerId);
+                const p = new Projectile(this.game, noseX, noseY, shootAngle, 'bullet', this.playerId);
                 p.speed = 2200;
                 p.damage = this.bulletDamage || 2;
                 p.radius = 3;
@@ -329,7 +351,7 @@ export class Player {
             } else {
                 // Normal shot with tiny spread
                 const spread = (Math.random() - 0.5) * 0.08;
-                const p = new Projectile(this.game, noseX, noseY, this.angle + spread, 'bullet', this.playerId);
+                const p = new Projectile(this.game, noseX, noseY, shootAngle + spread, 'bullet', this.playerId);
                 p.damage = this.bulletDamage || 1;
                 this.game.projectiles.push(p);
             }
