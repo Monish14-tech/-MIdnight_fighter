@@ -87,10 +87,26 @@ export class Player {
         // Ghost powerup
         this.ghostTimer = 0;
 
-        // Passive: partial heal accumulator (for tank/juggernaut)
+        // Passive: partial heal accumulator (for tank/juggernaut/guardian)
         this._passiveHealAccum = 0;
 
-        // ── Ship Passive Abilities ─────────────────────────────
+        // ── Per-Ship Passive State Variables ───────────────────────────────────
+        this._bloodRushStacks = 0;        // fighter: +5% dmg per kill, max 5
+        this._killSinceHit = 0;           // fighter: reset stacks on damage
+        this._consecKills = 0;            // inferno: consecutive kills for fire rate
+        this._infernoActive = false;      // inferno: fire rate boost active
+        this._laserFireTime = 0;          // laser_drone: sustained fire timer
+        this._amplifierActive = false;    // laser_drone: +20% dmg boost
+        this._eclipseSurvivalTimer = 0;   // eclipse: timed heal
+        this._phoenixReviveUsed = false;  // phoenix: once-per-run revive
+        this._novaDrainTimer = 0;         // nova: HP drain timer
+        this._deathMarkSet = new Set();   // reaper: track first-hit enemies
+        this._bossKillCount = 0;          // crimson_emperor / starborn: boss kills
+        this._starborMaxHPBonus = 0;      // starborn: bonus max HP from bosses
+        this._wraith_coinKills = 0;       // not needed (handled inline on kill)
+        this._rapidBurstCounter = 0;      // rapid: track fire count for burst
+
+        // ── Ship Passive Abilities: Constructor Setup ─────────────────────────
         // Speedy ships: shorter dash cooldown
         if (['scout', 'phantom', 'wraith', 'reaper'].includes(shipType)) {
             this.dashCooldown = 3.0;
@@ -100,6 +116,18 @@ export class Player {
             this.fireRate = Math.max(0.03, this.fireRate * 0.85);
             this.baseFireRate = this.fireRate;
         }
+        // Shadowblade: 30% longer dash (increase dashDuration)
+        if (shipType === 'shadowblade') {
+            this.dashDuration *= 1.3;
+            this.dashSpeed *= 1.2;
+        }
+        // Nova: all shots deal x2 damage (baked in via multiplier flag)
+        if (shipType === 'nova') {
+            this.bulletDamage *= 2;
+            this.baseBulletDamage = this.bulletDamage;
+        }
+        // scout: speed bonus flag (applied in update when at full HP)
+        this._scoutFullHpSpeed = (shipType === 'scout') ? this.speed * 1.10 : null;
     }
 
     update(deltaTime, input) {
@@ -109,6 +137,48 @@ export class Player {
         // Update health-related timers
         if (this.invulnerableTimer > 0) this.invulnerableTimer -= deltaTime;
         if (this.damageFlashTimer > 0) this.damageFlashTimer -= deltaTime;
+
+        // ── Per-Ship Time-Based Passive Logic ──────────────────────────────
+        // Scout: +10% speed at full HP
+        if (this.shipType === 'scout' && this._scoutFullHpSpeed) {
+            this.speed = (this.currentHealth >= this.maxHealth) ? this._scoutFullHpSpeed : this.speed < this._scoutFullHpSpeed ? this.speed : this._scoutFullHpSpeed / 1.10;
+        }
+        // Eclipse: heal +1 HP every 8s of survival
+        if (this.shipType === 'eclipse') {
+            this._eclipseSurvivalTimer += deltaTime;
+            if (this._eclipseSurvivalTimer >= 8.0) {
+                this._eclipseSurvivalTimer = 0;
+                this.currentHealth = Math.min(this.maxHealth, this.currentHealth + 1);
+                if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 20, text: '+1 HP', color: '#66ccff', life: 1.0 });
+            }
+        }
+        // Nova: drain 1 HP every 15s
+        if (this.shipType === 'nova') {
+            this._novaDrainTimer += deltaTime;
+            if (this._novaDrainTimer >= 15.0) {
+                this._novaDrainTimer = 0;
+                if (this.currentHealth > 1) {
+                    this.currentHealth -= 1;
+                    if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 20, text: '-1 HP (NOVA)', color: '#ffeeaa', life: 1.0 });
+                }
+            }
+        }
+        // Laser Drone: track sustained fire for Amplifier passive
+        if (this.shipType === 'laser_drone') {
+            if (input && input.keys.fire) {
+                this._laserFireTime += deltaTime;
+                if (this._laserFireTime >= 3.0 && !this._amplifierActive) {
+                    this._amplifierActive = true;
+                    this.bulletDamage = this.baseBulletDamage * 1.2;
+                }
+            } else {
+                this._laserFireTime = 0;
+                if (this._amplifierActive) {
+                    this._amplifierActive = false;
+                    this.bulletDamage = this.baseBulletDamage;
+                }
+            }
+        }
 
         // Update power-up timers
         if (this.speedBoostTimer > 0) this.speedBoostTimer -= deltaTime;
@@ -220,6 +290,24 @@ export class Player {
                 // Standard auto-aim strength for regular enemies
                 const lockStrength = 4;
                 this.angle += normalizedDiff * deltaTime * lockStrength;
+            } else if (this.game.boss && !this.game.boss.markedForDeletion && input.keys.fire) {
+                // --- REFINED: Boss Aim Assist (Tilt-Only) ---
+                const dx = this.game.boss.x - this.x;
+                const dy = this.game.boss.y - this.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist < 500) { // Range restricted to 500px for close encounters
+                    const bossAngle = Math.atan2(dy, dx);
+                    let angleDiff = bossAngle - this.angle;
+                    while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                    while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+
+                    // If aimed roughly at the boss within ~45 degrees, tilt towards it
+                    if (Math.abs(angleDiff) < 0.8) {
+                        const bossLockStrength = 3.5; // Slightly slower/smoother than standard lock
+                        this.angle += angleDiff * deltaTime * bossLockStrength;
+                    }
+                }
             } else if (moveVec.x !== 0 || moveVec.y !== 0) {
                 const destAngle = Math.atan2(moveVec.y, moveVec.x);
                 let diff = destAngle - this.angle;
@@ -287,22 +375,22 @@ export class Player {
 
             let shootAngle = this.angle;
 
-            // --- Boss Firing Aim Assist ---
+            // --- REFINED: Boss Aim Assist (Accuracy Spread) ---
+            // We removed mid-air snapping and added a small spread for "fair play" balance
             if (this.game.boss && !this.game.boss.markedForDeletion) {
                 const dx = this.game.boss.x - this.x;
                 const dy = this.game.boss.y - this.y;
                 const dist = Math.hypot(dx, dy);
 
-                if (dist < 1200) {
+                if (dist < 500) { // Range restricted to 500px for close encounters
                     const bossAngle = Math.atan2(dy, dx);
                     let angleDiff = bossAngle - this.angle;
-
                     while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
                     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
 
-                    // If aimed roughly at the boss within ~45 degrees, snap aim directly to it
-                    if (Math.abs(angleDiff) < 0.8) {
-                        shootAngle = bossAngle;
+                    // If the ship is tilted toward the boss (assist active), add a fair-play spread
+                    if (Math.abs(angleDiff) < 0.2) {
+                        shootAngle += (Math.random() - 0.5) * 0.12; // 0.12 rad spread (~7 deg)
                     }
                 }
             }
@@ -2019,9 +2107,45 @@ export class Player {
             return false;
         }
 
+        // ── Phantom: Ghost Protocol ── (15% chance to ignore damage)
+        if (this.shipType === 'phantom' && Math.random() < 0.15) {
+            if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 20, text: 'PHASED!', color: '#9900ff', life: 1.0 });
+            return false;
+        }
+
+        // ── Phantom-X (prestige): 30% damage ignore ──
+        if (this.shipType === 'phantom_x' && Math.random() < 0.30) {
+            return false;
+        }
+
+        // ── Guardian: Fortress Protocol ── (damage capped at 1 per hit)
+        if (this.shipType === 'guardian') {
+            amount = Math.min(amount, 1);
+        }
+
+        // ── Juggernaut: Unstoppable ── (50% reduction when below 30% HP)
+        if (this.shipType === 'juggernaut' && this.currentHealth <= this.maxHealth * 0.3) {
+            amount = Math.ceil(amount * 0.5);
+        }
+
         this.currentHealth -= amount;
-        this.damageFlashTimer = 0.2; // Flash for 200ms
+        this.damageFlashTimer = 0.2;
         this.invulnerableTimer = this.invulnerableDuration;
+
+        // ── Fighter: Blood Rush reset on hit ──
+        if (this.shipType === 'fighter' && this._bloodRushStacks > 0) {
+            this._bloodRushStacks = 0;
+            this.bulletDamage = this.baseBulletDamage;
+        }
+
+        // ── Inferno: consecutive kill streak resets on hit ──
+        if (this.shipType === 'inferno') {
+            this._consecKills = 0;
+            if (this._infernoActive) {
+                this._infernoActive = false;
+                this.fireRate = this.baseFireRate;
+            }
+        }
 
         // Play damage sound
         if (this.game.audio) {
@@ -2030,6 +2154,24 @@ export class Player {
 
         // Check if dead
         if (this.currentHealth <= 0) {
+            // ── Phoenix: Eternal Rebirth ── (once per run revive at 3 HP)
+            if (this.shipType === 'phoenix' && !this._phoenixReviveUsed) {
+                this._phoenixReviveUsed = true;
+                this.currentHealth = 3;
+                this.invulnerableTimer = 2.0; // 2s immunity after revive
+                if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 30, text: 'ETERNAL REBIRTH!', color: '#ffa500', life: 2.0 });
+                return false; // Survived via rebirth
+            }
+
+            // ── Rank Perk: HP Mercy (survive first death at 2 HP) ──
+            if (!this._rankMercyUsed && this.game.rankPerk && this.game.rankPerk.hpMercy) {
+                this._rankMercyUsed = true;
+                this.currentHealth = 2;
+                this.invulnerableTimer = 1.5;
+                if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 30, text: 'RANK MERCY!', color: '#ff6600', life: 2.0 });
+                return false;
+            }
+
             this.currentHealth = 0;
             return true; // Player died
         }
@@ -2038,12 +2180,73 @@ export class Player {
     }
 
     // Called by game when this player kills an enemy (passive ability)
-    onEnemyKill() {
-        if (['tank', 'juggernaut', 'guardian'].includes(this.shipType)) {
-            this._passiveHealAccum = (this._passiveHealAccum || 0) + 0.25;
+    onEnemyKill(enemy) {
+        // ── Tank / Juggernaut / Guardian: heal on kill ──
+        const healPerKill = this.shipType === 'tank' ? 0.25 :
+            this.shipType === 'juggernaut' ? 0.25 :
+                this.shipType === 'guardian' ? 0.20 : 0;
+        if (healPerKill > 0) {
+            this._passiveHealAccum = (this._passiveHealAccum || 0) + healPerKill;
             if (this._passiveHealAccum >= 1) {
                 this._passiveHealAccum -= 1;
                 this.currentHealth = Math.min(this.maxHealth, this.currentHealth + 1);
+                if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 20, text: '+1 HP', color: '#00ff44', life: 1.0 });
+            }
+        }
+
+        // ── Fighter: Blood Rush ── (+5% damage per kill, stacks x5)
+        if (this.shipType === 'fighter') {
+            this._bloodRushStacks = Math.min(5, (this._bloodRushStacks || 0) + 1);
+            this.bulletDamage = this.baseBulletDamage * (1 + this._bloodRushStacks * 0.05);
+            if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 20, text: `BLOOD RUSH x${this._bloodRushStacks}`, color: '#ff0055', life: 1.2 });
+        }
+
+        // ── Pulse: Overcharge ── (-0.1s missile CD per kill)
+        if (this.shipType === 'pulse') {
+            this.missileTimer = Math.max(0, this.missileTimer - 0.1);
+        }
+
+        // ── Wraith: Reality Shatter ── (10% chance coin burst)
+        if (this.shipType === 'wraith' && Math.random() < 0.10) {
+            const bonus = 10;
+            this.game.coins = (this.game.coins || 0) + bonus;
+            if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 30, text: `+${bonus}c SHATTER`, color: '#cc44ff', life: 1.2 });
+        }
+
+        // ── Inferno: Hellfire ── (3+ consecutive kills = +15% fire rate)
+        if (this.shipType === 'inferno') {
+            this._consecKills = (this._consecKills || 0) + 1;
+            if (this._consecKills >= 3 && !this._infernoActive) {
+                this._infernoActive = true;
+                this.fireRate = Math.max(0.03, this.baseFireRate * 0.85);
+                if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 30, text: 'HELLFIRE!', color: '#ff4500', life: 1.5 });
+            }
+        }
+
+        // ── Nemesis (prestige): +1 HP per kill ──
+        if (this.shipType === 'nemesis' && this.currentHealth < 50) {
+            this.currentHealth += 1;
+            this.maxHealth = Math.min(50, Math.max(this.maxHealth, this.currentHealth));
+        }
+    }
+
+    // Called by game when a boss is defeated
+    onBossKill() {
+        // ── Crimson Emperor: Missile CD reduction per boss kill ──
+        if (this.shipType === 'crimson_emperor') {
+            this._bossKillCount = (this._bossKillCount || 0) + 1;
+            const reductionFactor = Math.max(0.5, 1.0 - this._bossKillCount * 0.10);
+            this.missileCooldown = this.missileCooldown * reductionFactor;
+            if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 30, text: 'MISSILE CD -10%!', color: '#dc143c', life: 1.5 });
+        }
+        // ── Starborn: +1 max HP per boss kill (up to +5) ──
+        if (this.shipType === 'starborn') {
+            this._starborMaxHPBonus = (this._starborMaxHPBonus || 0);
+            if (this._starborMaxHPBonus < 5) {
+                this._starborMaxHPBonus += 1;
+                this.maxHealth += 1;
+                this.currentHealth += 1;
+                if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 30, text: '+1 MAX HP!', color: '#99ffcc', life: 1.5 });
             }
         }
     }
