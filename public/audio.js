@@ -42,7 +42,7 @@ export class AudioController {
 
     async preloadBGM() {
         // BGM Disabled as per user request (wants only game audio/SFX)
-        console.log('BGM Preload skipped (Disabled)');
+        // console.log('BGM Preload skipped (Disabled)');
     }
 
     makeDistortionCurve(amount) {

@@ -888,19 +888,19 @@ export class Game {
         const playerName = this.leaderboard.getPlayerName();
         if (!playerName) return;
 
-        console.log(`[Sync] Fetching global stats for ${playerName}...`);
+        // console.log(`[Sync] Fetching global stats for ${playerName}...`);
         const stats = await this.leaderboard.getPlayerStats(playerName);
 
         if (stats && stats.score !== undefined) {
-            console.log(`[Sync] Found global score: ${stats.score}. Local: ${this.highScore}`);
+            // console.log(`[Sync] Found global score: ${stats.score}. Local: ${this.highScore}`);
             if (stats.score > this.highScore) {
                 this.highScore = stats.score;
                 localStorage.setItem('midnight_highscore', this.highScore);
-                console.log(`[Sync] Local high score updated to match global.`);
+                // console.log(`[Sync] Local high score updated to match global.`);
             }
             if (stats.globalRank !== undefined) {
                 this.globalRank = stats.globalRank;
-                console.log(`[Sync] Player is ranked #${this.globalRank} globally.`);
+                // console.log(`[Sync] Player is ranked #${this.globalRank} globally.`);
             }
         }
 
@@ -1485,7 +1485,7 @@ export class Game {
     }
 
     updatePlayerNameDisplay() {
-        console.log("Updating player name displays...");
+        // console.log("Updating player name displays...");
         // 1. Update main menu display
         const displayEl = document.getElementById('current-player-name');
         if (displayEl) {
@@ -1499,7 +1499,7 @@ export class Game {
     }
 
     updatePlayerHudInfo() {
-        console.log("Updating HUD info. Local name:", this.leaderboard.getPlayerName());
+        // console.log("Updating HUD info. Local name:", this.leaderboard.getPlayerName());
         const p1NameEl = document.getElementById('p1-hud-name');
         const p1ShipEl = document.getElementById('p1-hud-ship');
         const p2NameEl = document.getElementById('p2-hud-name');

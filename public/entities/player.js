@@ -283,8 +283,8 @@ export class Player {
                 const diff = targetAngleForMovement - this.angle;
                 const normalizedDiff = diff > Math.PI ? diff - Math.PI * 2 : diff < -Math.PI ? diff + Math.PI * 2 : diff;
 
-                // Unified lock strength
-                const lockStrength = 4;
+                // Unified lock strength - Increased to 12 for "Production Ready" snap responsiveness
+                const lockStrength = 12;
                 this.angle += normalizedDiff * deltaTime * lockStrength;
             } else if (moveVec.x !== 0 || moveVec.y !== 0) {
                 const destAngle = Math.atan2(moveVec.y, moveVec.x);
