@@ -270,50 +270,53 @@ export class Player {
         // DISABLED during boss fights
         if (!this.isDashing) {
             let targetAngleForMovement = null;
-            let isBossTarget = false;
-            // Disable auto-target completely when boss is active
-            const bossActive = this.game.boss && !this.game.boss.markedForDeletion;
-            if (this.game.autoTargetEnabled && !bossActive) {
-                const nearestEnemy = this.findNearestEnemy(700); // Increased range for auto-detection
-                if (nearestEnemy) {
-                    const dx = nearestEnemy.x - this.x;
-                    const dy = nearestEnemy.y - this.y;
-                    targetAngleForMovement = Math.atan2(dy, dx);
-                    isBossTarget = false; // No boss targeting now
+            
+            // PRIORITIZE MOVEMENT DIRECTION: If player is moving, face that direction
+            if (moveVec.x !== 0 || moveVec.y !== 0) {
+                const destAngle = Math.atan2(moveVec.y, moveVec.x);
+                let diff = destAngle - this.angle;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                this.angle += diff * deltaTime * 15; // Faster rotation towards movement
+            } 
+            // Only use auto-target if player is NOT moving
+            else if (this.game.autoTargetEnabled) {
+                const bossActive = this.game.boss && !this.game.boss.markedForDeletion;
+                
+                if (!bossActive) {
+                    const nearestEnemy = this.findNearestEnemy(700);
+                    if (nearestEnemy) {
+                        const dx = nearestEnemy.x - this.x;
+                        const dy = nearestEnemy.y - this.y;
+                        targetAngleForMovement = Math.atan2(dy, dx);
+                    }
                 }
             }
 
-            // Apply target angle or movement direction
+            // Apply auto-target angle if set
             if (targetAngleForMovement !== null) {
                 const diff = targetAngleForMovement - this.angle;
                 const normalizedDiff = diff > Math.PI ? diff - Math.PI * 2 : diff < -Math.PI ? diff + Math.PI * 2 : diff;
-                // Standard auto-aim strength for regular enemies
                 const lockStrength = 4;
                 this.angle += normalizedDiff * deltaTime * lockStrength;
-            } else if (this.game.boss && !this.game.boss.markedForDeletion && input.keys.fire) {
-                // --- REFINED: Boss Aim Assist (Tilt-Only) ---
+            }
+            // Boss aim assist (tilt towards boss when firing)
+            else if (this.game.boss && !this.game.boss.markedForDeletion && input.keys.fire && (moveVec.x === 0 && moveVec.y === 0)) {
                 const dx = this.game.boss.x - this.x;
                 const dy = this.game.boss.y - this.y;
                 const dist = Math.hypot(dx, dy);
 
-                if (dist < 500) { // Range restricted to 500px for close encounters
+                if (dist < 500) {
                     const bossAngle = Math.atan2(dy, dx);
                     let angleDiff = bossAngle - this.angle;
                     while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
                     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
 
-                    // If aimed roughly at the boss within ~45 degrees, tilt towards it
                     if (Math.abs(angleDiff) < 0.8) {
-                        const bossLockStrength = 3.5; // Slightly slower/smoother than standard lock
+                        const bossLockStrength = 3.5;
                         this.angle += angleDiff * deltaTime * bossLockStrength;
                     }
                 }
-            } else if (moveVec.x !== 0 || moveVec.y !== 0) {
-                const destAngle = Math.atan2(moveVec.y, moveVec.x);
-                let diff = destAngle - this.angle;
-                while (diff > Math.PI) diff -= Math.PI * 2;
-                while (diff < -Math.PI) diff += Math.PI * 2;
-                this.angle += diff * deltaTime * 10;
             }
         }
 

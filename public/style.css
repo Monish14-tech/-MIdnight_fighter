@@ -768,33 +768,44 @@ h1 {
 
 /* Pause UI */
 #pause-btn {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 40px;
-    height: 40px;
-    background: rgba(0, 0, 0, 0.5);
-    border: 1px solid var(--neon-blue);
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    width: 50px;
+    height: 50px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid var(--neon-blue);
     color: var(--neon-blue);
     font-family: 'Orbitron', sans-serif;
     font-weight: bold;
-    font-size: 1.2rem;
+    font-size: 1.4rem;
     cursor: pointer;
-    z-index: 2000;
-    display: flex;
+    z-index: 3000;
+    display: none;
+    /* Hidden until game starts */
     justify-content: center;
     align-items: center;
     pointer-events: auto;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.5), inset 0 0 15px rgba(0, 243, 255, 0.1);
+}
+
+#pause-btn:hover {
+    background: rgba(0, 243, 255, 0.15);
+    box-shadow: 0 0 30px var(--neon-blue), 0 0 60px rgba(0, 243, 255, 0.5), inset 0 0 20px rgba(0, 243, 255, 0.2);
+    transform: scale(1.1);
+    text-shadow: 0 0 10px var(--neon-blue);
 }
 
 /* Mobile pause button - Better touch target */
 @media screen and (max-width: 900px) {
     #pause-btn {
-        width: 44px;
-        height: 44px;
-        top: 5px;
-        right: 5px;
-        font-size: 1rem;
+        width: 54px;
+        height: 54px;
+        top: 10px;
+        right: 10px;
+        font-size: 1.2rem;
     }
 }
 
@@ -815,38 +826,44 @@ h1 {
 }
 
 #settings-btn {
-    position: absolute;
-    top: 10px;
-    right: 60px;
-    width: 40px;
-    height: 40px;
-    background: rgba(0, 0, 0, 0.5);
-    border: 1px solid var(--neon-blue);
+    position: fixed;
+    top: 15px;
+    right: 75px;
+    width: 50px;
+    height: 50px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid var(--neon-blue);
     color: var(--neon-blue);
     font-family: 'Orbitron', sans-serif;
     font-weight: bold;
-    font-size: 1.2rem;
+    font-size: 1.4rem;
     cursor: pointer;
-    z-index: 2000;
-    display: flex;
+    z-index: 3000;
+    display: none;
+    /* Hidden until game starts */
     justify-content: center;
     align-items: center;
     pointer-events: auto;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.5), inset 0 0 15px rgba(0, 243, 255, 0.1);
 }
 
 #settings-btn:hover {
-    background: rgba(0, 243, 255, 0.2);
-    box-shadow: 0 0 10px var(--neon-blue);
+    background: rgba(0, 243, 255, 0.15);
+    box-shadow: 0 0 30px var(--neon-blue), 0 0 60px rgba(0, 243, 255, 0.5), inset 0 0 20px rgba(0, 243, 255, 0.2);
+    transform: scale(1.1);
+    text-shadow: 0 0 10px var(--neon-blue);
 }
 
 /* Mobile settings button */
 @media screen and (max-width: 900px) {
     #settings-btn {
-        width: 44px;
-        height: 44px;
-        top: 5px;
-        right: 55px;
-        font-size: 1rem;
+        width: 54px;
+        height: 54px;
+        top: 10px;
+        right: 74px;
+        font-size: 1.2rem;
     }
 }
 

@@ -394,17 +394,10 @@ export class Game {
             resumeBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.togglePause(); }, { passive: false });
         }
 
-        const pauseMusicToggle = document.getElementById('pause-music-toggle');
-        if (pauseMusicToggle) {
-            pauseMusicToggle.addEventListener('click', () => {
-                const enabled = !this.audio.musicEnabled;
-                this.audio.toggleMusic(enabled);
-                pauseMusicToggle.innerText = `MUSIC: ${enabled ? 'ON' : 'OFF'}`;
-                // Update the settings menu checkmark if visible
-                const settingsToggle = document.getElementById('music-toggle');
-                if (settingsToggle) settingsToggle.checked = enabled;
-            });
-            pauseMusicToggle.addEventListener('touchstart', (e) => { e.preventDefault(); pauseMusicToggle.click(); }, { passive: false });
+        const pauseArmoryBtn = document.getElementById('pause-armory-btn');
+        if (pauseArmoryBtn) {
+            pauseArmoryBtn.addEventListener('click', () => this.openStoreFromPause());
+            pauseArmoryBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.openStoreFromPause(); }, { passive: false });
         }
 
         // Settings Button
@@ -1342,7 +1335,44 @@ export class Game {
             this.achievementManager.addStat('games', 1);
         }
 
+        // Show game controls (pause and settings buttons)
+        this.showGameControls();
+
         requestAnimationFrame(this.loop);
+    }
+
+    showGameControls() {
+        // Show pause and settings buttons
+        const pauseBtn = document.getElementById('pause-btn');
+        const settingsBtn = document.getElementById('settings-btn');
+        if (pauseBtn) pauseBtn.style.display = 'flex';
+        if (settingsBtn) settingsBtn.style.display = 'flex';
+
+        // Show mobile controls for touch devices or small screens
+        const mobileControls = document.getElementById('mobile-controls');
+        if (mobileControls) {
+            // Check if device is touch-enabled or small screen
+            const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+            const isSmallScreen = window.innerWidth <= 1024;
+            
+            if (isTouchDevice || isSmallScreen) {
+                mobileControls.classList.add('active');
+            }
+        }
+    }
+
+    hideGameControls() {
+        // Hide pause and settings buttons
+        const pauseBtn = document.getElementById('pause-btn');
+        const settingsBtn = document.getElementById('settings-btn');
+        if (pauseBtn) pauseBtn.style.display = 'none';
+        if (settingsBtn) settingsBtn.style.display = 'none';
+
+        // Hide mobile controls
+        const mobileControls = document.getElementById('mobile-controls');
+        if (mobileControls) {
+            mobileControls.classList.remove('active');
+        }
     }
 
     togglePause() {
@@ -1352,9 +1382,6 @@ export class Game {
 
         if (this.isPaused) {
             document.getElementById('pause-menu').classList.add('active');
-            // Sync music toggle text
-            const toggle = document.getElementById('pause-music-toggle');
-            if (toggle) toggle.innerText = `MUSIC: ${this.audio.musicEnabled ? 'ON' : 'OFF'}`;
         } else {
             document.getElementById('pause-menu').classList.remove('active');
             this.lastTime = 0; // Reset delta time to prevent jump
