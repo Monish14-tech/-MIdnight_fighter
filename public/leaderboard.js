@@ -73,7 +73,7 @@ export class LeaderboardManager {
             const data = await response.json();
 
             if (data.success) {
-                return data.data;
+                return data;
             } else {
                 return null;
             }

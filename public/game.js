@@ -1042,8 +1042,16 @@ export class Game {
         const list = document.getElementById('ranks-list');
         if (list) {
             list.innerHTML = '';
-            // Sort by threshold descending for display
-            [...RANK_DATA].sort((a, b) => b.threshold - a.threshold).forEach(rank => {
+            // Sort by rankTarget ascending for display
+            [...RANK_DATA].sort((a, b) => a.rankTarget - b.rankTarget).forEach(rank => {
+                let targetText = '';
+                if (rank.rankTarget === 1) targetText = 'Rank 1';
+                else if (rank.rankTarget === 2) targetText = 'Rank 2';
+                else if (rank.rankTarget === 3) targetText = 'Rank 3';
+                else if (rank.rankTarget === Infinity) targetText = 'Default';
+                else if (rank.rankTarget >= 1000) targetText = 'Top ' + (rank.rankTarget / 1000) + 'k';
+                else targetText = 'Top ' + rank.rankTarget;
+
                 const item = document.createElement('div');
                 item.className = 'rank-info-item';
                 item.style.borderColor = rank.color;
@@ -1051,7 +1059,7 @@ export class Game {
                     <div class="rank-info-badge" style="background: ${rank.color}">${rank.badge}</div>
                     <div class="rank-info-details">
                         <div class="rank-info-name" style="color: ${rank.color}">${rank.name}</div>
-                        <div class="rank-info-threshold">${rank.threshold.toLocaleString()} PTS</div>
+                        <div class="rank-info-threshold">${targetText}</div>
                     </div>
                 `;
                 list.appendChild(item);
