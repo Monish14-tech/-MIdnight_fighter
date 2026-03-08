@@ -221,11 +221,9 @@ export class Game {
         this.screenShake = new ScreenShake();
         this.assets = new AssetLoader();
 
-        // Initialize audio settings
+        // Initialize audio settings (music toggle should not mute gameplay SFX)
         const musicEnabled = localStorage.getItem('midnight_music_enabled') !== 'false';
-        if (!musicEnabled) {
-            this.audio.masterGain.gain.value = 0;
-        }
+        this.audio.toggleMusic(musicEnabled);
 
         // Arrays
         this.enemies = [];
@@ -357,6 +355,10 @@ export class Game {
 
         const handleStart = (e) => {
             if (e.type === 'touchstart') e.preventDefault();
+            // Unlock audio on direct user gesture (required by many browsers)
+            if (this.audio && this.audio.ctx && this.audio.ctx.state === 'suspended') {
+                this.audio.ctx.resume().catch(() => { });
+            }
             // Auto-fullscreen on game start
             this.enterFullscreen();
             this.startGame();
