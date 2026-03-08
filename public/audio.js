@@ -47,6 +47,10 @@ export class AudioController {
                 const arr = await menuRes.arrayBuffer();
                 this.menuBuffer = await this.ctx.decodeAudioData(arr);
                 console.log('Menu BGM Loaded successfully');
+                // If we are waiting for menu music, start it now
+                if (!this.bgmSource && !this.isPlayingMusic) {
+                    this.playBGM(this.menuBuffer);
+                }
             }
         } catch (err) {
             console.log('Using procedural menu music');
@@ -290,6 +294,12 @@ export class AudioController {
 
     playBGM(buffer) {
         if (!buffer || this.bgmSource) return;
+
+        // Ensure context is running
+        if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+
         this.bgmSource = this.ctx.createBufferSource();
         this.bgmSource.buffer = buffer;
         this.bgmSource.loop = true;
