@@ -265,24 +265,19 @@ export class Player {
 
             input.keys.dash = false;
         }
-
-        // 360-Degree Face Direction (Aim Assist) - Only if auto-target is enabled
+        // 360-degree facing: movement direction first, auto-target only while idle.
         if (!this.isDashing) {
             let targetAngleForMovement = null;
-<<<<<<< HEAD
-            
-            // PRIORITIZE MOVEMENT DIRECTION: If player is moving, face that direction
+
+            // Prioritize explicit movement input so the ship points where the player steers.
             if (moveVec.x !== 0 || moveVec.y !== 0) {
                 const destAngle = Math.atan2(moveVec.y, moveVec.x);
                 let diff = destAngle - this.angle;
                 while (diff > Math.PI) diff -= Math.PI * 2;
                 while (diff < -Math.PI) diff += Math.PI * 2;
-                this.angle += diff * deltaTime * 15; // Faster rotation towards movement
-            } 
-            // Only use auto-target if player is NOT moving
-            else if (this.game.autoTargetEnabled) {
+                this.angle += diff * deltaTime * 15;
+            } else if (this.game.autoTargetEnabled) {
                 const bossActive = this.game.boss && !this.game.boss.markedForDeletion;
-                
                 if (!bossActive) {
                     const nearestEnemy = this.findNearestEnemy(700);
                     if (nearestEnemy) {
@@ -290,27 +285,16 @@ export class Player {
                         const dy = nearestEnemy.y - this.y;
                         targetAngleForMovement = Math.atan2(dy, dx);
                     }
-=======
-            if (this.game.autoTargetEnabled) {
-                const nearestEnemy = this.findNearestEnemy(1000); // High range for reliable lock
-                if (nearestEnemy) {
-                    const dx = nearestEnemy.x - this.x;
-                    const dy = nearestEnemy.y - this.y;
-                    targetAngleForMovement = Math.atan2(dy, dx);
->>>>>>> 84acac063aaf5b59eabf39905c147185364d128b
                 }
             }
 
-            // Apply auto-target angle if set
             if (targetAngleForMovement !== null) {
                 const diff = targetAngleForMovement - this.angle;
                 const normalizedDiff = diff > Math.PI ? diff - Math.PI * 2 : diff < -Math.PI ? diff + Math.PI * 2 : diff;
-<<<<<<< HEAD
                 const lockStrength = 4;
                 this.angle += normalizedDiff * deltaTime * lockStrength;
-            }
-            // Boss aim assist (tilt towards boss when firing)
-            else if (this.game.boss && !this.game.boss.markedForDeletion && input.keys.fire && (moveVec.x === 0 && moveVec.y === 0)) {
+            } else if (this.game.boss && !this.game.boss.markedForDeletion && input.keys.fire && moveVec.x === 0 && moveVec.y === 0) {
+                // Slight boss assist when stationary and firing.
                 const dx = this.game.boss.x - this.x;
                 const dy = this.game.boss.y - this.y;
                 const dist = Math.hypot(dx, dy);
@@ -326,18 +310,6 @@ export class Player {
                         this.angle += angleDiff * deltaTime * bossLockStrength;
                     }
                 }
-=======
-
-                // Unified lock strength - Increased to 12 for "Production Ready" snap responsiveness
-                const lockStrength = 12;
-                this.angle += normalizedDiff * deltaTime * lockStrength;
-            } else if (moveVec.x !== 0 || moveVec.y !== 0) {
-                const destAngle = Math.atan2(moveVec.y, moveVec.x);
-                let diff = destAngle - this.angle;
-                while (diff > Math.PI) diff -= Math.PI * 2;
-                while (diff < -Math.PI) diff += Math.PI * 2;
-                this.angle += diff * deltaTime * 10;
->>>>>>> 84acac063aaf5b59eabf39905c147185364d128b
             }
         }
 
