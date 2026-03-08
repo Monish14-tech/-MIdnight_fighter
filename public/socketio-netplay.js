@@ -32,7 +32,7 @@ export class SocketIONetplay {
             this.playerName = playerName;
             this.shipType = shipType || 'default';
 
-            console.log(`[SocketIONetplay] Connecting to room ${roomId} as ${playerName}...`);
+            // console.log(`[SocketIONetplay] Connecting to room ${roomId} as ${playerName}...`);
 
             // Check if socket.io library is loaded
             if (typeof io === 'undefined') {
@@ -61,36 +61,36 @@ export class SocketIONetplay {
 
             // Connection established
             this.socket.on('connect', () => {
-                console.log('[SocketIONetplay] Socket.IO connected, joining room...');
-                this.socket.emit('join_room', { 
-                    roomId: this.roomId, 
-                    playerName: this.playerName, 
-                    shipType: this.shipType 
+                // console.log('[SocketIONetplay] Socket.IO connected, joining room...');
+                this.socket.emit('join_room', {
+                    roomId: this.roomId,
+                    playerName: this.playerName,
+                    shipType: this.shipType
                 });
             });
 
             // Successfully joined room
             this.socket.on('joined_room', (data) => {
                 clearTimeout(timeoutId);
-                console.log('[SocketIONetplay] Successfully joined room:', data);
+                // console.log('[SocketIONetplay] Successfully joined room:', data);
                 this.isConnected = true;
                 this.reconnectAttempts = 0;
-                
+
                 // Start heartbeat
                 this._startHeartbeat();
-                
+
                 // Trigger handler
                 const handler = this.handlers['joined_room'];
                 if (handler) {
                     handler(data);
                 }
-                
+
                 resolve(data);
             });
 
             // Peer joined
             this.socket.on('peer_joined', (data) => {
-                console.log('[SocketIONetplay] Peer joined:', data);
+                // console.log('[SocketIONetplay] Peer joined:', data);
                 const handler = this.handlers['peer_joined'];
                 if (handler) {
                     handler(data);
@@ -143,7 +143,7 @@ export class SocketIONetplay {
             this.socket.on('connect_error', (error) => {
                 console.error('[SocketIONetplay] Connection error:', error.message);
                 this.reconnectAttempts++;
-                
+
                 if (this.reconnectAttempts >= this.maxReconnectAttempts) {
                     clearTimeout(timeoutId);
                     reject(new Error('Failed to connect after multiple attempts'));
@@ -155,7 +155,7 @@ export class SocketIONetplay {
                 console.log('[SocketIONetplay] Disconnected:', reason);
                 this.isConnected = false;
                 this._stopHeartbeat();
-                
+
                 const handler = this.handlers['closed'];
                 if (handler) {
                     handler({ type: 'closed', reason });
@@ -176,13 +176,13 @@ export class SocketIONetplay {
             this.socket.on('reconnect', (attemptNumber) => {
                 console.log('[SocketIONetplay] Reconnected after', attemptNumber, 'attempts');
                 this.reconnectAttempts = 0;
-                
+
                 // Rejoin room after reconnection
                 if (this.roomId && this.playerName) {
-                    this.socket.emit('join_room', { 
-                        roomId: this.roomId, 
-                        playerName: this.playerName, 
-                        shipType: this.shipType 
+                    this.socket.emit('join_room', {
+                        roomId: this.roomId,
+                        playerName: this.playerName,
+                        shipType: this.shipType
                     });
                 }
             });
@@ -217,16 +217,16 @@ export class SocketIONetplay {
     disconnect() {
         this._stopHeartbeat();
         this.isConnected = false;
-        
+
         if (this.socket) {
             this.socket.emit('leave_room');
             this.socket.disconnect();
             this.socket = null;
         }
-        
+
         this.roomId = null;
         this.playerName = null;
-        
+
         console.log('[SocketIONetplay] Disconnected');
     }
 }

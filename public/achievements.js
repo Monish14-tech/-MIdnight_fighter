@@ -134,9 +134,9 @@ export const ACHIEVEMENT_DATA = [
     },
 
     {
-        id: 'legendary_score', name: 'LEGENDARY SCORE', icon: '🌠',
-        desc: 'Score 1,000,000 in a single run.',
-        type: 'best_score', target: 1000000, reward: 150000,
+        id: 'legendary_score', name: 'REACH TO THE TOP', icon: '🌠',
+        desc: 'Reach Ace Commander (Rank 10) or better.',
+        type: 'global_rank', target: 10, reward: 150000,
         shipUnlock: 'celestial'
     },  // Unlocks CELESTIAL STRIKER
 
@@ -213,6 +213,7 @@ export class AchievementManager {
             missiles: 0,
             total_coins: 0,
             all_achievements: 0,
+            global_rank: 999999, // New dimension for rank-based unlocks
         };
         this.claimed = JSON.parse(localStorage.getItem('midnight_claimed_achievements')) || [];
         this.completedButUnclaimed = JSON.parse(localStorage.getItem('midnight_unclaimed_achievements')) || [];
@@ -279,6 +280,13 @@ export class AchievementManager {
         }
     }
 
+    updateGlobalRank(rank) {
+        if (!rank || rank < 1) return;
+        this.stats['global_rank'] = rank;
+        this.save();
+        this.checkUnlocks('global_rank');
+    }
+
     updateMaxLevel(level) {
         if (level > (this.stats['max_level'] || 0)) {
             this.stats['max_level'] = level;
@@ -300,8 +308,16 @@ export class AchievementManager {
 
         relevant.forEach(ach => {
             if (this.claimed.includes(ach.id) || this.completedButUnclaimed.includes(ach.id)) return;
-            if (this.stats[type] >= ach.target) {
-                this.unlock(ach);
+
+            if (type === 'global_rank') {
+                // For rank, LOWER is better
+                if (this.stats[type] <= ach.target) {
+                    this.unlock(ach);
+                }
+            } else {
+                if (this.stats[type] >= ach.target) {
+                    this.unlock(ach);
+                }
             }
         });
     }

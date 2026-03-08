@@ -267,9 +267,9 @@ export class Player {
         }
 
         // 360-Degree Face Direction (Aim Assist) - Only if auto-target is enabled
-        // DISABLED during boss fights
         if (!this.isDashing) {
             let targetAngleForMovement = null;
+<<<<<<< HEAD
             
             // PRIORITIZE MOVEMENT DIRECTION: If player is moving, face that direction
             if (moveVec.x !== 0 || moveVec.y !== 0) {
@@ -290,6 +290,14 @@ export class Player {
                         const dy = nearestEnemy.y - this.y;
                         targetAngleForMovement = Math.atan2(dy, dx);
                     }
+=======
+            if (this.game.autoTargetEnabled) {
+                const nearestEnemy = this.findNearestEnemy(1000); // High range for reliable lock
+                if (nearestEnemy) {
+                    const dx = nearestEnemy.x - this.x;
+                    const dy = nearestEnemy.y - this.y;
+                    targetAngleForMovement = Math.atan2(dy, dx);
+>>>>>>> 84acac063aaf5b59eabf39905c147185364d128b
                 }
             }
 
@@ -297,6 +305,7 @@ export class Player {
             if (targetAngleForMovement !== null) {
                 const diff = targetAngleForMovement - this.angle;
                 const normalizedDiff = diff > Math.PI ? diff - Math.PI * 2 : diff < -Math.PI ? diff + Math.PI * 2 : diff;
+<<<<<<< HEAD
                 const lockStrength = 4;
                 this.angle += normalizedDiff * deltaTime * lockStrength;
             }
@@ -317,6 +326,18 @@ export class Player {
                         this.angle += angleDiff * deltaTime * bossLockStrength;
                     }
                 }
+=======
+
+                // Unified lock strength - Increased to 12 for "Production Ready" snap responsiveness
+                const lockStrength = 12;
+                this.angle += normalizedDiff * deltaTime * lockStrength;
+            } else if (moveVec.x !== 0 || moveVec.y !== 0) {
+                const destAngle = Math.atan2(moveVec.y, moveVec.x);
+                let diff = destAngle - this.angle;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                this.angle += diff * deltaTime * 10;
+>>>>>>> 84acac063aaf5b59eabf39905c147185364d128b
             }
         }
 
@@ -2310,25 +2331,30 @@ export class Player {
         let nearest = null;
         let minDist = range;
 
-        // Check boss first if it exists (bosses have infinite tracking range, but closer enemies take priority)
+        // Check regular enemies
+        if (this.game.enemies) {
+            this.game.enemies.forEach(enemy => {
+                const dx = enemy.x - this.x;
+                const dy = enemy.y - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearest = enemy;
+                }
+            });
+        }
+
+        // Check boss (boss also follows nearest-priority)
         if (this.game.boss && !this.game.boss.markedForDeletion) {
             const dx = this.game.boss.x - this.x;
             const dy = this.game.boss.y - this.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            minDist = dist;
-            nearest = this.game.boss;
-        }
-
-        this.game.enemies.forEach(enemy => {
-            const dx = enemy.x - this.x;
-            const dy = enemy.y - this.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
             if (dist < minDist) {
                 minDist = dist;
-                nearest = enemy;
+                nearest = this.game.boss;
             }
-        });
+        }
 
         return nearest;
     }
