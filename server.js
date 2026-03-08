@@ -270,6 +270,44 @@ app.post('/api/score', requireDB, async (req, res) => {
     }
 });
 
+// GET: Fetch a specific player's exact global rank
+app.get('/api/player/:playerName', async (req, res) => {
+    try {
+        const playerName = req.params.playerName;
+        if (!playerName) {
+            return res.status(400).json({ success: false, error: 'Player name missing' });
+        }
+
+        const playerStats = await leaderboardCollection.findOne({ playerName: playerName });
+
+        if (!playerStats) {
+            return res.json({ success: true, score: 0, globalRank: -1 });
+        }
+
+        const score = playerStats.score;
+
+        // Competitive Ranking logic (1, 2, 2, 4)
+        // Find how many players have a STRICTLY GREATER score than this player.
+        // The competitive rank is simply that count + 1.
+        // E.g., if 3 people have 500, and this player has 400, rank is 3 + 1 = 4.
+        const higherScoringPlayersCount = await leaderboardCollection.countDocuments({
+            score: { $gt: score }
+        });
+
+        const globalRank = higherScoringPlayersCount + 1;
+
+        res.json({
+            success: true,
+            score: score,
+            globalRank: globalRank
+        });
+
+    } catch (error) {
+        console.error('Error fetching player stats:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch player stats' });
+    }
+});
+
 // Co-op Rooms (Collaborate Feature) 
 // Routes for creation and joining are below
 

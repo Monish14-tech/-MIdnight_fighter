@@ -8,7 +8,7 @@ import { PowerUp } from './entities/powerup.js?v=4';
 import { LeaderboardManager } from './leaderboard.js?v=4';
 import { SocketIONetplay } from './socketio-netplay.js?v=4';
 import { AchievementManager } from './achievements.js?v=4';
-import { RANK_DATA, getRankByScore } from './ranks.js?v=4';
+import { RANK_DATA, getRankByGlobalPosition } from './ranks.js?v=11';
 
 class AssetLoader {
     constructor() {
@@ -310,6 +310,7 @@ export class Game {
         this.netplay = new SocketIONetplay();
         this.netSyncTimer = 0;
         this.rankPerk = { coinBonus: 0, hpMercy: false, nameGlow: false, hudBorder: false };
+        this.globalRank = Infinity; // Store competitive ranking position
 
         // Fullscreen management
         this.fullscreenCheckTimer = 0;
@@ -868,6 +869,10 @@ export class Game {
                 localStorage.setItem('midnight_highscore', this.highScore);
                 console.log(`[Sync] Local high score updated to match global.`);
             }
+            if (stats.globalRank !== undefined) {
+                this.globalRank = stats.globalRank;
+                console.log(`[Sync] Player is ranked #${this.globalRank} globally.`);
+            }
         }
 
         // Update Main Menu Rank Display
@@ -900,8 +905,10 @@ export class Game {
                     const playerIndex = top5.findIndex(entry => entry.playerName === playerName);
                     const playerEntry = top5[playerIndex];
 
-                    // Determine rank based on score to get the correct color
-                    const rank = typeof getRankByScore === 'function' ? getRankByScore(playerEntry.score) : { color: '#ffd700' };
+                    // Determine rank based on global position to get the correct color
+                    const pRankData = typeof getRankByGlobalPosition === 'function' && playerEntry._rank
+                        ? getRankByGlobalPosition(playerEntry._rank)
+                        : { color: '#ffd700' };
 
                     if (header) {
                         header.innerText = '★ GLOBAL LEGEND ★';
@@ -911,10 +918,10 @@ export class Game {
 
                     const div = document.createElement('div');
                     div.className = 'top-player-entry';
-                    div.style.color = rank.color;
-                    div.style.borderColor = rank.color;
-                    div.style.textShadow = `0 0 5px ${rank.color}`;
-                    div.style.boxShadow = `inset 0 0 10px ${rank.color}40`;
+                    div.style.color = pRankData.color;
+                    div.style.borderColor = pRankData.color;
+                    div.style.textShadow = `0 0 5px ${pRankData.color}`;
+                    div.style.boxShadow = `inset 0 0 10px ${pRankData.color}40`;
 
                     div.innerText = `#${playerIndex + 1} ${playerEntry.playerName} ${playerEntry.score.toLocaleString()} pts`;
                     container.appendChild(div);
@@ -945,8 +952,8 @@ export class Game {
         keysToClear.forEach(key => localStorage.removeItem(key));
     }
 
-    getPlayerRank(score) {
-        const rank = getRankByScore(score);
+    getPlayerRank() {
+        const rank = getRankByGlobalPosition(this.globalRank);
         return rank.name;
     }
 
@@ -959,7 +966,7 @@ export class Game {
 
     // Refresh the rank badge display on start screen
     refreshRankDisplay() {
-        const rank = getRankByScore(this.highScore);
+        const rank = getRankByGlobalPosition(this.globalRank);
 
         // Update existing small rank text
         const rankMain = document.getElementById('player-rank-main');
@@ -1001,7 +1008,7 @@ export class Game {
 
     applyRankPerks() {
         if (!this.rankPerk) return;
-        const rank = getRankByScore(this.highScore);
+        const rank = getRankByGlobalPosition(this.globalRank);
 
         // 1. Name Glow Perk
         const p1NameEl = document.getElementById('p1-hud-name');
@@ -1200,7 +1207,7 @@ export class Game {
         }
 
         // Rank Perks Initialization
-        const rank = getRankByScore(this.highScore);
+        const rank = getRankByGlobalPosition(this.globalRank);
         this.rankPerk = rank.perk || { coinBonus: 0, hpMercy: false };
         this.applyRankPerks();
 

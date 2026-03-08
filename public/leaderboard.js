@@ -1,5 +1,4 @@
-// Leaderboard API Manager
-import { getRankByScore } from './ranks.js?v=4';
+import { getRankByGlobalPosition } from './ranks.js?v=11';
 
 export class LeaderboardManager {
     constructor() {
@@ -129,7 +128,7 @@ export class LeaderboardManager {
                 ? entry.teamMembers.join(' + ')
                 : entry.playerName;
 
-            const rankInfo = getRankByScore(entry.score);
+            const rankInfo = getRankByGlobalPosition(rank);
 
             entryDiv.innerHTML = `
                 <div class="leaderboard-rank">${rank}</div>
