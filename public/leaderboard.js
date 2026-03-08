@@ -1,4 +1,4 @@
-import { getRankByGlobalPosition } from './ranks.js?v=14';
+import { RANK_DATA, getRankByGlobalPosition } from './ranks.js?v=16';
 
 export class LeaderboardManager {
     constructor() {

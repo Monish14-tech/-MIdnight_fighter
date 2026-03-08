@@ -56,8 +56,9 @@
             originalLog.apply(console, arguments);
         };
     </script>
-    <link rel="stylesheet" href="style.css?v=14">
-    <link rel="stylesheet" href="ranks.css?v=14">
+    <link rel="stylesheet" href="style.css?v=17">
+    <link rel="stylesheet" href="ranks.css?v=17">
+    <script type="module" src="main.js?v=17"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
@@ -110,8 +111,9 @@
                     </div>
                 </div>
                 <button id="pause-btn" class="icon-btn">II</button>
-                <button id="settings-btn" class="icon-btn">⚙</button>
             </div>
+            <button id="settings-btn" class="icon-btn"
+                style="position: absolute; top: 15px; right: 15px; z-index: 1000; pointer-events: auto;">⚙</button>
 
             <!-- Mobile Controls -->
             <div id="mobile-controls">
@@ -170,7 +172,10 @@
                 <div class="menu-buttons">
                     <button id="start-btn" class="neon-btn">INITIATE SEQUENCE</button>
                     <button id="store-btn" class="neon-btn">ARMORY</button>
-                    <button id="achievements-menu-btn" class="neon-btn">ACHIEVEMENTS</button>
+                    <button id="achievements-menu-btn" class="neon-btn">
+                        ACHIEVEMENTS
+                        <span id="achievement-notification-dot" class="notification-dot hidden"></span>
+                    </button>
                     <button id="leaderboard-btn" class="neon-btn">LEADERBOARD</button>
                     <button id="collab-btn" class="neon-btn">COLLABORATE</button>
                 </div>
@@ -212,7 +217,7 @@
                 <h2>PAUSED</h2>
                 <div class="menu-buttons-vertical">
                     <button id="resume-btn" class="neon-btn">RESUME</button>
-                    <button id="pause-armory-btn" class="neon-btn">ARMORY</button>
+                    <button id="pause-music-toggle" class="neon-btn">MUSIC: ON</button>
                     <button id="leave-room-btn" class="neon-btn" style="display:none;">LEAVE ROOM</button>
                     <button id="main-menu-btn" class="neon-btn">MAIN MENU</button>
                 </div>
@@ -329,7 +334,7 @@
     </script>
     <!-- Socket.IO Client Library -->
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js" crossorigin="anonymous"></script>
-    <script type="module" src="main.js?v=14"></script>
+
 </body>
 
 </html>

@@ -687,6 +687,7 @@ export class Enemy {
                         orb.explosive = true;
                         orb.color = '#ff00ff'; // Purple/Magenta 
                         this.game.projectiles.push(orb);
+                        if (this.game.audio) this.game.audio.enemyShot();
                         this.hasFiredSingleMissile = true;
                     }
                 } else {
@@ -701,10 +702,12 @@ export class Enemy {
                         for (let i = -1; i <= 1; i += 2) {
                             this.game.projectiles.push(new Projectile(this.game, this.x, this.y, leadAngle + spread * i, 'bullet', 'enemy'));
                         }
+                        if (this.game.audio) this.game.audio.enemyShot();
                     } else {
                         // Long range: much more spread (0.8 instead of 0.5)
                         const spread = (Math.sin(seed * 1.5) * 0.8) * spreadMultiplier;
                         this.game.projectiles.push(new Projectile(this.game, this.x, this.y, leadAngle + spread, 'bullet', 'enemy'));
+                        if (this.game.audio) this.game.audio.enemyShot();
                     }
                 }
             }
@@ -723,6 +726,7 @@ export class Enemy {
                         missile.damage = 2;
                         missile.color = '#6bd6ff';
                         this.game.projectiles.push(missile);
+                        if (this.game.audio) this.game.audio.enemyShot();
                         this.hasFiredSingleMissile = true;
                     }
                 } else {
@@ -735,6 +739,7 @@ export class Enemy {
                     shot.damage = 2;
                     shot.color = '#6bd6ff';
                     this.game.projectiles.push(shot);
+                    if (this.game.audio) this.game.audio.enemyShot();
                 }
             }
         } else if (this.type === 'launcher') {
@@ -751,6 +756,7 @@ export class Enemy {
                         missile.damage = 2;
                         missile.color = '#ff0099';
                         this.game.projectiles.push(missile);
+                        if (this.game.audio) this.game.audio.enemyShot();
                         this.hasFiredSingleMissile = true;
                     }
                 } else {
@@ -761,6 +767,7 @@ export class Enemy {
                     bullet.damage = 2;
                     bullet.color = '#ff0099';
                     this.game.projectiles.push(bullet);
+                    if (this.game.audio) this.game.audio.enemyShot();
                 }
             }
         } else if (this.type === 'pulsar') {

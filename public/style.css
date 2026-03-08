@@ -2600,8 +2600,45 @@ body {
     margin-top: 20px;
 }
 
+
 .highlight-text {
     color: #00f3ff;
     text-shadow: 0 0 10px #00f3ff;
     font-weight: bold;
+}
+
+/* Achievement Notification Dot */
+#achievements-menu-btn {
+    position: relative;
+}
+
+.notification-dot {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 12px;
+    height: 12px;
+    background-color: #ff3333;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #ff3333, 0 0 20px #ff3333;
+    z-index: 10;
+    pointer-events: none;
+    animation: pulse-red 1.5s infinite;
+}
+
+@keyframes pulse-red {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(255, 51, 51, 0.7);
+    }
+
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 10px rgba(255, 51, 51, 0);
+    }
+
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(255, 51, 51, 0);
+    }
 }

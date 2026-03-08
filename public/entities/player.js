@@ -448,7 +448,7 @@ export class Player {
             if (this.game.audio) {
                 // Use shoot sound if available, fall back to dash
                 if (typeof this.game.audio.shoot === 'function') {
-                    this.game.audio.shoot();
+                    this.game.audio.shoot(this.shipType);
                 }
                 // (no fallback — silent fire is better than wrong sfx)
             }

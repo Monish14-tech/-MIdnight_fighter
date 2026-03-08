@@ -930,6 +930,7 @@ export class Boss {
                     wideShot.color = '#ff4400';
                     wideShot.radius = 5;
                     this.game.projectiles.push(wideShot);
+                    if (this.game.audio) this.game.audio.enemyShot();
                 }
             } else {
                 // Beam done
@@ -1425,6 +1426,7 @@ export class Boss {
             p.damage = Math.max(1, Math.floor(this.level / 5)) * this.damageScale;
         }
         this.game.projectiles.push(p);
+        if (this.game.audio) this.game.audio.enemyShot();
         return p;
     }
 

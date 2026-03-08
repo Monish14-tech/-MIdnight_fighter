@@ -1,14 +1,14 @@
-import { InputHandler } from './input.js?v=14';
-import { Player } from './entities/player.js?v=14';
-import { Enemy } from './entities/enemy.js?v=14';
-import { Explosion, FloatingText } from './entities/particle.js?v=14';
-import { AudioController } from './audio.js?v=14';
-import { ScreenShake, Nebula, CosmicDust, Planet, Asteroid } from './utils.js?v=14';
-import { PowerUp } from './entities/powerup.js?v=14';
-import { LeaderboardManager } from './leaderboard.js?v=14';
-import { SocketIONetplay } from './socketio-netplay.js?v=14';
-import { AchievementManager } from './achievements.js?v=14';
-import { RANK_DATA, getRankByGlobalPosition } from './ranks.js?v=14';
+import { InputHandler } from './input.js?v=16';
+import { Player } from './entities/player.js?v=16';
+import { Enemy } from './entities/enemy.js?v=16';
+import { Explosion, FloatingText } from './entities/particle.js?v=16';
+import { AudioController } from './audio.js?v=16';
+import { ScreenShake, Nebula, CosmicDust, Planet, Asteroid } from './utils.js?v=16';
+import { PowerUp } from './entities/powerup.js?v=16';
+import { LeaderboardManager } from './leaderboard.js?v=16';
+import { SocketIONetplay } from './socketio-netplay.js?v=16';
+import { AchievementManager } from './achievements.js?v=16';
+import { RANK_DATA, getRankByGlobalPosition } from './ranks.js?v=16';
 
 class AssetLoader {
     constructor() {
@@ -45,38 +45,36 @@ export const SHIP_DATA = {
     // ── Tier 0: Starter ──────────────────────────────────────────────────────
     'default': { name: 'INTERCEPTOR', price: 0, hp: 5, speed: 450, damage: 3, fireRate: 0.12, missileCooldown: 1.5, missileCount: 2, color: '#00f3ff', bulletType: 'normal', desc: 'Standard issue. Reliable & fast.', passive: 'None' },
     // ── Tier 1: Early ──────────────────────────────────────
-    'scout': { name: 'RAZORBACK', price: 8000, hp: 5, speed: 600, damage: 3, fireRate: 0.10, missileCooldown: 1.2, missileCount: 2, color: '#ffff00', bulletType: 'spread', desc: 'Blazing speed. Fan spread.', passive: 'Speed Demon: Dash CD = 3s. +10% speed at full HP.' },
-    'phantom': { name: 'PHANTOM', price: 11000, hp: 6, speed: 550, damage: 3, fireRate: 0.08, missileCooldown: 1.0, missileCount: 2, color: '#9900ff', bulletType: 'spread', desc: 'Nimble spread fighter.', passive: 'Ghost Protocol: 15% chance to ignore incoming damage.' },
-    'rapid': { name: 'STORM BRINGER', price: 14500, hp: 6, speed: 450, damage: 3, fireRate: 0.06, missileCooldown: 1.0, missileCount: 3, color: '#aa00ff', bulletType: 'normal', desc: 'Hyper fire rate. Dual missiles.', passive: 'Rapid Suppression: Every 5th shot fires a burst of 3.' },
-    'fighter': { name: 'CRIMSON FURY', price: 17000, hp: 8, speed: 460, damage: 5, fireRate: 0.12, missileCooldown: 1.5, missileCount: 3, color: '#ff0055', bulletType: 'normal', desc: 'High damage. Extra HP.', passive: 'Blood Rush: +5% damage per kill (stacks ×5, resets on hit).' },
-    'pulse': { name: 'NEON PULSE', price: 20000, hp: 8, speed: 500, damage: 5, fireRate: 0.04, missileCooldown: 1.2, missileCount: 3, color: '#00ffff', bulletType: 'normal', desc: 'Extreme fire rate. Neon core.', passive: 'Overcharge: Each kill reduces missile CD by 0.1s.' },
+    'scout': { name: 'RAZORBACK', price: 1000, hp: 5, speed: 600, damage: 3, fireRate: 0.10, missileCooldown: 1.2, missileCount: 2, color: '#ffff00', bulletType: 'spread', desc: 'Blazing speed. Fan spread.', passive: 'Speed Demon: Dash CD = 3s. +10% speed at full HP.' },
+    'phantom': { name: 'PHANTOM', price: 2500, hp: 6, speed: 550, damage: 3, fireRate: 0.08, missileCooldown: 1.0, missileCount: 2, color: '#9900ff', bulletType: 'spread', desc: 'Nimble spread fighter.', passive: 'Ghost Protocol: 15% chance to ignore incoming damage.' },
+    'rapid': { name: 'STORM BRINGER', price: 5000, hp: 6, speed: 450, damage: 3, fireRate: 0.06, missileCooldown: 1.0, missileCount: 3, color: '#aa00ff', bulletType: 'normal', desc: 'Hyper fire rate. Dual missiles.', passive: 'Rapid Suppression: Every 5th shot fires a burst of 3.' },
+    'fighter': { name: 'CRIMSON FURY', price: 8000, hp: 8, speed: 460, damage: 5, fireRate: 0.12, missileCooldown: 1.5, missileCount: 3, color: '#ff0055', bulletType: 'normal', desc: 'High damage. Extra HP.', passive: 'Blood Rush: +5% damage per kill (stacks ×5, resets on hit).' },
+    'pulse': { name: 'NEON PULSE', price: 12000, hp: 8, speed: 500, damage: 5, fireRate: 0.04, missileCooldown: 1.2, missileCount: 3, color: '#00ffff', bulletType: 'normal', desc: 'Extreme fire rate. Neon core.', passive: 'Overcharge: Each kill reduces missile CD by 0.1s.' },
     // ── Tier 2: Mid ──────────────────────────────────────
-    'quantum': { name: 'QUANTUM GHOST', price: 40000, hp: 10, speed: 650, damage: 16, fireRate: 0.05, missileCooldown: 1.0, missileCount: 4, color: '#39ff14', bulletType: 'railgun', desc: 'Quantum entity. Hyper velocity.', passive: 'Quantum Tunnel: Railgun pierces asteroids.', playCountToUnlock: 50 },
-    'void': { name: 'VOID STALKER', price: 55000, hp: 10, speed: 500, damage: 12, fireRate: 0.20, missileCooldown: 1.5, missileCount: 4, color: '#4400ff', bulletType: 'railgun', desc: 'Experimental railgun. Shadow walk.', passive: 'Shadow Step: Dash leaves a damage zone (75px, 1 dmg).', playCountToUnlock: 50 },
-    'solar': { name: 'SOLAR FLARE', price: 70000, hp: 10, speed: 460, damage: 8, fireRate: 0.12, missileCooldown: 1.5, missileCount: 4, color: '#ffcc00', bulletType: 'explosive', desc: 'Explosive solar rounds.', passive: 'Solar Burn: Explosions leave fire DOT patch (0.8s).', playCountToUnlock: 50 },
-    'bomber': { name: 'DOOMSDAY', price: 85000, hp: 10, speed: 420, damage: 8, fireRate: 0.10, missileCooldown: 1.5, missileCount: 5, color: '#ff6600', bulletType: 'explosive', desc: 'Triple missile barrage.', passive: 'Triple Volley: Missiles fire in a triple spread.', playCountToUnlock: 50 },
-    'tank': { name: 'V.G. TITAN', price: 100000, hp: 7, speed: 400, damage: 8, fireRate: 0.12, missileCooldown: 1.8, missileCount: 4, color: '#00ff44', bulletType: 'piercing', desc: 'Heavy armor. Piercing shots.', passive: 'Iron Will: +1 HP per 4 kills.' },
-    'laser_drone': { name: 'LASER DRONE', price: 120000, hp: 10, speed: 480, damage: 6, fireRate: 0.03, missileCooldown: 1.2, missileCount: 4, color: '#ff00cc', bulletType: 'laser', desc: 'Sustained laser pulses. High DPS.', passive: 'Amplifier: 3s sustained fire gives +20% damage.', playCountToUnlock: 50 },
+    'quantum': { name: 'QUANTUM GHOST', price: 18000, hp: 10, speed: 650, damage: 16, fireRate: 0.05, missileCooldown: 1.0, missileCount: 4, color: '#39ff14', bulletType: 'railgun', desc: 'Quantum entity. Hyper velocity.', passive: 'Quantum Tunnel: Railgun pierces asteroids.', playCountToUnlock: 50 },
+    'void': { name: 'VOID STALKER', price: 25000, hp: 10, speed: 500, damage: 12, fireRate: 0.20, missileCooldown: 1.5, missileCount: 4, color: '#4400ff', bulletType: 'railgun', desc: 'Experimental railgun. Shadow walk.', passive: 'Shadow Step: Dash leaves a damage zone (75px, 1 dmg).', playCountToUnlock: 50 },
+    'solar': { name: 'SOLAR FLARE', price: 32000, hp: 10, speed: 460, damage: 8, fireRate: 0.12, missileCooldown: 1.5, missileCount: 4, color: '#ffcc00', bulletType: 'explosive', desc: 'Explosive solar rounds.', passive: 'Solar Burn: Explosions leave fire DOT patch (0.8s).', playCountToUnlock: 50 },
+    'bomber': { name: 'DOOMSDAY', price: 40000, hp: 10, speed: 420, damage: 8, fireRate: 0.10, missileCooldown: 1.5, missileCount: 5, color: '#ff6600', bulletType: 'explosive', desc: 'Triple missile barrage.', passive: 'Triple Volley: Missiles fire in a triple spread.', playCountToUnlock: 50 },
+    'tank': { name: 'V.G. TITAN', price: 48000, hp: 7, speed: 400, damage: 8, fireRate: 0.12, missileCooldown: 1.8, missileCount: 4, color: '#00ff44', bulletType: 'piercing', desc: 'Heavy armor. Piercing shots.', passive: 'Iron Will: +1 HP per 4 kills.' },
+    'laser_drone': { name: 'LASER DRONE', price: 55000, hp: 10, speed: 480, damage: 6, fireRate: 0.03, missileCooldown: 1.2, missileCount: 4, color: '#ff00cc', bulletType: 'laser', desc: 'Sustained laser pulses. High DPS.', passive: 'Amplifier: 3s sustained fire gives +20% damage.', playCountToUnlock: 50 },
     // ── Tier 3: Upper-Mid ────────────────────────────────
-    'wraith': { name: 'COSMIC WRAITH', price: 200000, hp: 6, speed: 600, damage: 20, fireRate: 0.05, missileCooldown: 1.0, missileCount: 5, color: '#cc44ff', bulletType: 'railgun', desc: 'Void phantom. Reality breaker.', passive: 'Reality Shatter: 10% chance each kill spawns a coin burst (+10c).' },
-    'vanguard': { name: 'VANGUARD', price: 280000, hp: 6, speed: 480, damage: 8, fireRate: 0.06, missileCooldown: 1.2, missileCount: 5, color: '#00ffcc', bulletType: 'piercing', desc: 'Elite piercing fighter.', passive: 'Piercing Barrage: Piercing rounds slow enemies 15%.' },
-    'eclipse': { name: 'ECLIPSE SERAPH', price: 380000, hp: 7, speed: 500, damage: 12, fireRate: 0.05, missileCooldown: 1.0, missileCount: 6, color: '#66ccff', bulletType: 'piercing', desc: 'Angel core. Enhanced hull.', passive: 'Angel Core: Heal +1 HP every 8s of survival.' },
-    'shadowblade': { name: 'SHADOWBLADE', price: 500000, hp: 7, speed: 560, damage: 15, fireRate: 0.06, missileCooldown: 1.2, missileCount: 6, color: '#5522aa', bulletType: 'piercing', desc: 'Silent assassin. Stealth.', passive: 'Stealth Mode: Dash range is 30% longer.' },
-    'guardian': { name: 'GALAXY GUARDIAN', price: 600000, hp: 8, speed: 380, damage: 8, fireRate: 0.10, missileCooldown: 1.8, missileCount: 5, color: '#ffffff', bulletType: 'normal', desc: 'Elite protector. High HP.', passive: 'Fortress Protocol: Damage capped at 1 per hit. +1 HP per 5 kills.' },
+    'wraith': { name: 'COSMIC WRAITH', price: 62000, hp: 6, speed: 600, damage: 20, fireRate: 0.05, missileCooldown: 1.0, missileCount: 5, color: '#cc44ff', bulletType: 'railgun', desc: 'Void phantom. Reality breaker.', passive: 'Reality Shatter: 10% chance each kill spawns a coin burst (+10c).' },
+    'vanguard': { name: 'VANGUARD', price: 68000, hp: 6, speed: 480, damage: 8, fireRate: 0.06, missileCooldown: 1.2, missileCount: 5, color: '#00ffcc', bulletType: 'piercing', desc: 'Elite piercing fighter.', passive: 'Piercing Barrage: Piercing rounds slow enemies 15%.' },
+    'eclipse': { name: 'ECLIPSE SERAPH', price: 75000, hp: 7, speed: 500, damage: 12, fireRate: 0.05, missileCooldown: 1.0, missileCount: 6, color: '#66ccff', bulletType: 'piercing', desc: 'Angel core. Enhanced hull.', passive: 'Angel Core: Heal +1 HP every 8s of survival.' },
+    'shadowblade': { name: 'SHADOWBLADE', price: 82000, hp: 7, speed: 560, damage: 15, fireRate: 0.06, missileCooldown: 1.2, missileCount: 6, color: '#5522aa', bulletType: 'piercing', desc: 'Silent assassin. Stealth.', passive: 'Stealth Mode: Dash range is 30% longer.' },
+    'guardian': { name: 'GALAXY GUARDIAN', price: 88000, hp: 8, speed: 380, damage: 8, fireRate: 0.10, missileCooldown: 1.8, missileCount: 5, color: '#ffffff', bulletType: 'normal', desc: 'Elite protector. High HP.', passive: 'Fortress Protocol: Damage capped at 1 per hit. +1 HP per 5 kills.' },
     // ── Tier 4: Advanced ────────────────────────────────
-    'obliterator': { name: 'OBLITERATOR PRIME', price: 1200000, hp: 8, speed: 440, damage: 18, fireRate: 0.06, missileCooldown: 1.2, missileCount: 7, color: '#ff3366', bulletType: 'explosive', desc: 'Siege frame. Reinforced core.', passive: 'Siege Frame: Explosions deal +25% area damage.' },
-    'inferno': { name: 'INFERNO KING', price: 2000000, hp: 8, speed: 520, damage: 22, fireRate: 0.07, missileCooldown: 1.0, missileCount: 7, color: '#ff4500', bulletType: 'explosive', desc: 'Blazing hellfire. Pure devastation.', passive: 'Hellfire: 3+ consecutive kills give +15% fire rate.' },
-    'juggernaut': { name: 'JUGGERNAUT', price: 3000000, hp: 10, speed: 380, damage: 10, fireRate: 0.12, missileCooldown: 1.8, missileCount: 7, color: '#ff9900', bulletType: 'piercing', desc: 'God of War. Heals on kill.', passive: 'Unstoppable: Below 30% HP, take 50% less damage.', playCountToUnlock: 100 },
-    'tempest': { name: 'TEMPEST LORD', price: 4000000, hp: 9, speed: 500, damage: 18, fireRate: 0.06, missileCooldown: 1.1, missileCount: 8, color: '#00d9ff', bulletType: 'spread', desc: 'Lightning god. Storm incarnate.', passive: 'Lightning God: Spread bullets gain +20% speed.', playCountToUnlock: 100 },
-    // ── Tier 5: Elite ───────────────────────────────────
-    'reaper': { name: 'VOID REAPER', price: 7000000, hp: 9, speed: 550, damage: 28, fireRate: 0.05, missileCooldown: 0.9, missileCount: 8, color: '#880022', bulletType: 'explosive', desc: 'Death embodied. Final judgment.', passive: 'Death Mark: First hit on each new enemy deals double damage.', playCountToUnlock: 100 },
-    'crimson_emperor': { name: 'CRIMSON EMPEROR', price: 11000000, hp: 10, speed: 490, damage: 25, fireRate: 0.06, missileCooldown: 1.0, missileCount: 10, color: '#dc143c', bulletType: 'piercing', desc: 'Royal ruler. Absolute dominion.', passive: 'Absolute Dominion: Missile CD -10% per boss kill (max 50%).', playCountToUnlock: 100 },
-    'phoenix': { name: 'CELESTIAL PHOENIX', price: 16000000, hp: 11, speed: 530, damage: 26, fireRate: 0.07, missileCooldown: 0.9, missileCount: 10, color: '#ffa500', bulletType: 'explosive', desc: 'Mythic firebird. Eternal rebirth.', passive: 'Eternal Rebirth: Once per run, revive at 3 HP on death.', playCountToUnlock: 100 },
-    'starborn': { name: 'STARBORN TITAN', price: 22000000, hp: 11, speed: 480, damage: 18, fireRate: 0.04, missileCooldown: 0.8, missileCount: 9, color: '#99ffcc', bulletType: 'railgun', desc: 'Mythic relic. God-tier hull.', passive: 'God-Tier Hull: +1 max HP per boss killed (up to +5).', playCountToUnlock: 100 },
-    'leviathan': { name: 'LEVIATHAN ROX', price: 30000000, hp: 13, speed: 460, damage: 24, fireRate: 0.08, missileCooldown: 1.2, missileCount: 10, color: '#003d82', bulletType: 'explosive', desc: 'Deep sea titan. Unstoppable.', passive: 'Tsunami Force: Explosions knock back nearby enemies.', playCountToUnlock: 100 },
-    // ── Tier 6: Legendary ──────────────────────────────
-    'sentinel': { name: 'ETERNAL SENTINEL', price: 45000000, hp: 15, speed: 500, damage: 32, fireRate: 0.06, missileCooldown: 0.8, missileCount: 14, color: '#e8e8e8', bulletType: 'railgun', desc: 'Ultimate guardian. Infinite power.', passive: 'Infinite Power: Railgun shots slightly home toward nearest enemy.', playCountToUnlock: 100 },
-    'nova': { name: 'NOVA ASCENDANT', price: 75000000, hp: 12, speed: 580, damage: 36, fireRate: 0.04, missileCooldown: 0.6, missileCount: 16, color: '#ffeeaa', bulletType: 'railgun', desc: 'Supernova core. Reality-shattering.', passive: 'Supernova: All shots deal ×2 damage but drain 1 HP every 15s.', playCountToUnlock: 100 },
+    'obliterator': { name: 'OBLITERATOR PRIME', price: 90000, hp: 8, speed: 440, damage: 18, fireRate: 0.06, missileCooldown: 1.2, missileCount: 7, color: '#ff3366', bulletType: 'explosive', desc: 'Siege frame. Reinforced core.', passive: 'Siege Frame: Explosions deal +25% area damage.' },
+    'inferno': { name: 'INFERNO KING', price: 92000, hp: 8, speed: 520, damage: 22, fireRate: 0.07, missileCooldown: 1.0, missileCount: 7, color: '#ff4500', bulletType: 'explosive', desc: 'Blazing hellfire. Pure devastation.', passive: 'Hellfire: 3+ consecutive kills give +15% fire rate.' },
+    'juggernaut': { name: 'JUGGERNAUT', price: 94000, hp: 10, speed: 380, damage: 10, fireRate: 0.12, missileCooldown: 1.8, missileCount: 7, color: '#ff9900', bulletType: 'piercing', desc: 'God of War. Heals on kill.', passive: 'Unstoppable: Below 30% HP, take 50% less damage.', playCountToUnlock: 100 },
+    'tempest': { name: 'TEMPEST LORD', price: 95000, hp: 9, speed: 500, damage: 18, fireRate: 0.06, missileCooldown: 1.1, missileCount: 8, color: '#00d9ff', bulletType: 'spread', desc: 'Lightning god. Storm incarnate.', passive: 'Lightning God: Spread bullets gain +20% speed.', playCountToUnlock: 100 },
+    'reaper': { name: 'VOID REAPER', price: 96000, hp: 9, speed: 550, damage: 28, fireRate: 0.05, missileCooldown: 0.9, missileCount: 8, color: '#880022', bulletType: 'explosive', desc: 'Death embodied. Final judgment.', passive: 'Death Mark: First hit on each new enemy deals double damage.', playCountToUnlock: 100 },
+    'crimson_emperor': { name: 'CRIMSON EMPEROR', price: 97000, hp: 10, speed: 490, damage: 25, fireRate: 0.06, missileCooldown: 1.0, missileCount: 10, color: '#dc143c', bulletType: 'piercing', desc: 'Royal ruler. Absolute dominion.', passive: 'Absolute Dominion: Missile CD -10% per boss kill (max 50%).', playCountToUnlock: 100 },
+    'phoenix': { name: 'CELESTIAL PHOENIX', price: 98000, hp: 11, speed: 530, damage: 26, fireRate: 0.07, missileCooldown: 0.9, missileCount: 10, color: '#ffa500', bulletType: 'explosive', desc: 'Mythic firebird. Eternal rebirth.', passive: 'Eternal Rebirth: Once per run, revive at 3 HP on death.', playCountToUnlock: 100 },
+    'starborn': { name: 'STARBORN TITAN', price: 98500, hp: 11, speed: 480, damage: 18, fireRate: 0.04, missileCooldown: 0.8, missileCount: 9, color: '#99ffcc', bulletType: 'railgun', desc: 'Mythic relic. God-tier hull.', passive: 'God-Tier Hull: +1 max HP per boss killed (up to +5).', playCountToUnlock: 100 },
+    'leviathan': { name: 'LEVIATHAN ROX', price: 99000, hp: 13, speed: 460, damage: 24, fireRate: 0.08, missileCooldown: 1.2, missileCount: 10, color: '#003d82', bulletType: 'explosive', desc: 'Deep sea titan. Unstoppable.', passive: 'Tsunami Force: Explosions knock back nearby enemies.', playCountToUnlock: 100 },
+    'sentinel': { name: 'ETERNAL SENTINEL', price: 99500, hp: 15, speed: 500, damage: 32, fireRate: 0.06, missileCooldown: 0.8, missileCount: 14, color: '#e8e8e8', bulletType: 'railgun', desc: 'Ultimate guardian. Infinite power.', passive: 'Infinite Power: Railgun shots slightly home toward nearest enemy.', playCountToUnlock: 100 },
+    'nova': { name: 'NOVA ASCENDANT', price: 100000, hp: 12, speed: 580, damage: 36, fireRate: 0.04, missileCooldown: 0.6, missileCount: 16, color: '#ffeeaa', bulletType: 'railgun', desc: 'Supernova core. Reality-shattering.', passive: 'Supernova: All shots deal ×2 damage but drain 1 HP every 15s.', playCountToUnlock: 100 },
 
     // ── PRESTIGE TIER: Achievement-locked only — cannot be purchased (hidden from armory) ──────────
     'nemesis': {
@@ -322,6 +320,19 @@ export class Game {
         this.initAtmosphere();
         this.addEventListeners();
         this.updatePlayerNameDisplay();
+
+        // Check for autostart after match restart
+        if (sessionStorage.getItem('midnight_autostart') === 'true') {
+            sessionStorage.removeItem('midnight_autostart');
+            // Give a tiny delay for everything to settle
+            setTimeout(() => this.startGame(), 250);
+        } else {
+            // Start Menu music if not autostarting
+            this.audio.playTrack('menu');
+        }
+
+        // Check for global data reset
+        this.checkDataVersion();
     }
 
     initAtmosphere() {
@@ -383,10 +394,17 @@ export class Game {
             resumeBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.togglePause(); }, { passive: false });
         }
 
-        const pauseArmoryBtn = document.getElementById('pause-armory-btn');
-        if (pauseArmoryBtn) {
-            pauseArmoryBtn.addEventListener('click', () => this.openStoreFromPause());
-            pauseArmoryBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.openStoreFromPause(); }, { passive: false });
+        const pauseMusicToggle = document.getElementById('pause-music-toggle');
+        if (pauseMusicToggle) {
+            pauseMusicToggle.addEventListener('click', () => {
+                const enabled = !this.audio.musicEnabled;
+                this.audio.toggleMusic(enabled);
+                pauseMusicToggle.innerText = `MUSIC: ${enabled ? 'ON' : 'OFF'}`;
+                // Update the settings menu checkmark if visible
+                const settingsToggle = document.getElementById('music-toggle');
+                if (settingsToggle) settingsToggle.checked = enabled;
+            });
+            pauseMusicToggle.addEventListener('touchstart', (e) => { e.preventDefault(); pauseMusicToggle.click(); }, { passive: false });
         }
 
         // Settings Button
@@ -408,7 +426,7 @@ export class Game {
             musicToggle.checked = localStorage.getItem('midnight_music_enabled') !== 'false';
             musicToggle.addEventListener('change', (e) => {
                 localStorage.setItem('midnight_music_enabled', e.target.checked);
-                this.audio.masterGain.gain.value = e.target.checked ? 0.3 : 0;
+                this.audio.toggleMusic(e.target.checked);
             });
         }
 
@@ -458,8 +476,19 @@ export class Game {
 
         const collabBtn = document.getElementById('collab-btn');
         if (collabBtn) {
-            collabBtn.addEventListener('click', () => this.openCollaborate());
-            collabBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.openCollaborate(); }, { passive: false });
+            const showSoon = () => {
+                const toast = document.createElement('div');
+                toast.className = 'achievement-toast';
+                toast.style.background = 'rgba(255, 0, 100, 0.9)';
+                toast.innerHTML = `
+                    <div style="font-weight: bold; color: #fff;">COLLABORATIVE MODE</div>
+                    <div style="font-size: 0.9em; color: #ffeb3b;">COMING SOON! 🚀</div>
+                `;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            };
+            collabBtn.addEventListener('click', showSoon);
+            collabBtn.addEventListener('touchstart', (e) => { e.preventDefault(); showSoon(); }, { passive: false });
         }
 
         const backFromLeaderboardBtn = document.getElementById('back-from-leaderboard-btn');
@@ -1107,7 +1136,7 @@ export class Game {
 
                 // Level Up Visuals
                 this.screenShake.trigger(30, 0.3);
-                if (this.audio) this.audio.dash();
+                if (this.audio) this.audio.levelUp();
 
                 // Show Level Up Text
                 this.showLevelUpText(this.currentLevel);
@@ -1158,7 +1187,7 @@ export class Game {
         document.body.appendChild(alertDiv);
 
         // Play alert sound
-        if (this.audio) this.audio.dash();
+        if (this.audio) this.audio.playTrack('boss');
 
         // Remove after 2 seconds
         setTimeout(() => {
@@ -1216,6 +1245,14 @@ export class Game {
     }
 
     startGame() {
+        // If we want a fresh state after every match, we can use location.reload().
+        // If we are calling startGame while gameOver is true, it means it's a RESTART.
+        if (this.gameOver) {
+            sessionStorage.setItem('midnight_autostart', 'true');
+            window.location.reload();
+            return;
+        }
+
         if (!this.onlineCoop || !this.randomSeed) {
             this.initRandom(Date.now().toString()); // Single player fallback
         }
@@ -1224,6 +1261,7 @@ export class Game {
         const rank = getRankByGlobalPosition(this.globalRank);
         this.rankPerk = rank.perk || { coinBonus: 0, hpMercy: false };
         this.applyRankPerks();
+        if (this.audio) this.audio.playTrack('gameplay');
 
         this.isRunning = true;
         this.gameOver = false;
@@ -1314,6 +1352,9 @@ export class Game {
 
         if (this.isPaused) {
             document.getElementById('pause-menu').classList.add('active');
+            // Sync music toggle text
+            const toggle = document.getElementById('pause-music-toggle');
+            if (toggle) toggle.innerText = `MUSIC: ${this.audio.musicEnabled ? 'ON' : 'OFF'}`;
         } else {
             document.getElementById('pause-menu').classList.remove('active');
             this.lastTime = 0; // Reset delta time to prevent jump
@@ -1340,21 +1381,8 @@ export class Game {
             return;
         }
 
-        this.isRunning = false;
-        this.isPaused = false;
-        this.gameOver = false;
-
-        // Hide all screens
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-
-        if (this.hud) this.hud.style.display = 'none';
-
-        // Fix: Ensure Boss HUD is hidden when going to main menu
-        const bossHud = document.getElementById('boss-hud');
-        if (bossHud) bossHud.classList.remove('active');
-
-        this.startScreen.classList.add('active');
-        this.init(); // Refresh start screen data
+        // Auto-refresh to ensure leaderboard/starting ui is updated
+        window.location.reload();
     }
 
     goToStoreFromGameOver() {
@@ -2306,6 +2334,7 @@ export class Game {
                         this.handleEnemyDefeat(enemy, true);
                     } else {
                         const playerDied = player.takeDamage(this.getEnemyContactDamage());
+                        if (this.audio) this.audio.playerHit();
                         this.triggerImpact(0.1, 0.5);
                         this.hudFlashDamage();
                         if (playerDied) {
@@ -2329,6 +2358,7 @@ export class Game {
                 if (dist < this.boss.radius + player.radius) {
                     const bossContactDamage = this.currentLevel >= 20 ? Math.max(2, Math.ceil(player.maxHealth / 2)) : this.getEnemyContactDamage();
                     const died = player.takeDamage(bossContactDamage);
+                    if (this.audio) this.audio.playerHit();
                     this.triggerImpact(0.15, 0.6);
                     this.hudFlashDamage();
                     if (died) this.handleGameOver();
@@ -2382,10 +2412,12 @@ export class Game {
                             proj.markedForDeletion = true;
                         } else if (proj.piercing) {
                             const dead = this.boss.takeDamage(proj.damage);
+                            if (this.audio) this.audio.bossHit();
                             if (dead) this.handleBossDefeat();
                         } else {
                             proj.markedForDeletion = true;
                             const dead = this.boss.takeDamage(proj.damage);
+                            if (this.audio) this.audio.bossHit();
                             if (dead) this.handleBossDefeat();
                         }
                     }
@@ -2404,6 +2436,7 @@ export class Game {
                             ? Math.max(2, Math.ceil(player.maxHealth / 2))
                             : this.getEnemyProjectileDamage(proj.damage || 1);
                         const died = player.takeDamage(hitDamage);
+                        if (this.audio) this.audio.playerHit();
                         this.triggerImpact(0.1, 0.5);
                         this.hudFlashDamage();
                         if (died) this.handleGameOver();
@@ -2730,12 +2763,8 @@ export class Game {
             this.particles.push(new Explosion(this, this.playerTwo.x, this.playerTwo.y, '#33ff99'));
         }
 
-        if (this.audio && this.audio.gameOver) {
-            // Safe call
-            try {
-                this.audio.gameOver();
-            } catch (e) {
-            }
+        if (this.audio) {
+            this.audio.gameOver();
         }
 
         this.screenShake.trigger(50, 0.5);
@@ -2853,14 +2882,16 @@ export class Game {
         coinsDisplay.innerText = `COINS: ${this.coins}`;
         document.getElementById('total-coins-display').innerText = `COINS: ${this.coins}`;
 
-        // Show ALL ships — including prestige/achievement-locked ones
+        // Show ALL ships — Prestige ships at the end, others sorted by price
         const sortedShips = Object.entries(SHIP_DATA)
             .sort((a, b) => {
+                const sA = a[1];
+                const sB = b[1];
                 // Prestige ships go to the end
-                if (a[1].prestige && !b[1].prestige) return 1;
-                if (!a[1].prestige && b[1].prestige) return -1;
-                const hpDiff = a[1].hp - b[1].hp;
-                return hpDiff !== 0 ? hpDiff : a[1].price - b[1].price;
+                if (sA.prestige && !sB.prestige) return 1;
+                if (!sA.prestige && sB.prestige) return -1;
+                // Otherwise sort by price ASC
+                return sA.price - sB.price;
             });
 
         for (const [key, ship] of sortedShips) {
@@ -3248,4 +3279,41 @@ export class Game {
     }
 
 
+    async checkDataVersion() {
+        try {
+            const response = await fetch('/api/version');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    const serverVersion = data.version;
+                    const localVersion = parseInt(localStorage.getItem('midnight_data_version') || '1');
+
+                    if (serverVersion > localVersion) {
+                        console.log(`🚨 Data version mismatch! Server: ${serverVersion}, Local: ${localVersion}. Resetting progress...`);
+                        this.resetLocalProgress();
+                        localStorage.setItem('midnight_data_version', serverVersion);
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('Could not check data version:', e);
+        }
+    }
+
+    resetLocalProgress() {
+        // Clear gameplay progress from localStorage
+        localStorage.removeItem('midnight_coins');
+        localStorage.removeItem('midnight_owned_ships');
+        localStorage.removeItem('midnight_high_score');
+        localStorage.removeItem('midnight_lifetime_coins');
+        localStorage.removeItem('midnight_play_count');
+        localStorage.removeItem('midnight_achievements');
+
+        console.log('✅ Local progress data cleared.');
+
+        // Force reload to apply changes if already on main menu
+        if (!this.isRunning) {
+            window.location.reload();
+        }
+    }
 }

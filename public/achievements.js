@@ -225,8 +225,10 @@ export class AchievementManager {
         this.backBtn = document.getElementById('back-from-achievements-btn');
         this.listEl = document.getElementById('achievement-list');
         this.coinsDisplay = document.getElementById('coins-display-achievements');
+        this.notifDot = document.getElementById('achievement-notification-dot');
 
         this.initUI();
+        this.updateNotificationState();
     }
 
     initUI() {
@@ -243,7 +245,18 @@ export class AchievementManager {
             this.backBtn.addEventListener('click', () => {
                 this.screenEl.classList.remove('active');
                 document.getElementById('start-screen').classList.add('active');
+                this.updateNotificationState();
             });
+        }
+    }
+
+    updateNotificationState() {
+        if (!this.notifDot) return;
+        const count = this.completedButUnclaimed.length;
+        if (count > 0) {
+            this.notifDot.classList.remove('hidden');
+        } else {
+            this.notifDot.classList.add('hidden');
         }
     }
 
@@ -314,6 +327,7 @@ export class AchievementManager {
         this.completedButUnclaimed.push(ach.id);
         this.save();
         this.showToast(ach.name, ach.icon);
+        this.updateNotificationState();
 
         // If this achievement unlocks a ship, add it to ownedShips
         if (ach.shipUnlock) {
@@ -365,6 +379,7 @@ export class AchievementManager {
 
         this.updateCoinsDisplay();
         this.renderList();
+        this.updateNotificationState();
     }
 
     updateCoinsDisplay() {
