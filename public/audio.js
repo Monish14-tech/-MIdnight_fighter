@@ -41,31 +41,8 @@ export class AudioController {
     }
 
     async preloadBGM() {
-        try {
-            const menuRes = await fetch('menu_bgm.mp3');
-            if (menuRes.ok) {
-                const arr = await menuRes.arrayBuffer();
-                this.menuBuffer = await this.ctx.decodeAudioData(arr);
-                console.log('Menu BGM Loaded successfully');
-                // If we are waiting for menu music, start it now
-                if (!this.bgmSource && !this.isPlayingMusic) {
-                    this.playBGM(this.menuBuffer);
-                }
-            }
-        } catch (err) {
-            console.log('Using procedural menu music');
-        }
-
-        try {
-            const gameRes = await fetch('gameplay_bgm.mp3');
-            if (gameRes.ok) {
-                const arr = await gameRes.arrayBuffer();
-                this.gameplayBuffer = await this.ctx.decodeAudioData(arr);
-                console.log('Gameplay BGM Loaded successfully');
-            }
-        } catch (err) {
-            console.log('Using procedural gameplay music');
-        }
+        // BGM Disabled as per user request (wants only game audio/SFX)
+        console.log('BGM Preload skipped (Disabled)');
     }
 
     makeDistortionCurve(amount) {
@@ -141,11 +118,11 @@ export class AudioController {
     // --- SFX SUITE ---
 
     shoot(shipType = 'default') {
-        // Square wave for aggressive fighter jet cannon sound
-        const freq = shipType === 'quantum' ? 350 : 250;
-        this.playTone(freq, 'square', 0.1, this.sfxGain, 0.4);
-        // Add a noise layer for grit
-        this.explosion(0.2);
+        // More aggressive cannon sound: Higher distortion and low-end kick
+        const freq = shipType === 'quantum' ? 180 : 120;
+        this.playTone(freq, 'square', 0.12, this.sfxGain, 0.6);
+        // Short white noise burst for "mechanical" snap
+        this.explosion(0.1);
     }
 
     playerHit() {
@@ -173,14 +150,15 @@ export class AudioController {
     }
 
     explosion(size = 1) {
-        const duration = 0.4 + (size * 0.2);
+        const duration = 0.5 + (size * 0.3);
         const bufferSize = this.ctx.sampleRate * duration;
         const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
         const data = buffer.getChannelData(0);
 
         for (let i = 0; i < bufferSize; i++) {
-            // Brown noise approximation for deeper jet-fuel explosions
-            data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+            // Distorted noise for gritty debris feel
+            const noise = (Math.random() * 2 - 1);
+            data[i] = noise * (1 - i / bufferSize);
         }
 
         const noise = this.ctx.createBufferSource();
@@ -188,21 +166,22 @@ export class AudioController {
 
         const filter = this.ctx.createBiquadFilter();
         filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(800 * size, this.ctx.currentTime);
-        filter.Q.value = 10;
+        // Much deeper, heavier explosion frequency
+        filter.frequency.setValueAtTime(400 * size, this.ctx.currentTime);
+        filter.Q.value = 5;
 
         const gain = this.ctx.createGain();
-        gain.gain.setValueAtTime(size > 2 ? 1.8 : 1.2, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+        gain.gain.setValueAtTime(size > 2 ? 2.5 : 1.5, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
 
         noise.connect(filter);
         filter.connect(gain);
         gain.connect(this.sfxGain);
         noise.start();
 
-        // Add a sub-bass thump for large explosions
-        if (size > 1.5) {
-            this.playTone(60, 'sine', 0.5, this.sfxGain, 1.0);
+        // Sub-bass impact shockwave
+        if (size > 0.5) {
+            this.playTone(45, 'sine', 0.4, this.sfxGain, 1.2);
         }
     }
 
@@ -259,24 +238,8 @@ export class AudioController {
     // --- MUSIC SYNTH ENGINE ---
 
     playTrack(trackName) {
-        if (this.currentTrack === trackName) return;
+        // Music playback disabled
         this.stopMusic();
-
-        this.currentTrack = trackName;
-        this.isPlayingMusic = true;
-
-        if (trackName === 'menu') {
-            this.stopJetHum();
-            this.startMenuTrack();
-        }
-        if (trackName === 'gameplay') {
-            this.startJetHum();
-            this.startGameplayTrack();
-        }
-        if (trackName === 'boss') {
-            this.startJetHum();
-            this.startBossTrack();
-        }
     }
 
     stopMusic() {

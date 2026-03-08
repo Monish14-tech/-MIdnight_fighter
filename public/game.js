@@ -1386,8 +1386,10 @@ export class Game {
     }
 
     goToStoreFromGameOver() {
-        this.goToMainMenu();
+        this.gameOverScreen.classList.remove('active');
         this.openStore();
+        // Since we didn't reload, we might need to reset some game state flags if we want to allow immediate restart
+        // but opening store is already safe as is.
     }
 
     // Leaderboard Methods
