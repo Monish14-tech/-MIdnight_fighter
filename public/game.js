@@ -1,14 +1,14 @@
-import { InputHandler } from './input.js?v=4';
-import { Player } from './entities/player.js?v=4';
-import { Enemy } from './entities/enemy.js?v=4';
-import { Explosion, FloatingText } from './entities/particle.js?v=4';
-import { AudioController } from './audio.js?v=4';
-import { ScreenShake, Nebula, CosmicDust, Planet, Asteroid } from './utils.js?v=4';
-import { PowerUp } from './entities/powerup.js?v=4';
-import { LeaderboardManager } from './leaderboard.js?v=4';
-import { SocketIONetplay } from './socketio-netplay.js?v=4';
-import { AchievementManager } from './achievements.js?v=4';
-import { RANK_DATA, getRankByGlobalPosition } from './ranks.js?v=11';
+import { InputHandler } from './input.js?v=14';
+import { Player } from './entities/player.js?v=14';
+import { Enemy } from './entities/enemy.js?v=14';
+import { Explosion, FloatingText } from './entities/particle.js?v=14';
+import { AudioController } from './audio.js?v=14';
+import { ScreenShake, Nebula, CosmicDust, Planet, Asteroid } from './utils.js?v=14';
+import { PowerUp } from './entities/powerup.js?v=14';
+import { LeaderboardManager } from './leaderboard.js?v=14';
+import { SocketIONetplay } from './socketio-netplay.js?v=14';
+import { AchievementManager } from './achievements.js?v=14';
+import { RANK_DATA, getRankByGlobalPosition } from './ranks.js?v=14';
 
 class AssetLoader {
     constructor() {
