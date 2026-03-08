@@ -2047,14 +2047,14 @@ body {
 }
 
 .leaderboard-entry.rank-1 {
-    background: linear-gradient(90deg, rgba(255, 215, 0, 0.2), rgba(255, 215, 0, 0.05));
-    border-color: #FFD700;
-    animation: glowGold 2s ease-in-out infinite alternate;
+    background: linear-gradient(90deg, rgba(255, 68, 255, 0.2), rgba(255, 68, 255, 0.05));
+    border-color: #ff44ff;
+    animation: glowGuardian 2s ease-in-out infinite alternate;
 }
 
 .leaderboard-entry.rank-1 .leaderboard-name {
-    color: #FFD700;
-    text-shadow: 0 0 10px #FFD700, 0 0 20px #FFD700;
+    color: #ff44ff;
+    text-shadow: 0 0 10px #ff44ff, 0 0 20px #ff44ff;
 }
 
 .leaderboard-entry.rank-2 {
@@ -2079,14 +2079,19 @@ body {
     text-shadow: 0 0 10px #CD7F32, 0 0 20px #CD7F32;
 }
 
-@keyframes glowGold {
+@keyframes glowGuardian {
     from {
-        box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+        box-shadow: 0 0 5px rgba(255, 68, 255, 0.3);
     }
 
     to {
-        box-shadow: 0 0 20px rgba(255, 215, 0, 0.6), 0 0 40px rgba(255, 215, 0, 0.2);
+        box-shadow: 0 0 20px rgba(255, 68, 255, 0.6), 0 0 40px rgba(255, 68, 255, 0.2);
     }
+}
+
+.rank-panel.glow-guardian {
+    animation: glowGuardian 2s ease-in-out infinite alternate;
+    border-color: #ff44ff !important;
 }
 
 @keyframes glowSilver {

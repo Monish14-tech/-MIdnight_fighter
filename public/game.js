@@ -912,8 +912,8 @@ export class Game {
 
                     if (header) {
                         header.innerText = '★ GLOBAL LEGEND ★';
-                        header.style.color = rank.color;
-                        header.style.textShadow = `0 0 10px ${rank.color}`;
+                        header.style.color = pRankData.color;
+                        header.style.textShadow = `0 0 10px ${pRankData.color}`;
                     }
 
                     const div = document.createElement('div');
@@ -980,6 +980,12 @@ export class Game {
         // Update the prominent rank panel (if present)
         const rankPanel = document.getElementById('rank-panel');
         if (rankPanel) {
+            if (rank.rankTarget === 1) {
+                rankPanel.classList.add('glow-guardian');
+            } else {
+                rankPanel.classList.remove('glow-guardian');
+            }
+
             const badgeEl = rankPanel.querySelector('.rank-panel-badge');
             const nameEl = rankPanel.querySelector('.rank-panel-name');
             const ptsEl = rankPanel.querySelector('.rank-panel-pts');

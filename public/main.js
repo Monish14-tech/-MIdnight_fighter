@@ -1,5 +1,5 @@
-import { Game } from './game.js?v=13';
-import { LeaderboardManager } from './leaderboard.js?v=13';
+import { Game } from './game.js?v=14';
+import { LeaderboardManager } from './leaderboard.js?v=14';
 
 window.addEventListener('DOMContentLoaded', () => {
     const game = new Game();

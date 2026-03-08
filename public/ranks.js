@@ -2,7 +2,7 @@
 // threshold has been replaced by rankTarget (the required position to achieve this rank)
 export const RANK_DATA = [
     // ── Peak Tier ──
-    { rankTarget: 1, name: "COSMIC DEITY", color: "#ff44ff", badge: "DEITY", glow: true, perk: { coinBonus: 0.50, hpMercy: true, nameGlow: true, hudBorder: true } },
+    { rankTarget: 1, name: "GUARDIAN OF THE GALAXY", color: "#ff44ff", badge: "GUARDIAN", glow: true, perk: { coinBonus: 0.50, hpMercy: true, nameGlow: true, hudBorder: true } },
     { rankTarget: 2, name: "ETERNAL WARLORD", color: "#ff0066", badge: "WARLORD", glow: true, perk: { coinBonus: 0.45, hpMercy: true, nameGlow: true, hudBorder: true } },
     { rankTarget: 3, name: "GALACTIC LEGEND", color: "#ff00ff", badge: "LEGEND", glow: true, perk: { coinBonus: 0.40, hpMercy: true, nameGlow: true, hudBorder: true } },
     // ── Elite Tier ──
