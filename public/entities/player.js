@@ -2236,7 +2236,14 @@ export class Player {
     }
 
     // Called by game when this player kills an enemy (passive ability)
-    onEnemyKill(enemy) {
+    onEnemyKill(enemy, killedByMissile = false) {
+        // ── Divine Radiance (Celestial Striker): 30% chance missile kills drop HP ──
+        if (this.shipType === 'celestial' || this.shipType === 'absolute') {
+            if (killedByMissile && Math.random() < 0.30) {
+                this.game.spawnPowerUpAt(enemy.x, enemy.y);
+            }
+        }
+
         // ── Tank / Juggernaut / Guardian: heal on kill ──
         const healPerKill = this.shipType === 'tank' ? 0.25 :
             this.shipType === 'juggernaut' ? 0.25 :
