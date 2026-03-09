@@ -2911,24 +2911,51 @@ export class Game {
         if (this.hud) this.hud.style.display = 'none';
     }
 
-    // Dynamic Difficulty Scaling based on selected ship
+    // Advanced AI: Dynamic Difficulty Scaling based on selected ship DPS and Passives
     getPlayerScalingMetrics() {
-        // Base stats are modeled around 'interceptor'/'scout'
-        const defaultScale = { hpScale: 1.0, damageScale: 1.0, speedScale: 1.0 };
+        const defaultScale = { aiAggression: 1.0, bossSpeed: 1.0, projectileDensity: 1.0, damageMultiplier: 1.0, hpMultiplier: 1.0 };
         if (!this.selectedShip) return defaultScale;
 
         const ship = SHIP_DATA[this.selectedShip];
         if (!ship) return defaultScale;
 
-        // Baseline comparison stats (based on typical tier 1 ships like Interceptor/Scout)
+        // Calculate True Player DPS
+        // Interceptor base (3 dmg * 2 count / 1.5 cd) = 4 DPS
+        // Absolute base (60 dmg * 20 count / 0.4 cd) = 3000 DPS
+        // For burst calculation we use 1 / (fireRate + cooldown) as relative uptime, though we mostly care about raw output potential.
+        // Simplified raw burst potential = (Damage * Missile Count) / Missile Cooldown
+        const rawDPS = (ship.damage * ship.missileCount) / Math.max(0.1, ship.missileCooldown);
+
+        // Calculate Passive Threat Score
+        let passiveThreat = 1.0;
+        if (ship.specialAbility === 'all_passives') passiveThreat = 2.5;
+        else if (ship.specialAbility === 'phase_dodge') passiveThreat = 1.5;
+        else if (ship.passive.includes('Heal') || ship.passive.includes('revive')) passiveThreat = 1.4;
+        else if (ship.passive.includes('ignore') || ship.passive.includes('Double damage')) passiveThreat = 1.3;
+
+        // Base Interceptor comparisons for scaling ratios
+        const baseDPS = 4.0;
         const baseHp = 5;
-        const baseDamage = 2;
-        const baseSpeed = 350;
+        const baseSpeed = 450;
+
+        const dpsRatio = rawDPS / baseDPS; // Can be 1x up to 750x for absolute
+        const hpRatio = ship.hp / baseHp; // Can be 1x up to 8x
+
+        // The scaling multipliers output:
+        // aiAggression: dictates attack speed and tracking speed.
+        // bossSpeed: dictates boss movement velocity.
+        // projectileDensity: dictates how many bullets or the spread of bullets an enemy uses.
+        // damageMultiplier: directly scales enemy collision and bullet damage.
+        // hpMultiplier: directly scales enemy health to match Time-to-Kill (TTK).
 
         return {
-            hpScale: Math.max(1.0, 1.0 + (ship.hp - baseHp) * 0.05),          // 5% increase in enemy HP per extra player HP
-            damageScale: Math.max(1.0, 1.0 + (ship.damage - baseDamage) * 0.08), // 8% more enemy damage per extra player damage
-            speedScale: Math.max(1.0, 1.0 + (ship.speed - baseSpeed) * 0.001)   // 0.1% speed increase per extra player speed
+            aiAggression: Math.max(0.6, 1.0 + (Math.log10(dpsRatio) * 0.4) * passiveThreat),
+            speedScale: Math.max(0.7, 1.0 + ((ship.speed - baseSpeed) / 450)),
+            projectileDensity: Math.max(1, Math.floor(1 + Math.log2(dpsRatio) * 0.3)),
+            damageMultiplier: Math.max(0.7, hpRatio * 1.1),
+            hpMultiplier: Math.max(0.25, dpsRatio * 0.9 * passiveThreat),
+            // Useful flat stat for direct lookups
+            rawPlayerDPS: rawDPS
         };
     }
 

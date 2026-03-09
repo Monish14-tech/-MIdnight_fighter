@@ -22,6 +22,11 @@ class EnemyBrain {
         this.playerVelX = 0;
         this.playerVelY = 0;
 
+        // Dodge bias tracking
+        this.dodgeBias = 0; // -1 = left, +1 = right
+        this.dodgeBiasStrength = 0; // 0 to 1
+        this.playerSamplesShort = []; // last 5 samples for quick reaction
+
         // Behavior state
         this.behavior = 'aggro';        // 'aggro'|'flank'|'retreat'|'orbit'
         this.behaviorTimer = 0;
@@ -66,6 +71,25 @@ class EnemyBrain {
             const dt = Math.max((b.t - a.t) * 0.001, 0.001);
             this.playerVelX = (b.x - a.x) / dt;
             this.playerVelY = (b.y - a.y) / dt;
+
+            // ── Update Dodge Bias ──────────────────────────────
+            // We want to know if the player consistently moves perpendicular to the enemy
+            const dx = b.x - this.enemy.x;
+            const dy = b.y - this.enemy.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist > 5) {
+                const angleToPlayer = Math.atan2(dy, dx);
+                const velAngle = Math.atan2(this.playerVelY, this.playerVelX);
+                const diffAngle = velAngle - angleToPlayer;
+
+                // Sin of diff angle: cross product magnitude
+                // If sin(diff) > 0, moving right relative to enemy, < 0 moving left
+                const perp = Math.sin(diffAngle);
+
+                // Smoothly update dodge bias
+                this.dodgeBias = this.dodgeBias * 0.95 + perp * 0.05;
+                this.dodgeBiasStrength = Math.abs(this.dodgeBias);
+            }
         }
 
         // ── Predicted player position (adaptive lead time) ──────────
@@ -74,6 +98,18 @@ class EnemyBrain {
         const leadTime = Math.max(0.18, 0.38 - level * 0.008);
         this.predictedPlayerX = player.x + this.playerVelX * leadTime;
         this.predictedPlayerY = player.y + this.playerVelY * leadTime;
+
+        // Apply Dodge Bias to prediction (counter-prediction)
+        // If the player has a strong bias, offset prediction even further in that direction
+        if (this.dodgeBiasStrength > 0.4) {
+            const aiAggression = (this.game.getPlayerScalingMetrics ? this.game.getPlayerScalingMetrics().aiAggression : 1);
+            const counterLead = 30 * this.dodgeBiasStrength * aiAggression;
+            const angleToPlayer = Math.atan2(player.y - this.enemy.y, player.x - this.enemy.x);
+            // Move prediction perpendicular to direction
+            this.predictedPlayerX += Math.cos(angleToPlayer + Math.PI / 2) * this.dodgeBias * counterLead;
+            this.predictedPlayerY += Math.sin(angleToPlayer + Math.PI / 2) * this.dodgeBias * counterLead;
+        }
+
         // Clamp to arena
         this.predictedPlayerX = Math.max(20, Math.min(this.game.width - 20, this.predictedPlayerX));
         this.predictedPlayerY = Math.max(20, Math.min(this.game.height - 20, this.predictedPlayerY));
@@ -210,30 +246,30 @@ export class Enemy {
         // Dynamic Enemy Scaling based on Player's equipped ship stats
         const playerScale = this.game.getPlayerScalingMetrics
             ? this.game.getPlayerScalingMetrics()
-            : { hpScale: 1, damageScale: 1, speedScale: 1 };
+            : { aiAggression: 1, speedScale: 1, projectileDensity: 1, damageMultiplier: 1, hpMultiplier: 1 };
 
         let baseDamage = 1;
 
         if (this.type === 'chaser') {
-            this.speed = (150 + Math.random() * 50) * diffSpeedMultiplier * playerScale.speedScale;
+            this.speed = (150 + (rng() * 50)) * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#ff3333'; // Neon Red
             this.radius = 12;
             this.points = 100;
-            this.health = Math.max(1, Math.floor((1 + hpBonus) * playerScale.hpScale));
+            this.health = Math.max(1, Math.floor((1 + hpBonus) * playerScale.hpMultiplier));
             baseDamage = 1;
         } else if (this.type === 'heavy') {
             this.speed = 80 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#ffaa00'; // Neon Orange
             this.radius = 25;
             this.points = 300;
-            this.health = Math.max(1, Math.floor((5 + hpBonus) * playerScale.hpScale));
+            this.health = Math.max(1, Math.floor((5 + hpBonus) * playerScale.hpMultiplier));
             baseDamage = 4;
         } else if (this.type === 'shooter') {
             this.speed = 100 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#ff00ff'; // Neon Pink
             this.radius = 15;
             this.points = 200;
-            this.health = Math.max(1, Math.floor((2 + hpBonus) * playerScale.hpScale));
+            this.health = Math.max(1, Math.floor((2 + hpBonus) * playerScale.hpMultiplier));
             this.shootTimer = 0;
             baseDamage = 2;
         } else if (this.type === 'swarm') {
@@ -241,14 +277,14 @@ export class Enemy {
             this.color = '#ff7a6b';
             this.radius = 9;
             this.points = 80;
-            this.health = Math.max(1, Math.floor(1 * playerScale.hpScale));
+            this.health = Math.max(1, Math.floor(1 * playerScale.hpMultiplier));
             baseDamage = 1;
         } else if (this.type === 'sniper') {
             this.speed = 120 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#6bd6ff';
             this.radius = 14;
             this.points = 250;
-            this.health = Math.max(1, Math.floor((2 + hpBonus) * playerScale.hpScale));
+            this.health = Math.max(1, Math.floor((2 + hpBonus) * playerScale.hpMultiplier));
             this.shootTimer = 0;
             // Snipers back off more as levels increase
             this.preferredRange = 260 + Math.min((level - 1) * 8, 200);
@@ -258,7 +294,7 @@ export class Enemy {
             this.color = '#a97bff';
             this.radius = 18;
             this.points = 220;
-            this.health = Math.max(1, Math.floor((3 + hpBonus) * powerScale));
+            this.health = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpMultiplier));
             this.splitOnDeath = true;
             this.splitCount = 2;
             this.splitType = 'swarm';
@@ -268,7 +304,7 @@ export class Enemy {
             this.color = '#9966ff'; // Violet/Purple
             this.radius = 15;
             this.points = 150;
-            this.health = Math.max(1, Math.floor((2 + hpBonus) * playerScale.hpScale));
+            this.health = Math.max(1, Math.floor((2 + hpBonus) * playerScale.hpMultiplier));
             this.phaseTimer = 0;
             this.phaseCooldown = 3.0;
             baseDamage = 2;
@@ -278,7 +314,7 @@ export class Enemy {
             this.color = '#cc7722'; // Bronze
             this.radius = 28;
             this.points = 400;
-            this.health = Math.max(1, Math.floor((10 + hpBonus * 3) * playerScale.hpScale));
+            this.health = Math.max(1, Math.floor((10 + hpBonus * 3) * playerScale.hpMultiplier));
             this.armor = 2;
             baseDamage = 5;
         } else if (this.type === 'wraith') {
@@ -287,7 +323,7 @@ export class Enemy {
             this.color = '#bb66dd'; // Magenta-Purple
             this.radius = 16;
             this.points = 350;
-            this.health = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpScale));
+            this.health = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpMultiplier));
             this.teleportCooldown = 2.5;
             this.teleportTimer = 1.5;
             baseDamage = 3;
@@ -297,7 +333,7 @@ export class Enemy {
             this.color = '#6600cc'; // Deep Purple
             this.radius = 20;
             this.points = 500;
-            this.health = Math.max(1, Math.floor((12 + hpBonus * 4) * playerScale.hpScale));
+            this.health = Math.max(1, Math.floor((12 + hpBonus * 4) * playerScale.hpMultiplier));
             this.spinRate = 360; // degrees per second
             baseDamage = 5;
         } else if (this.type === 'bomber') {
@@ -306,7 +342,7 @@ export class Enemy {
             this.color = '#ff6600'; // Bright Orange
             this.radius = 28;
             this.points = 350;
-            this.health = Math.max(1, Math.floor((8 + hpBonus * 2) * playerScale.hpScale));
+            this.health = Math.max(1, Math.floor((8 + hpBonus * 2) * playerScale.hpMultiplier));
             this.explosionRadius = 80;
             this.explosionDamage = 2;
             baseDamage = 3;
@@ -316,7 +352,7 @@ export class Enemy {
             this.color = '#00ff88'; // Bright Green
             this.radius = 10;
             this.points = 110;
-            this.health = Math.max(1, Math.floor((1 + hpBonus) * playerScale.hpScale));
+            this.health = Math.max(1, Math.floor((1 + hpBonus) * playerScale.hpMultiplier));
             this.dashCooldown = 3.0;
             this.dashTimer = 2.0;
             baseDamage = 1;
@@ -336,7 +372,7 @@ export class Enemy {
             this.color = '#ff0099'; // Hot Pink
             this.radius = 20;
             this.points = 280;
-            this.health = Math.max(1, Math.floor((4 + hpBonus) * playerScale.hpScale));
+            this.health = Math.max(1, Math.floor((4 + hpBonus) * playerScale.hpMultiplier));
             this.shootTimer = 0;
             this.missileMode = true;
             baseDamage = 2;
@@ -346,8 +382,8 @@ export class Enemy {
             this.color = '#00ddff'; // Cyan
             this.radius = 19;
             this.points = 240;
-            this.health = Math.max(1, Math.floor((4 + hpBonus) * playerScale.hpScale));
-            this.shieldHealth = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpScale));
+            this.health = Math.max(1, Math.floor((4 + hpBonus) * playerScale.hpMultiplier));
+            this.shieldHealth = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpMultiplier));
             this.hasShield = true;
             baseDamage = 2;
         } else if (this.type === 'pulsar') {
@@ -356,7 +392,7 @@ export class Enemy {
             this.color = '#ff00ff'; // Magenta
             this.radius = 16;
             this.points = 200;
-            this.health = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpScale));
+            this.health = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpMultiplier));
             this.pulseTimer = 0;
             this.pulseCooldown = 2.5;
             this.pulseRadius = 60;
@@ -367,7 +403,7 @@ export class Enemy {
             this.color = '#ff1111'; // Bright Red
             this.radius = 13;
             this.points = 180;
-            this.health = Math.max(1, Math.floor((2 + hpBonus) * playerScale.hpScale));
+            this.health = Math.max(1, Math.floor((2 + hpBonus) * playerScale.hpMultiplier));
             this.slashCooldown = 1.5;
             this.slashTimer = 0;
             this.attackRange = 35;
@@ -378,7 +414,7 @@ export class Enemy {
             this.color = '#9900ff'; // Deep Purple
             this.radius = 24;
             this.points = 310;
-            this.health = Math.max(1, Math.floor((6 + hpBonus) * playerScale.hpScale));
+            this.health = Math.max(1, Math.floor((6 + hpBonus) * playerScale.hpMultiplier));
             this.tractorRange = 300;
             this.tractorPull = 50; // Force magnitude
             baseDamage = 2;
@@ -388,7 +424,7 @@ export class Enemy {
             this.color = '#ccccff'; // Silver/Blue
             this.radius = 17;
             this.points = 200;
-            this.health = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpScale));
+            this.health = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpMultiplier));
             this.reflectChance = 0.6; // 60% chance to reflect
             this.rotation = 0;
             baseDamage = 2;
@@ -398,13 +434,16 @@ export class Enemy {
             this.color = '#ffaa00'; // Gold/Orange
             this.radius = 10;
             this.points = 95;
-            this.health = Math.max(1, Math.floor((1 + hpBonus) * playerScale.hpScale));
+            this.health = Math.max(1, Math.floor((1 + hpBonus) * playerScale.hpMultiplier));
             this.swarming = true;
             baseDamage = 1;
         }
 
         // Final calculated Collision Damage
-        this.damage = Math.max(1, Math.floor(baseDamage * playerScale.damageScale));
+        this.damageMultiplier = playerScale.damageMultiplier || 1;
+        this.aiAggression = playerScale.aiAggression || 1;
+        this.projectileDensity = playerScale.projectileDensity || 1;
+        this.damage = Math.max(1, Math.floor(baseDamage * this.damageMultiplier));
 
         // Wave Budget Weight
         const typeWeights = {
@@ -682,7 +721,7 @@ export class Enemy {
                         const aimAngle = this.brain ? this.brain.getLeadAngle() : this.angle;
                         const orb = new Projectile(this.game, this.x, this.y, aimAngle, 'bullet', 'enemy');
                         orb.speed = 200; // Slow travel
-                        orb.damage = 2 * this.damageScale;
+                        orb.damage = 2 * this.damageMultiplier;
                         orb.radius = 12; // Large orb
                         orb.explosive = true;
                         orb.color = '#ff00ff'; // Purple/Magenta 
@@ -698,11 +737,12 @@ export class Enemy {
                     const leadAngle = (this.brain ? this.brain.getLeadAngle() : this.angle) + accuracyError;
 
                     if (dist < 200) {
-                        // Close range: slightly more spread (0.2 instead of 0.12)
+                        // Close range: slightly more spread
                         const spread = 0.2 * spreadMultiplier;
-                        for (let i = -1; i <= 1; i += 2) {
+                        const densityBonus = Math.floor(this.projectileDensity - 1);
+                        for (let i = -(1 + densityBonus); i <= (1 + densityBonus); i += 2) {
                             const p = new Projectile(this.game, this.x, this.y, leadAngle + spread * i, 'bullet', 'enemy');
-                            p.damage *= this.damageScale;
+                            p.damage *= this.damageMultiplier;
                             this.game.projectiles.push(p);
                         }
                         if (this.game.audio) this.game.audio.enemyShot();
@@ -710,7 +750,7 @@ export class Enemy {
                         // Long range: much more spread (0.8 instead of 0.5)
                         const spread = (Math.sin(seed * 1.5) * 0.8) * spreadMultiplier;
                         const p = new Projectile(this.game, this.x, this.y, leadAngle + spread, 'bullet', 'enemy');
-                        p.damage *= this.damageScale;
+                        p.damage *= this.damageMultiplier;
                         this.game.projectiles.push(p);
                         if (this.game.audio) this.game.audio.enemyShot();
                     }
@@ -728,7 +768,7 @@ export class Enemy {
                         missile.speed = 300;
                         missile.maxSpeed = 800;
                         missile.acceleration = 350;
-                        missile.damage = 2 * this.damageScale;
+                        missile.damage = 2 * this.damageMultiplier;
                         missile.color = '#6bd6ff';
                         this.game.projectiles.push(missile);
                         if (this.game.audio) this.game.audio.enemyShot();
@@ -742,7 +782,7 @@ export class Enemy {
                     const spread = (Math.sin(seed * 2.1) * 0.15) * spreadMultiplier;
                     const shot = new Projectile(this.game, this.x, this.y, leadAngle + spread + accuracyError, 'bullet', 'enemy');
                     shot.speed = 750; // slightly faster for lead-targeting accuracy
-                    shot.damage = 2 * this.damageScale;
+                    shot.damage = 2 * this.damageMultiplier;
                     shot.color = '#6bd6ff';
                     this.game.projectiles.push(shot);
                     if (this.game.audio) this.game.audio.enemyShot();
@@ -759,7 +799,7 @@ export class Enemy {
                         missile.speed = 220;
                         missile.maxSpeed = 650;
                         missile.acceleration = 260;
-                        missile.damage = 2;
+                        missile.damage = 2 * this.damageMultiplier;
                         missile.color = '#ff0099';
                         this.game.projectiles.push(missile);
                         if (this.game.audio) this.game.audio.enemyShot();
@@ -770,7 +810,7 @@ export class Enemy {
                     const spread = (Math.sin(seed * 0.8) * 0.3) * spreadMultiplier;
                     const bullet = new Projectile(this.game, this.x, this.y, this.angle + spread, 'bullet', 'enemy');
                     bullet.speed = 350;
-                    bullet.damage = 2;
+                    bullet.damage = 2 * this.damageMultiplier;
                     bullet.color = '#ff0099';
                     this.game.projectiles.push(bullet);
                     if (this.game.audio) this.game.audio.enemyShot();

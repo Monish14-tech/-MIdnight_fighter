@@ -116,9 +116,10 @@ class BossAI {
 
         if (phase === 3) {
             this.strategy = 'overwhelm';
-        } else if (absDodgeBias > 0.5 && phase >= 2) {
+        } else if (absDodgeBias > 0.4 && phase >= 2) {
             this.strategy = 'counter-dodge';
-        } else if (this.playerSpeedProfile === 2) {
+        } else if (this.playerSpeedProfile === 2 || (this.hitRate < 0.2 && this.shotsFired > 20)) {
+            // If the player is very fast OR the boss is missing 80%+ of shots, try to suppress/overwhelm
             this.strategy = 'suppress';
         } else {
             this.strategy = 'standard';
@@ -137,15 +138,16 @@ class BossAI {
         const vx = (b.x - a.x) / dt;
         const vy = (b.y - a.y) / dt;
 
-        // Lead time depends on strategy
-        let lead = 0.3;
+        // Lead time depends on strategy and AI aggression
+        const aiAggression = this.boss.aiAggression || 1.0;
+        let lead = 0.3 * aiAggression;
         if (this.strategy === 'counter-dodge') {
             // Counter the dodge direction
-            lead = 0.5;
+            lead = 0.5 * aiAggression;
         } else if (this.strategy === 'suppress') {
-            lead = 0.6; // Further lead for fast players
+            lead = 0.6 * aiAggression; // Further lead for fast players
         } else if (this.strategy === 'overwhelm') {
-            lead = 0.4;
+            lead = 0.4 * aiAggression;
         }
         return {
             x: Math.max(20, Math.min(this.game.width - 20, player.x + vx * lead)),
@@ -209,10 +211,10 @@ export class Boss {
         // Dynamic Boss Scaling based on Player's equipped ship stats
         const playerScale = this.game.getPlayerScalingMetrics
             ? this.game.getPlayerScalingMetrics()
-            : { hpScale: 1, damageScale: 1, speedScale: 1 };
+            : { aiAggression: 1, speedScale: 1, projectileDensity: 1, damageMultiplier: 1, hpMultiplier: 1 };
 
-        // Base HP drastically increased (180 -> 1200)
-        this.maxHealth = Math.floor(1200 * levelScale * tierMultiplier * playerScale.hpScale);
+        // Base HP scaled to player DPS to maintain Time-to-Kill (TTK) parity
+        this.maxHealth = Math.floor(1200 * levelScale * tierMultiplier * playerScale.hpMultiplier);
         this.health = this.maxHealth;
         this.points = Math.floor(1500 * levelScale);
         this.coinReward = Math.floor(200 * level * 0.8); // Balanced linear reward
@@ -243,8 +245,10 @@ export class Boss {
         this.speed = (150 + (levelScale * 10)) * (1 + (this.bossTier * 0.15)) * playerScale.speedScale;
         this.rotationSpeed = 2.0 * (1 + (this.bossTier * 0.2)) * playerScale.speedScale;
 
-        // Store damage scale for collisions/attacks
-        this.damageScale = playerScale.damageScale;
+        // Store damage multiplier for collisions/attacks
+        this.damageMultiplier = playerScale.damageMultiplier;
+        this.aiAggression = playerScale.aiAggression;
+        this.projectileDensity = playerScale.projectileDensity;
 
         // ── State Machine ─────────────────────────────────────
         this.state = 'entering';
@@ -799,7 +803,8 @@ export class Boss {
 
         if (totalShots > prevShots) {
             const spin = this.stateTimer * (this.phase === 3 ? 7 : 5);
-            const arms = this.phase === 3 ? 6 : (this.phase === 2 ? 4 : 2);
+            const densityBonus = Math.floor((this.projectileDensity - 1) * 2);
+            const arms = (this.phase === 3 ? 6 : (this.phase === 2 ? 4 : 2)) + densityBonus;
             for (let i = 0; i < arms; i++) {
                 const angle = spin + (Math.PI * 2 / arms) * i;
                 this.fireProjectile(this.x, this.y, angle, 'bullet');
@@ -815,7 +820,8 @@ export class Boss {
         const prevBursts = Math.floor((this.stateTimer - deltaTime) / burstRate);
 
         if (totalBursts > prevBursts) {
-            const count = this.phase === 3 ? 9 : (this.phase === 2 ? 7 : 5);
+            const densityBonus = Math.floor((this.projectileDensity - 1) * 3);
+            const count = (this.phase === 3 ? 9 : (this.phase === 2 ? 7 : 5)) + densityBonus;
             const spread = 0.8;
 
             // ── AI Strategy: use counter-dodge angle ──────────
@@ -1165,7 +1171,7 @@ export class Boss {
         for (let i = 0; i < count; i++) {
             const a = base - spread / 2 + (spread / Math.max(count - 1, 1)) * i;
             const p = this.fireProjectile(this.x, this.y, a, 'bullet');
-            if (p) { p.color = '#ff7700'; p.speed = 160; p.radius = 12; p.damage = 2; }
+            if (p) { p.color = '#ff7700'; p.speed = 160; p.radius = 12; p.damage = 2 * (this.damageMultiplier || 1); }
         }
         if (this.game.screenShake) this.game.screenShake.trigger(10, 0.2);
     }
@@ -1180,9 +1186,9 @@ export class Boss {
         const offsets = [-40, 40];
         offsets.forEach(yo => {
             const p = this.fireProjectile(this.x, this.y + yo, 0, 'bullet'); // fires right
-            if (p) { p.color = '#ff4400'; p.speed = 420; p.radius = 7; p.damage = 1.5; }
+            if (p) { p.color = '#ff4400'; p.speed = 420; p.radius = 7; p.damage = 1.5 * (this.damageMultiplier || 1); }
             const p2 = this.fireProjectile(this.x, this.y + yo, Math.PI, 'bullet'); // fires left
-            if (p2) { p2.color = '#ff4400'; p2.speed = 420; p2.radius = 7; p2.damage = 1.5; }
+            if (p2) { p2.color = '#ff4400'; p2.speed = 420; p2.radius = 7; p2.damage = 1.5 * (this.damageMultiplier || 1); }
         });
     }
 
@@ -1194,7 +1200,7 @@ export class Boss {
             for (let i = 0; i < count; i++) {
                 const a = (i / count) * Math.PI * 2;
                 const p = this.fireProjectile(this.x, this.y, a, 'bullet');
-                if (p) { p.color = '#ff8800'; p.speed = 130; p.radius = 14; p.damage = 2.5; }
+                if (p) { p.color = '#ff8800'; p.speed = 130; p.radius = 14; p.damage = 2.5 * (this.damageMultiplier || 1); }
             }
             // Inner fast ring
             for (let i = 0; i < 8; i++) {
@@ -1409,7 +1415,7 @@ export class Boss {
             p.speed = 180;        // was 250 — slower, more dodgeable
             p.maxSpeed = 420;     // was 600
             p.acceleration = 200; // was 300
-            p.damage = (this.level >= 15 ? 2.0 : 1.5) * this.damageScale;
+            p.damage = (this.level >= 15 ? 2.0 : 1.5) * (this.damageMultiplier || 1);
             p.lifetime = 5.0;
             p.isHoming = false;
             p.color = '#ff0000';
@@ -1418,12 +1424,12 @@ export class Boss {
             p.speed = 130;
             p.maxSpeed = 320;
             p.acceleration = 150;
-            p.damage = (this.level >= 20 ? 1.2 : 0.8) * this.damageScale;
+            p.damage = (this.level >= 20 ? 1.2 : 0.8) * (this.damageMultiplier || 1);
             p.lifetime = 4.0;
             p.isHoming = false;
         } else {
             p.speed = 280 + (this.level * 4); // was 350+(level*5) — ~20% slower
-            p.damage = Math.max(1, Math.floor(this.level / 5)) * this.damageScale;
+            p.damage = Math.max(1, Math.floor(this.level / 5)) * (this.damageMultiplier || 1);
         }
         this.game.projectiles.push(p);
         if (this.game.audio) this.game.audio.enemyShot();
