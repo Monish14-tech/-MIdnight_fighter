@@ -7,7 +7,7 @@ import { ScreenShake, Nebula, CosmicDust, Planet, Asteroid } from './utils.js?v=
 import { PowerUp } from './entities/powerup.js?v=16';
 import { LeaderboardManager } from './leaderboard.js?v=16';
 import { SocketIONetplay } from './socketio-netplay.js?v=16';
-import { AchievementManager } from './achievements.js?v=16';
+import { AchievementManager, ACHIEVEMENT_DATA } from './achievements.js?v=16';
 import { RANK_DATA, getRankByGlobalPosition } from './ranks.js?v=16';
 
 class AssetLoader {
@@ -100,7 +100,7 @@ export const SHIP_DATA = {
     'celestial': {
         name: 'CELESTIAL STRIKER', price: 0,
         hp: 26, speed: 560, damage: 50, fireRate: 0.06, missileCooldown: 0.5, missileCount: 18,
-        color: '#ffdd00', bulletType: 'explosive', invincible: true,
+        color: '#ffdd00', bulletType: 'explosive',
         desc: '🌠 Rank: ACE COMMANDER (Top 10). Passive: score multiplier ×3. Missiles auto-split on impact.',
         passive: 'Reach to the Top: Score ×3. Missiles auto-split on impact.',
         achievementLocked: 'legendary_score',
@@ -110,7 +110,7 @@ export const SHIP_DATA = {
     'absolute': {
         name: 'THE ABSOLUTE', price: 0,
         hp: 40, speed: 600, damage: 60, fireRate: 0.03, missileCooldown: 0.4, missileCount: 20,
-        color: '#ffffff', bulletType: 'railgun', invincible: true,
+        color: '#ffffff', bulletType: 'railgun',
         desc: '🌌 Achievement: THE ABSOLUTE. All abilities combined. True endgame. 100% completion only.',
         passive: 'All Passives: Every passive ability unlocked simultaneously.',
         achievementLocked: 'the_absolute',
@@ -269,6 +269,7 @@ export class Game {
         this.comboWindow = 3.0;
         this.comboMax = 5.0;
         this.enemyDropChance = 0.08;
+        this.currentKillStreak = 0; // Kill streak tracker for achievements
 
         // Settings
         this.autoTargetEnabled = localStorage.getItem('midnight_autotarget_enabled') !== 'false';
@@ -1977,6 +1978,9 @@ export class Game {
         enemy.markedForDeletion = true;
         this.addScore(enemy.points, useCombo);
         if (this.achievementManager) this.achievementManager.addStat('kills', 1);
+        // Track kill streak
+        this.currentKillStreak++;
+        if (this.achievementManager) this.achievementManager.updateMaxKillstreak(this.currentKillStreak);
         this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
         if (this.audio) this.audio.explosion();
 
@@ -2372,6 +2376,7 @@ export class Game {
                         if (this.audio) this.audio.playerHit();
                         this.triggerImpact(0.1, 0.5);
                         this.hudFlashDamage();
+                        this.currentKillStreak = 0; // Reset kill streak on damage
                         if (playerDied) {
                             this.handleGameOver();
                         } else {
@@ -2474,6 +2479,7 @@ export class Game {
                         if (this.audio) this.audio.playerHit();
                         this.triggerImpact(0.1, 0.5);
                         this.hudFlashDamage();
+                        this.currentKillStreak = 0; // Reset kill streak on damage
                         if (died) this.handleGameOver();
                     }
                 });
@@ -2931,7 +2937,7 @@ export class Game {
 
         for (const [key, ship] of sortedShips) {
             const isPrestige = !!ship.prestige;
-            const isAchievementUnlocked = isPrestige && this.achievementManager?.isAchievementCompleted?.(ship.achievementLocked);
+            const isAchievementUnlocked = isPrestige && this.achievementManager?.isShipUnlocked?.(key);
 
             const card = document.createElement('div');
             card.className = `ship-card ${this.ownedShips.includes(key) ? 'owned' : ''} ${this.selectedShip === key ? 'selected' : ''} ${isPrestige ? 'prestige' : ''}`;
@@ -3014,7 +3020,9 @@ export class Game {
                     btn.style.borderColor = ship.color;
                     btn.onclick = () => this.buyShip(key);
                 } else {
-                    const achName = ship.achievementLocked?.replace(/_/g, ' ').toUpperCase() || 'UNKNOWN';
+                    // Look up the actual achievement name from ACHIEVEMENT_DATA
+                    const achData = ACHIEVEMENT_DATA.find(a => a.id === ship.achievementLocked);
+                    const achName = achData ? achData.name : (ship.achievementLocked?.replace(/_/g, ' ').toUpperCase() || 'UNKNOWN');
                     btn.innerText = `🔒 ${achName}`;
                     btn.disabled = true;
                     btn.title = `Complete the "${achName}" achievement to unlock`;

@@ -261,6 +261,7 @@ export class Player {
                 // Grant i-frames for the duration of the dash
                 this.invulnerableTimer = this.dashDuration + 0.05;
                 if (this.game.audio) this.game.audio.dash();
+                if (this.game.achievementManager) this.game.achievementManager.addStat('dashes', 1);
             }
 
             input.keys.dash = false;
@@ -449,7 +450,8 @@ export class Player {
                 // (no fallback — silent fire is better than wrong sfx)
             }
         } else if (type === 'missile') {
-            const p = new Projectile(this.game, this.x, this.y, this.angle, 'missile', this.playerId);
+            const missileDmg = Math.max(5, this.damage * 2); // Scale with ship damage, minimum 5
+            const p = new Projectile(this.game, this.x, this.y, this.angle, 'missile', this.playerId, missileDmg);
             this.game.projectiles.push(p);
             if (this.game.achievementManager) this.game.achievementManager.addStat('missiles', 1);
             if (this.game.screenShake) this.game.screenShake.trigger(5, 0.2);

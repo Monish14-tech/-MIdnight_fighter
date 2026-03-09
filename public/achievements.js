@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════
-//  ACHIEVEMENT_DATA — 30 achievements tracking many stat dimensions
+//  ACHIEVEMENT_DATA — 50 achievements tracking many stat dimensions
 //  Special achievements unlock PRESTIGE jets (shipUnlock field)
 // ═══════════════════════════════════════════════════════════════════
 
@@ -31,6 +31,12 @@ export const ACHIEVEMENT_DATA = [
     },
 
     {
+        id: 'annihilator', name: 'ANNIHILATOR', icon: '🌋',
+        desc: 'Destroy 25,000 enemies.',
+        type: 'kills', target: 25000, reward: 100000
+    },
+
+    {
         id: 'god_of_war', name: 'GOD OF WAR', icon: '⚡',
         desc: 'Destroy 50,000 enemies.',
         type: 'kills', target: 50000, reward: 200000,
@@ -54,6 +60,12 @@ export const ACHIEVEMENT_DATA = [
         id: 'boss_destroyer', name: 'BOSS DESTROYER', icon: '🌟',
         desc: 'Defeat 50 Bosses.',
         type: 'bosses', target: 50, reward: 40000
+    },
+
+    {
+        id: 'boss_executioner', name: 'BOSS EXECUTIONER', icon: '⚔️',
+        desc: 'Defeat 100 Bosses.',
+        type: 'bosses', target: 100, reward: 100000
     },
 
     {
@@ -88,6 +100,12 @@ export const ACHIEVEMENT_DATA = [
         type: 'games', target: 200, reward: 40000
     },
 
+    {
+        id: 'war_machine', name: 'WAR MACHINE', icon: '🤖',
+        desc: 'Play 500 games. You ARE the game.',
+        type: 'games', target: 500, reward: 100000
+    },
+
     // ──────────────────── DEATHS ───────────────────────────────────
     {
         id: 'die_hard', name: 'DIE HARD', icon: '💔',
@@ -99,6 +117,12 @@ export const ACHIEVEMENT_DATA = [
         id: 'unkillable', name: 'UNKILLABLE', icon: '🛡️',
         desc: 'Get shot down 100 times — and keep coming back.',
         type: 'deaths', target: 100, reward: 5000
+    },
+
+    {
+        id: 'phoenix_rise', name: 'PHOENIX RISING', icon: '🔄',
+        desc: 'Get shot down 500 times. Undying spirit.',
+        type: 'deaths', target: 500, reward: 30000
     },
 
     // ──────────────────── LEVELS ───────────────────────────────────
@@ -120,6 +144,18 @@ export const ACHIEVEMENT_DATA = [
         type: 'max_level', target: 50, reward: 60000
     },
 
+    {
+        id: 'endless_void', name: 'ENDLESS VOID', icon: '🕳️',
+        desc: 'Survive to Wave 75 in a single run.',
+        type: 'max_level', target: 75, reward: 120000
+    },
+
+    {
+        id: 'eternal_night', name: 'ETERNAL NIGHT', icon: '🌑',
+        desc: 'Survive to Wave 100 in a single run.',
+        type: 'max_level', target: 100, reward: 250000
+    },
+
     // ──────────────────── SCORE ────────────────────────────────────
     {
         id: 'high_scorer', name: 'HIGH SCORER', icon: '🏆',
@@ -131,6 +167,12 @@ export const ACHIEVEMENT_DATA = [
         id: 'elite_score', name: 'ELITE SCORE', icon: '💎',
         desc: 'Score 250,000 in a single run.',
         type: 'best_score', target: 250000, reward: 25000
+    },
+
+    {
+        id: 'million_club', name: 'MILLION CLUB', icon: '💫',
+        desc: 'Score 1,000,000 in a single run.',
+        type: 'best_score', target: 1000000, reward: 80000
     },
 
     {
@@ -153,6 +195,12 @@ export const ACHIEVEMENT_DATA = [
         type: 'powerups', target: 500, reward: 8000
     },
 
+    {
+        id: 'power_god', name: 'POWER GOD', icon: '✨',
+        desc: 'Collect 2,000 power-ups.',
+        type: 'powerups', target: 2000, reward: 40000
+    },
+
     // ──────────────────── MISSILES ─────────────────────────────────
     {
         id: 'rocket_man', name: 'ROCKET MAN', icon: '🚀',
@@ -164,6 +212,12 @@ export const ACHIEVEMENT_DATA = [
         id: 'devastator', name: 'DEVASTATOR', icon: '💣',
         desc: 'Fire 5,000 missiles.',
         type: 'missiles', target: 5000, reward: 15000
+    },
+
+    {
+        id: 'arsenal_king', name: 'ARSENAL KING', icon: '🎆',
+        desc: 'Fire 20,000 missiles.',
+        type: 'missiles', target: 20000, reward: 60000
     },
 
     // ──────────────────── COINS ────────────────────────────────────
@@ -183,6 +237,81 @@ export const ACHIEVEMENT_DATA = [
         id: 'coin_king', name: 'COIN KING', icon: '🏅',
         desc: 'Earn a total of 1,000,000 coins.',
         type: 'total_coins', target: 1000000, reward: 80000
+    },
+
+    {
+        id: 'coin_emperor', name: 'COIN EMPEROR', icon: '💎',
+        desc: 'Earn a total of 5,000,000 coins.',
+        type: 'total_coins', target: 5000000, reward: 200000
+    },
+
+    // ──────────────────── DASHES ───────────────────────────────────
+    {
+        id: 'quick_step', name: 'QUICK STEP', icon: '💨',
+        desc: 'Dash 100 times.',
+        type: 'dashes', target: 100, reward: 1500
+    },
+
+    {
+        id: 'flash_pilot', name: 'FLASH PILOT', icon: '⚡',
+        desc: 'Dash 1,000 times.',
+        type: 'dashes', target: 1000, reward: 12000
+    },
+
+    {
+        id: 'phantom_dash', name: 'PHANTOM DASH', icon: '👻',
+        desc: 'Dash 5,000 times. You blur reality.',
+        type: 'dashes', target: 5000, reward: 50000
+    },
+
+    // ──────────────────── COMBOS ───────────────────────────────────
+    {
+        id: 'combo_starter', name: 'COMBO STARTER', icon: '🔗',
+        desc: 'Get a 10 kill streak without taking damage.',
+        type: 'max_killstreak', target: 10, reward: 2000
+    },
+
+    {
+        id: 'combo_master', name: 'COMBO MASTER', icon: '🔥',
+        desc: 'Get a 25 kill streak without taking damage.',
+        type: 'max_killstreak', target: 25, reward: 15000
+    },
+
+    {
+        id: 'combo_legend', name: 'COMBO LEGEND', icon: '💥',
+        desc: 'Get a 50 kill streak without taking damage.',
+        type: 'max_killstreak', target: 50, reward: 50000
+    },
+
+    {
+        id: 'combo_god', name: 'COMBO GOD', icon: '🌟',
+        desc: 'Get a 100 kill streak without taking damage.',
+        type: 'max_killstreak', target: 100, reward: 150000
+    },
+
+    // ──────────────────── SURVIVAL ─────────────────────────────────
+    {
+        id: 'survivor', name: 'SURVIVOR', icon: '🏕️',
+        desc: 'Play 100 games without giving up.',
+        type: 'games', target: 100, reward: 20000
+    },
+
+    {
+        id: 'sharpshooter', name: 'SHARPSHOOTER', icon: '🎯',
+        desc: 'Fire 10,000 missiles. Trigger happy.',
+        type: 'missiles', target: 10000, reward: 30000
+    },
+
+    {
+        id: 'ironclad', name: 'IRONCLAD', icon: '🛡️',
+        desc: 'Get shot down 250 times. Unbreakable will.',
+        type: 'deaths', target: 250, reward: 15000
+    },
+
+    {
+        id: 'legend_void', name: 'LEGEND OF THE VOID', icon: '🌠',
+        desc: 'Score 500,000 in a single run.',
+        type: 'best_score', target: 500000, reward: 50000
     },
 
     // ──────────────────── PRESTIGE UNLOCK ──────────────────────────
@@ -213,7 +342,10 @@ export class AchievementManager {
             missiles: 0,
             total_coins: 0,
             all_achievements: 0,
-            global_rank: 999999, // New dimension for rank-based unlocks
+            global_rank: 999999,
+            dashes: 0,
+            max_combo: 0,
+            max_killstreak: 0,
         };
         this.claimed = JSON.parse(localStorage.getItem('midnight_claimed_achievements')) || [];
         this.completedButUnclaimed = JSON.parse(localStorage.getItem('midnight_unclaimed_achievements')) || [];
@@ -300,6 +432,22 @@ export class AchievementManager {
             this.stats['best_score'] = score;
             this.save();
             this.checkUnlocks('best_score');
+        }
+    }
+
+    updateMaxCombo(combo) {
+        if (combo > (this.stats['max_combo'] || 0)) {
+            this.stats['max_combo'] = combo;
+            this.save();
+            this.checkUnlocks('max_combo');
+        }
+    }
+
+    updateMaxKillstreak(streak) {
+        if (streak > (this.stats['max_killstreak'] || 0)) {
+            this.stats['max_killstreak'] = streak;
+            this.save();
+            this.checkUnlocks('max_killstreak');
         }
     }
 

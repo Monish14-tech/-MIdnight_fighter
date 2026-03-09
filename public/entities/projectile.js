@@ -1,5 +1,5 @@
 export class Projectile {
-    constructor(game, x, y, angle, type = 'bullet', side = 'player') {
+    constructor(game, x, y, angle, type = 'bullet', side = 'player', missileDamage = 0) {
         this.game = game;
         this.x = x;
         this.y = y;
@@ -17,7 +17,7 @@ export class Projectile {
             this.speed = 400; // Start slower, accelerate
             this.maxSpeed = 1200;
             this.acceleration = 800;
-            this.damage = 5;
+            this.damage = missileDamage > 0 ? missileDamage : 5; // Scale with ship stats
             this.radius = 8;
             this.color = '#ff4400'; // Orange-Red
             this.homingRange = 5000; // Basically infinite
