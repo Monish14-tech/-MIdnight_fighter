@@ -132,6 +132,13 @@ export class Game {
         this.lastTime = 0;
         this.score = 0;
 
+        // One-time hard reset to clear all player data as requested
+        if (!localStorage.getItem('midnight_hard_reset_v3')) {
+            localStorage.clear();
+            localStorage.setItem('midnight_hard_reset_v3', 'true');
+            console.log('Game Hard Reset Executed');
+        }
+
         // Persistence
         this.highScore = parseInt(localStorage.getItem('midnight_highscore')) || 0;
         this.coins = parseInt(localStorage.getItem('midnight_coins')) || 0;
