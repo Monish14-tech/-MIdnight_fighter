@@ -481,15 +481,34 @@ export class Game {
         const collabBtn = document.getElementById('collab-btn');
         if (collabBtn) {
             const showSoon = () => {
+                const existing = document.getElementById('collab-toast');
+                if (existing) return;
+
                 const toast = document.createElement('div');
-                toast.className = 'achievement-toast';
-                toast.style.background = 'rgba(255, 0, 100, 0.9)';
+                toast.id = 'collab-toast';
+                toast.style.position = 'fixed';
+                toast.style.top = '20px';
+                toast.style.left = '50%';
+                toast.style.transform = 'translateX(-50%)';
+                toast.style.background = 'rgba(255, 0, 100, 0.95)';
+                toast.style.border = '2px solid var(--neon-pink)';
+                toast.style.boxShadow = '0 0 20px var(--neon-pink), inset 0 0 10px var(--neon-pink)';
+                toast.style.padding = '15px 30px';
+                toast.style.borderRadius = '8px';
+                toast.style.zIndex = '4000';
+                toast.style.textAlign = 'center';
+                toast.style.animation = 'toast-slide-down 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards';
+
                 toast.innerHTML = `
-                    <div style="font-weight: bold; color: #fff;">COLLABORATIVE MODE</div>
-                    <div style="font-size: 0.9em; color: #ffeb3b;">COMING SOON! 🚀</div>
+                    <div style="font-weight: bold; color: #fff; letter-spacing: 2px;">COLLABORATIVE MODE</div>
+                    <div style="font-size: 0.9em; color: #ffeb3b; margin-top: 5px;">COMING SOON! 🚀</div>
                 `;
                 document.body.appendChild(toast);
-                setTimeout(() => toast.remove(), 3000);
+
+                setTimeout(() => {
+                    toast.style.animation = 'toast-fade-out 0.5s forwards';
+                    setTimeout(() => toast.remove(), 500);
+                }, 2500);
             };
             collabBtn.addEventListener('click', showSoon);
             collabBtn.addEventListener('touchstart', (e) => { e.preventDefault(); showSoon(); }, { passive: false });
