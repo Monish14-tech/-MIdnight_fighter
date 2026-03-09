@@ -2284,37 +2284,36 @@ export class Player {
 
     // Called by game when this player kills an enemy (passive ability)
     onEnemyKill(enemy, killedByMissile = false) {
-        // ── Heal on Missile Kill (Celestial Striker / Phoenix / Absolute) ──
-        if (this.shipType === 'celestial' || this.shipType === 'phoenix' || this.shipType === 'absolute') {
-            if (killedByMissile) {
-                const ratio = (this.shipType === 'celestial') ? 8 : 10;
-                this._missileHealAccum = (this._missileHealAccum || 0) + 1;
-                if (this._missileHealAccum >= ratio) {
-                    this._missileHealAccum = 0;
-                    this.currentHealth = Math.min(this.maxHealth, this.currentHealth + 1);
-                    if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 30, text: '+1 HP (MISSILE HEAL)', color: '#00ff44', life: 1.5 });
-                }
+        // ── Eclipse Seraph: Slow Motion on Kill Streak ── (10 kills = 3s Slow Mo)
+        if (this.shipType === 'eclipse' || this.shipType === 'absolute') {
+            this._eclipseKillStreak = (this._eclipseKillStreak || 0) + 1;
+            if (this._eclipseKillStreak >= 10) {
+                this._eclipseKillStreak = 0;
+                this.slowMotionTimer = 3.0; // 3s Slow Motion
+                if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 30, text: 'TIME WARP!', color: '#66ccff', life: 1.5 });
             }
         }
 
-        // ── Heal on Kill (Nemesis / Starborn / Eclipse / Tank / Juggernaut / Guardian) ──
-        const hokMap = {
-            'nemesis': 3,
-            'starborn': 10,
-            'eclipse': 12,
-            'tank': 4,
-            'juggernaut': 4,
-            'guardian': 5
-        };
-        const killRatio = hokMap[this.shipType] || (this.shipType === 'absolute' ? 10 : 0);
+        // ── Celestial Striker: EMP Pulse on Missile Kill ──
+        if ((this.shipType === 'celestial' || this.shipType === 'absolute') && killedByMissile) {
+            if (this.game.floatingTexts) this.game.floatingTexts.push({ x: enemy.x, y: enemy.y, text: 'EMP!', color: '#ffff00', life: 0.8 });
+            // Apply slow to nearby enemies
+            this.game.enemies.forEach(e => {
+                const dist = Math.hypot(e.x - enemy.x, e.y - enemy.y);
+                if (dist < 120) {
+                    e.speedScale = 0.5;
+                    e._slowTimer = 2.0;
+                }
+            });
+        }
 
-        if (killRatio > 0) {
-            this._passiveHealAccum = (this._passiveHealAccum || 0) + (1 / killRatio);
-            if (this._passiveHealAccum >= 1) {
-                this._passiveHealAccum -= 1;
-                this.currentHealth = Math.min(this.maxHealth, this.currentHealth + 1);
-                const healText = this.shipType === 'absolute' ? '+1 HP (SIPHON)' : '+1 HP';
-                if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 20, text: healText, color: '#00ff44', life: 1.0 });
+        // ── Nemesis Prime: Missile Reset on Kill ──
+        if (this.shipType === 'nemesis' || this.shipType === 'absolute') {
+            this._nemesisKillCount = (this._nemesisKillCount || 0) + 1;
+            if (this._nemesisKillCount >= 5) {
+                this._nemesisKillCount = 0;
+                this.missileTimer = 0; // Instant missile reset
+                if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 30, text: 'READY!', color: '#ff0033', life: 1.0 });
             }
         }
 
