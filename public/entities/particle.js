@@ -187,3 +187,66 @@ export class FloatingText {
         ctx.restore();
     }
 }
+
+export class PhoenixRebirth {
+    constructor(game, x, y) {
+        this.game = game;
+        this.x = x;
+        this.y = y;
+        this.timer = 0;
+        this.duration = 1.5;
+        this.markedForDeletion = false;
+
+        // Spawn initial burst of sparks
+        for (let i = 0; i < 40; i++) {
+            const p = new Particle(game, x, y, '#ffa500', 'spark');
+            p.speedX *= 3;
+            p.speedY *= 3;
+            p.life = 1.5;
+            this.game.particles.push(p);
+        }
+    }
+
+    update(deltaTime) {
+        this.timer += deltaTime;
+        if (this.timer >= this.duration) this.markedForDeletion = true;
+
+        // Continuous fire particles during the effect
+        if (Math.random() < 0.5) {
+            const p = new Particle(this.game, this.x, this.y, '#ff4500', 'default');
+            p.speedY = -150 - Math.random() * 100; // Rise up
+            this.game.particles.push(p);
+        }
+    }
+
+    draw(ctx) {
+        ctx.save();
+        const progress = this.timer / this.duration;
+        const radius = progress * 250;
+        const alpha = 1 - progress;
+
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = '#ffa500';
+        ctx.lineWidth = 4 + (1 - progress) * 10;
+        ctx.shadowBlur = 40 * (1 - progress);
+        ctx.shadowColor = '#ff4500';
+
+        // Expanding Solar Ring
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Inner Core Glow
+        const coreRadius = (1 - progress) * 60;
+        const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, coreRadius);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.5, '#ffff00');
+        grad.addColorStop(1, 'transparent');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, coreRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+}

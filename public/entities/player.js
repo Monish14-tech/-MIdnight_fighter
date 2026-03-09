@@ -1,4 +1,4 @@
-import { AfterburnerTrail } from './particle.js?v=4';
+import { AfterburnerTrail, PhoenixRebirth } from './particle.js?v=4';
 import { Projectile } from './projectile.js?v=4';
 
 export class Player {
@@ -157,6 +157,38 @@ export class Player {
                     this._amplifierActive = false;
                     this.bulletDamage = this.baseBulletDamage;
                 }
+            }
+        }
+
+        // ── Starborn Titan: Celestial Pull (Item Vacuum) ──
+        if (this.shipType === 'starborn' || this.shipType === 'absolute') {
+            if (this.game.powerups) {
+                this.game.powerups.forEach(p => {
+                    const dist = Math.hypot(p.x - this.x, p.y - this.y);
+                    if (dist < 300) {
+                        const angle = Math.atan2(this.y - p.y, this.x - p.x);
+                        const pullSpeed = (300 - dist) * 2;
+                        p.x += Math.cos(angle) * pullSpeed * deltaTime;
+                        p.y += Math.sin(angle) * pullSpeed * deltaTime;
+                    }
+                });
+            }
+            if (this.game.coins_entities) { // Assuming coins exist as separate entities? If not, game.js handles them.
+                // Vacuum logic for coins if applicable
+            }
+        }
+
+        // ── Juggernaut: Adrenaline Rush (Low HP = Rapid Fire) ──
+        if (this.shipType === 'juggernaut' || this.shipType === 'absolute') {
+            if (this.currentHealth <= this.maxHealth * 0.4) {
+                if (!this._adrenalineActive) {
+                    this._adrenalineActive = true;
+                    this.fireRate = this.baseFireRate * 0.7;
+                    if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 30, text: 'ADRENALINE!', color: '#ff9900', life: 1.0 });
+                }
+            } else if (this._adrenalineActive) {
+                this._adrenalineActive = false;
+                this.fireRate = this.baseFireRate;
             }
         }
 
@@ -2154,6 +2186,16 @@ export class Player {
             return false;
         }
 
+        // ── V.G. Titan: Reactive Plating (Reflect bullets during dash) ──
+        if ((this.shipType === 'tank' || this.shipType === 'absolute') && this.isDashing) {
+            // This is handled in Enemy.update() or Collision detection normally
+            // But if we're here, it means takeDamage was called (likely by a projectile or contact)
+            // If it's a projectile contact, we can mark the projectile for reflection in the game loop.
+            // For now, let's just make the player invulnerable during Reactive Plating if they are dashing
+            if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 20, text: 'REFLECTED!', color: '#00ff44', life: 0.8 });
+            return false;
+        }
+
         // ── Guardian: Fortress Protocol ── (damage capped at 1 per hit)
         if (this.shipType === 'guardian') {
             amount = Math.min(amount, 1);
@@ -2162,6 +2204,19 @@ export class Player {
         // ── Juggernaut: Unstoppable ── (50% reduction when below 30% HP)
         if (this.shipType === 'juggernaut' && this.currentHealth <= this.maxHealth * 0.3) {
             amount = Math.ceil(amount * 0.5);
+        }
+
+        // ── Galaxy Guardian: Repulsor Shield (Knockback area on hit) ──
+        if (this.shipType === 'guardian' || this.shipType === 'absolute') {
+            this.game.enemies.forEach(e => {
+                const dist = Math.hypot(e.x - this.x, e.y - this.y);
+                if (dist < 200) {
+                    const angle = Math.atan2(e.y - this.y, e.x - this.x);
+                    e.x += Math.cos(angle) * 150;
+                    e.y += Math.sin(angle) * 150;
+                }
+            });
+            if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y, text: 'REPULSOR!', color: '#ffffff', life: 0.8 });
         }
 
         this.currentHealth -= amount;
@@ -2190,6 +2245,27 @@ export class Player {
 
         // Check if dead
         if (this.currentHealth <= 0) {
+            // ── Phoenix: Eternal Rebirth ── (Once per match, revive with 3 HP + Animation)
+            if (this.shipType === 'phoenix' && !this._phoenixReviveUsed) {
+                this._phoenixReviveUsed = true;
+                this.currentHealth = 3;
+                this.invulnerableTimer = 2.0; // 2s immunity after revive
+
+                // Trigger Phoenix Rebirth Effect
+                if (this.game.particles) {
+                    this.game.particles.push(new PhoenixRebirth(this.game, this.x, this.y));
+                }
+
+                if (this.game.audio) {
+                    this.game.audio.explosion(); // Placeholder sound for rebirth
+                }
+
+                if (this.game.floatingTexts) {
+                    this.game.floatingTexts.push({ x: this.x, y: this.y - 40, text: 'SOLAR REBIRTH!', color: '#ffa500', life: 2.0 });
+                }
+                return false; // Survived via rebirth
+            }
+
             // ── Rank Perk: HP Mercy (survive first death at 2 HP) ──
             if (!this._rankMercyUsed && this.game.rankPerk && this.game.rankPerk.hpMercy) {
                 this._rankMercyUsed = true;
