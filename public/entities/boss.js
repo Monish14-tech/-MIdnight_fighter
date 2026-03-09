@@ -202,7 +202,7 @@ export class Boss {
         this.modelIndex = modelIndex !== null ? modelIndex : Math.floor(Math.abs(Math.sin((level + 7) * 3.14)) * 5);
 
         // Stats scale with level
-        const levelScale = 1 + (level - 1) * 0.2; // Scale from 1.0 at level 1 to 1.8 at level 5, 3.8 at level 20
+        const levelScale = 1 + (level - 1) * 0.15; // Scale from 1.0 at level 1 to 1.6 at level 5
 
         // Tier System (Spike every 5 levels)
         this.bossTier = Math.floor((level - 1) / 5);
@@ -214,7 +214,7 @@ export class Boss {
             : { aiAggression: 1, speedScale: 1, projectileDensity: 1, damageMultiplier: 1, hpMultiplier: 1 };
 
         // Base HP scaled to player DPS to maintain Time-to-Kill (TTK) parity
-        this.maxHealth = Math.floor(1200 * levelScale * tierMultiplier * playerScale.hpMultiplier);
+        this.maxHealth = Math.floor(800 * levelScale * tierMultiplier * playerScale.hpMultiplier);
         this.health = this.maxHealth;
         this.points = Math.floor(1500 * levelScale);
         this.coinReward = Math.floor(200 * level * 0.8); // Balanced linear reward

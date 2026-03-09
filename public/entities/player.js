@@ -494,7 +494,7 @@ export class Player {
             }
         } else if (type === 'missile') {
             const isAbsolute = this.shipType === 'absolute';
-            const missileDmg = Math.max(5, this.damage * 2); // Scale with ship damage, minimum 5
+            const missileDmg = Math.max(15, this.bulletDamage * 5); // Scale significantly with ship damage, minimum 15
 
             // ── Bomber / Absolute: Triple Volley ──
             const count = (this.shipType === 'bomber' || isAbsolute) ? 3 : 1;

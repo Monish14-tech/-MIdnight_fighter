@@ -2949,11 +2949,11 @@ export class Game {
         // hpMultiplier: directly scales enemy health to match Time-to-Kill (TTK).
 
         return {
-            aiAggression: Math.max(0.6, 1.0 + (Math.log10(dpsRatio) * 0.4) * passiveThreat),
-            speedScale: Math.max(0.7, 1.0 + ((ship.speed - baseSpeed) / 450)),
-            projectileDensity: Math.max(1, Math.floor(1 + Math.log2(dpsRatio) * 0.3)),
-            damageMultiplier: Math.max(0.7, hpRatio * 1.1),
-            hpMultiplier: Math.max(0.25, dpsRatio * 0.9 * passiveThreat),
+            aiAggression: Math.max(0.6, 1.0 + (Math.log10(dpsRatio) * 0.25) * passiveThreat),
+            speedScale: Math.max(0.7, 1.0 + ((ship.speed - baseSpeed) / 600)),
+            projectileDensity: Math.max(1, Math.floor(1 + Math.log2(dpsRatio) * 0.2)),
+            damageMultiplier: Math.max(0.7, 1.0 + Math.sqrt(Math.max(0, hpRatio - 1)) * 0.6),
+            hpMultiplier: Math.max(0.25, 1.0 + Math.pow(Math.max(0, dpsRatio - 1), 0.7) * 0.5 * passiveThreat),
             // Useful flat stat for direct lookups
             rawPlayerDPS: rawDPS
         };
