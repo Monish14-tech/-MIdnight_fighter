@@ -143,26 +143,6 @@ export class Player {
         if (this.shipType === 'scout' && this._scoutFullHpSpeed) {
             this.speed = (this.currentHealth >= this.maxHealth) ? this._scoutFullHpSpeed : this.speed < this._scoutFullHpSpeed ? this.speed : this._scoutFullHpSpeed / 1.10;
         }
-        // Eclipse: heal +1 HP every 8s of survival
-        if (this.shipType === 'eclipse') {
-            this._eclipseSurvivalTimer += deltaTime;
-            if (this._eclipseSurvivalTimer >= 8.0) {
-                this._eclipseSurvivalTimer = 0;
-                this.currentHealth = Math.min(this.maxHealth, this.currentHealth + 1);
-                if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 20, text: '+1 HP', color: '#66ccff', life: 1.0 });
-            }
-        }
-        // Nova: drain 1 HP every 15s
-        if (this.shipType === 'nova') {
-            this._novaDrainTimer += deltaTime;
-            if (this._novaDrainTimer >= 15.0) {
-                this._novaDrainTimer = 0;
-                if (this.currentHealth > 1) {
-                    this.currentHealth -= 1;
-                    if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 20, text: '-1 HP (NOVA)', color: '#ffeeaa', life: 1.0 });
-                }
-            }
-        }
         // Laser Drone: track sustained fire for Amplifier passive
         if (this.shipType === 'laser_drone') {
             if (input && input.keys.fire) {
@@ -2210,15 +2190,6 @@ export class Player {
 
         // Check if dead
         if (this.currentHealth <= 0) {
-            // ── Phoenix: Eternal Rebirth ── (once per run revive at 3 HP)
-            if (this.shipType === 'phoenix' && !this._phoenixReviveUsed) {
-                this._phoenixReviveUsed = true;
-                this.currentHealth = 3;
-                this.invulnerableTimer = 2.0; // 2s immunity after revive
-                if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 30, text: 'ETERNAL REBIRTH!', color: '#ffa500', life: 2.0 });
-                return false; // Survived via rebirth
-            }
-
             // ── Rank Perk: HP Mercy (survive first death at 2 HP) ──
             if (!this._rankMercyUsed && this.game.rankPerk && this.game.rankPerk.hpMercy) {
                 this._rankMercyUsed = true;
@@ -2237,23 +2208,37 @@ export class Player {
 
     // Called by game when this player kills an enemy (passive ability)
     onEnemyKill(enemy, killedByMissile = false) {
-        // ── Divine Radiance (Celestial Striker): 30% chance missile kills drop HP ──
-        if (this.shipType === 'celestial' || this.shipType === 'absolute') {
-            if (killedByMissile && Math.random() < 0.30) {
-                this.game.spawnPowerUpAt(enemy.x, enemy.y);
+        // ── Heal on Missile Kill (Celestial Striker / Phoenix / Absolute) ──
+        if (this.shipType === 'celestial' || this.shipType === 'phoenix' || this.shipType === 'absolute') {
+            if (killedByMissile) {
+                const ratio = (this.shipType === 'celestial') ? 8 : 10;
+                this._missileHealAccum = (this._missileHealAccum || 0) + 1;
+                if (this._missileHealAccum >= ratio) {
+                    this._missileHealAccum = 0;
+                    this.currentHealth = Math.min(this.maxHealth, this.currentHealth + 1);
+                    if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 30, text: '+1 HP (MISSILE HEAL)', color: '#00ff44', life: 1.5 });
+                }
             }
         }
 
-        // ── Tank / Juggernaut / Guardian: heal on kill ──
-        const healPerKill = this.shipType === 'tank' ? 0.25 :
-            this.shipType === 'juggernaut' ? 0.25 :
-                this.shipType === 'guardian' ? 0.20 : 0;
-        if (healPerKill > 0) {
-            this._passiveHealAccum = (this._passiveHealAccum || 0) + healPerKill;
+        // ── Heal on Kill (Nemesis / Starborn / Eclipse / Tank / Juggernaut / Guardian) ──
+        const hokMap = {
+            'nemesis': 3,
+            'starborn': 10,
+            'eclipse': 12,
+            'tank': 4,
+            'juggernaut': 4,
+            'guardian': 5
+        };
+        const killRatio = hokMap[this.shipType] || (this.shipType === 'absolute' ? 10 : 0);
+
+        if (killRatio > 0) {
+            this._passiveHealAccum = (this._passiveHealAccum || 0) + (1 / killRatio);
             if (this._passiveHealAccum >= 1) {
                 this._passiveHealAccum -= 1;
                 this.currentHealth = Math.min(this.maxHealth, this.currentHealth + 1);
-                if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 20, text: '+1 HP', color: '#00ff44', life: 1.0 });
+                const healText = this.shipType === 'absolute' ? '+1 HP (SIPHON)' : '+1 HP';
+                if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 20, text: healText, color: '#00ff44', life: 1.0 });
             }
         }
 
@@ -2301,16 +2286,6 @@ export class Player {
             const reductionFactor = Math.max(0.5, 1.0 - this._bossKillCount * 0.10);
             this.missileCooldown = this.missileCooldown * reductionFactor;
             if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 30, text: 'MISSILE CD -10%!', color: '#dc143c', life: 1.5 });
-        }
-        // ── Starborn: +1 max HP per boss kill (up to +5) ──
-        if (this.shipType === 'starborn') {
-            this._starborMaxHPBonus = (this._starborMaxHPBonus || 0);
-            if (this._starborMaxHPBonus < 5) {
-                this._starborMaxHPBonus += 1;
-                this.maxHealth += 1;
-                this.currentHealth += 1;
-                if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 30, text: '+1 MAX HP!', color: '#99ffcc', life: 1.5 });
-            }
         }
     }
 
