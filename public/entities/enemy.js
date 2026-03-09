@@ -682,7 +682,7 @@ export class Enemy {
                         const aimAngle = this.brain ? this.brain.getLeadAngle() : this.angle;
                         const orb = new Projectile(this.game, this.x, this.y, aimAngle, 'bullet', 'enemy');
                         orb.speed = 200; // Slow travel
-                        orb.damage = 2;
+                        orb.damage = 2 * this.damageScale;
                         orb.radius = 12; // Large orb
                         orb.explosive = true;
                         orb.color = '#ff00ff'; // Purple/Magenta 
@@ -692,21 +692,26 @@ export class Enemy {
                     }
                 } else {
                     const seed = this.getNumericId() + this.game.lastTime;
-                    // Add slight inaccuracy to lead calculation (up to 0.15 radians error)
-                    const accuracyError = (this.brain ? (this.brain._prng(99) - 0.5) * 0.3 : 0);
+                    // Accuracy improves at higher levels: clamp base error down
+                    const accuracyRange = Math.max(0.05, 0.3 - (level * 0.01));
+                    const accuracyError = (this.brain ? (this.brain._prng(99) - 0.5) * accuracyRange : 0);
                     const leadAngle = (this.brain ? this.brain.getLeadAngle() : this.angle) + accuracyError;
 
                     if (dist < 200) {
                         // Close range: slightly more spread (0.2 instead of 0.12)
                         const spread = 0.2 * spreadMultiplier;
                         for (let i = -1; i <= 1; i += 2) {
-                            this.game.projectiles.push(new Projectile(this.game, this.x, this.y, leadAngle + spread * i, 'bullet', 'enemy'));
+                            const p = new Projectile(this.game, this.x, this.y, leadAngle + spread * i, 'bullet', 'enemy');
+                            p.damage *= this.damageScale;
+                            this.game.projectiles.push(p);
                         }
                         if (this.game.audio) this.game.audio.enemyShot();
                     } else {
                         // Long range: much more spread (0.8 instead of 0.5)
                         const spread = (Math.sin(seed * 1.5) * 0.8) * spreadMultiplier;
-                        this.game.projectiles.push(new Projectile(this.game, this.x, this.y, leadAngle + spread, 'bullet', 'enemy'));
+                        const p = new Projectile(this.game, this.x, this.y, leadAngle + spread, 'bullet', 'enemy');
+                        p.damage *= this.damageScale;
+                        this.game.projectiles.push(p);
                         if (this.game.audio) this.game.audio.enemyShot();
                     }
                 }
@@ -723,20 +728,21 @@ export class Enemy {
                         missile.speed = 300;
                         missile.maxSpeed = 800;
                         missile.acceleration = 350;
-                        missile.damage = 2;
+                        missile.damage = 2 * this.damageScale;
                         missile.color = '#6bd6ff';
                         this.game.projectiles.push(missile);
                         if (this.game.audio) this.game.audio.enemyShot();
                         this.hasFiredSingleMissile = true;
                     }
                 } else {
-                    // Precision lead shot — slightly more spread for fairness
+                    // Precision lead shot — accuracy improves heavily at higher levels
                     const seed = this.getNumericId() + this.game.lastTime;
-                    const accuracyError = (this.brain ? (this.brain._prng(88) - 0.5) * 0.15 : 0);
+                    const accuracyRange = Math.max(0.02, 0.15 - (level * 0.005));
+                    const accuracyError = (this.brain ? (this.brain._prng(88) - 0.5) * accuracyRange : 0);
                     const spread = (Math.sin(seed * 2.1) * 0.15) * spreadMultiplier;
                     const shot = new Projectile(this.game, this.x, this.y, leadAngle + spread + accuracyError, 'bullet', 'enemy');
                     shot.speed = 750; // slightly faster for lead-targeting accuracy
-                    shot.damage = 2;
+                    shot.damage = 2 * this.damageScale;
                     shot.color = '#6bd6ff';
                     this.game.projectiles.push(shot);
                     if (this.game.audio) this.game.audio.enemyShot();

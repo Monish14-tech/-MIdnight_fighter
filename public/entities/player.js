@@ -324,6 +324,18 @@ export class Player {
         if (this.isDashing) {
             this.x += this.dashDirection.x * this.dashSpeed * deltaTime;
             this.y += this.dashDirection.y * this.dashSpeed * deltaTime;
+
+            // ── Void Stalker / Absolute: Shadow Step (Leave 1-dmg zone) ──
+            if ((this.shipType === 'void' || this.shipType === 'absolute') && Math.random() < 0.3) {
+                const zone = new Projectile(this.game, this.x, this.y, 0, 'bullet', this.playerId);
+                zone.speed = 0;
+                zone.lifetime = 1.0;
+                zone.damage = 1;
+                zone.piercing = true;
+                zone.radius = 35; // 75px diameter -> ~35px radius
+                zone.color = 'rgba(68, 0, 255, 0.4)'; // Transparent purple
+                this.game.projectiles.push(zone);
+            }
         } else {
             this.x += moveVec.x * currentSpeed * deltaTime;
             this.y += moveVec.y * currentSpeed * deltaTime;
@@ -392,13 +404,18 @@ export class Player {
                 }
             }
 
+            // ── The Absolute / Passives logic helper ──
+            const isAbsolute = this.shipType === 'absolute';
+
             if (this.bulletType === 'spread') {
-                // Fire 3 bullets in a fan
-                const count = 3;
-                for (let i = 0; i < count; i++) {
-                    const offset = (i - (count - 1) / 2) * 0.22;
+                const count = (this.shipType === 'bomber' || isAbsolute) ? 5 : 3; // Triple volley / wide spread? Actually bomber is for missiles.
+                // Tempest Lord: Lightning God (spread bullets +20% speed)
+                const speedMult = (this.shipType === 'tempest' || isAbsolute) ? 1.2 : 1.0;
+                for (let i = 0; i < 3; i++) {
+                    const offset = (i - 1) * 0.22;
                     const p = new Projectile(this.game, noseX, noseY, shootAngle + offset, 'bullet', this.playerId);
                     p.damage = this.bulletDamage || 1;
+                    p.speed = p.speed * speedMult;
                     this.game.projectiles.push(p);
                 }
             } else if (this.bulletType === 'railgun') {
@@ -416,12 +433,26 @@ export class Player {
                 p.explosive = true;
                 p.color = '#ffcc00';
                 p.radius = 6;
+                // Solar Flare
+                if (this.shipType === 'solar' || isAbsolute) p.leavesFire = true;
+                // Obliterator Prime
+                if (this.shipType === 'obliterator' || isAbsolute) {
+                    p.explosionRadiusMult = 1.25;
+                    p.explosionDamageMult = 1.25;
+                }
+                // Leviathan Rox
+                if (this.shipType === 'leviathan' || isAbsolute) p.knocksBack = true;
+                // Nemesis Prime
+                if (this.shipType === 'nemesis' || isAbsolute) p.detonateTwice = true;
+
                 this.game.projectiles.push(p);
             } else if (this.bulletType === 'piercing') {
                 const p = new Projectile(this.game, noseX, noseY, shootAngle, 'bullet', this.playerId);
                 p.damage = this.bulletDamage || 1;
                 p.piercing = true;
                 p.color = '#00ff88';
+                // Vanguard
+                if (this.shipType === 'vanguard' || isAbsolute) p.slowsEnemies = true;
                 this.game.projectiles.push(p);
             } else if (this.bulletType === 'laser') {
                 // Rapid-fire laser pulses: thin, fast, piercing, short-lived
@@ -441,6 +472,18 @@ export class Player {
                 this.game.projectiles.push(p);
             }
 
+            // ── Storm Bringer / Absolute: Rapid Suppression ── (Burst every 5th shot)
+            if (this.shipType === 'rapid' || isAbsolute) {
+                this._rapidShotCount = (this._rapidShotCount || 0) + 1;
+                if (this._rapidShotCount % 5 === 0) {
+                    // Fire 2 extra bullets immediately slightly offset
+                    const p1 = new Projectile(this.game, noseX, noseY, shootAngle - 0.15, 'bullet', this.playerId);
+                    const p2 = new Projectile(this.game, noseX, noseY, shootAngle + 0.15, 'bullet', this.playerId);
+                    p1.damage = this.bulletDamage || 1; p2.damage = this.bulletDamage || 1;
+                    this.game.projectiles.push(p1, p2);
+                }
+            }
+
             // Correct: shoot sound for bullets (was wrongly calling dash sound)
             if (this.game.audio) {
                 // Use shoot sound if available, fall back to dash
@@ -450,10 +493,25 @@ export class Player {
                 // (no fallback — silent fire is better than wrong sfx)
             }
         } else if (type === 'missile') {
+            const isAbsolute = this.shipType === 'absolute';
             const missileDmg = Math.max(5, this.damage * 2); // Scale with ship damage, minimum 5
-            const p = new Projectile(this.game, this.x, this.y, this.angle, 'missile', this.playerId, missileDmg);
-            this.game.projectiles.push(p);
-            if (this.game.achievementManager) this.game.achievementManager.addStat('missiles', 1);
+
+            // ── Bomber / Absolute: Triple Volley ──
+            const count = (this.shipType === 'bomber' || isAbsolute) ? 3 : 1;
+            const spread = 0.4; // radians
+
+            for (let i = 0; i < count; i++) {
+                const angleOffset = count > 1 ? (-spread / 2 + (spread / (count - 1)) * i) : 0;
+                const p = new Projectile(this.game, this.x, this.y, this.angle + angleOffset, 'missile', this.playerId, missileDmg);
+
+                // ── Celestial Striker / Absolute: Missiles auto-split ──
+                if (this.shipType === 'celestial' || isAbsolute) {
+                    p.autoSplit = true;
+                }
+                this.game.projectiles.push(p);
+            }
+
+            if (this.game.achievementManager) this.game.achievementManager.addStat('missiles', count);
             if (this.game.screenShake) this.game.screenShake.trigger(5, 0.2);
         }
     }

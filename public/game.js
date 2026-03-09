@@ -2,6 +2,7 @@ import { InputHandler } from './input.js?v=16';
 import { Player } from './entities/player.js?v=16';
 import { Enemy } from './entities/enemy.js?v=16';
 import { Explosion, FloatingText } from './entities/particle.js?v=16';
+import { Projectile } from './entities/projectile.js?v=16';
 import { AudioController } from './audio.js?v=16';
 import { ScreenShake, Nebula, CosmicDust, Planet, Asteroid } from './utils.js?v=16';
 import { PowerUp } from './entities/powerup.js?v=16';
@@ -1361,7 +1362,7 @@ export class Game {
             // Check if device is touch-enabled or small screen
             const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
             const isSmallScreen = window.innerWidth <= 1024;
-            
+
             if (isTouchDevice || isSmallScreen) {
                 mobileControls.classList.add('active');
             }
@@ -2424,15 +2425,33 @@ export class Game {
                     if (dist < enemy.radius + proj.radius) {
                         // Support for Piercing / Explosive
                         if (proj.explosive) {
-                            this.triggerExplosion(proj.x, proj.y, 100, proj.damage * 2);
+                            const r = 100 * (proj.explosionRadiusMult || 1);
+                            const d = proj.damage * 2 * (proj.explosionDamageMult || 1);
+                            this.triggerExplosion(proj.x, proj.y, r, d, proj);
+                            if (proj.detonateTwice) {
+                                setTimeout(() => { if (!this.gameOver) this.triggerExplosion(proj.x, proj.y, r, d, proj); }, 250);
+                            }
                             proj.markedForDeletion = true;
                         } else if (proj.piercing) {
+                            // Vanguard slow
+                            if (proj.slowsEnemies) {
+                                enemy.speed = Math.max(enemy.speed * 0.5, enemy.speed * 0.95);
+                            }
                             // Don't delete, just damage
                             const dead = enemy.takeDamage(proj.damage);
                             if (dead) {
                                 this.handleEnemyDefeat(enemy, true);
                             }
                         } else {
+                            if (proj.autoSplit && proj.type === 'missile') {
+                                for (let s = 0; s < 3; s++) {
+                                    const sp = new Projectile(this, proj.x, proj.y, proj.angle - 0.4 + (s * 0.4), 'bullet', proj.side);
+                                    sp.damage = proj.damage * 0.4;
+                                    sp.color = '#ffffaa';
+                                    sp.radius = 4;
+                                    this.projectiles.push(sp);
+                                }
+                            }
                             proj.markedForDeletion = true;
                             const dead = enemy.takeDamage(proj.damage);
                             if (dead) {
@@ -2448,13 +2467,27 @@ export class Game {
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist < this.boss.radius + proj.radius) {
                         if (proj.explosive) {
-                            this.triggerExplosion(proj.x, proj.y, 120, proj.damage * 3);
+                            const r = 120 * (proj.explosionRadiusMult || 1);
+                            const d = proj.damage * 3 * (proj.explosionDamageMult || 1);
+                            this.triggerExplosion(proj.x, proj.y, r, d, proj);
+                            if (proj.detonateTwice) {
+                                setTimeout(() => { if (!this.gameOver) this.triggerExplosion(proj.x, proj.y, r, d, proj); }, 250);
+                            }
                             proj.markedForDeletion = true;
                         } else if (proj.piercing) {
                             const dead = this.boss.takeDamage(proj.damage);
                             if (this.audio) this.audio.bossHit();
                             if (dead) this.handleBossDefeat();
                         } else {
+                            if (proj.autoSplit && proj.type === 'missile') {
+                                for (let s = 0; s < 3; s++) {
+                                    const sp = new Projectile(this, proj.x, proj.y, proj.angle - 0.4 + (s * 0.4), 'bullet', proj.side);
+                                    sp.damage = proj.damage * 0.4;
+                                    sp.color = '#ffffaa';
+                                    sp.radius = 4;
+                                    this.projectiles.push(sp);
+                                }
+                            }
                             proj.markedForDeletion = true;
                             const dead = this.boss.takeDamage(proj.damage);
                             if (this.audio) this.audio.bossHit();
@@ -2508,9 +2541,16 @@ export class Game {
         });
     }
 
-    triggerExplosion(x, y, radius, damage) {
+    triggerExplosion(x, y, radius, damage, sourceProj = null) {
         // Visual explosion
         this.particles.push(new Explosion(this, x, y, '#ffaa00'));
+
+        if (sourceProj && sourceProj.leavesFire) {
+            const fire = new Projectile(this, x, y, 0, 'bullet', 'player');
+            fire.speed = 0; fire.lifetime = 1.2; fire.piercing = true; fire.damage = 0.5;
+            fire.radius = radius * 0.8; fire.color = 'rgba(255, 100, 0, 0.4)';
+            this.projectiles.push(fire);
+        }
 
         // Damage all enemies in range
         this.enemies.forEach(enemy => {
@@ -2518,6 +2558,10 @@ export class Game {
             const dy = enemy.y - y;
             const dist = Math.hypot(dx, dy);
             if (dist < radius + enemy.radius) {
+                if (sourceProj && sourceProj.knocksBack && enemy.type !== 'boss') {
+                    enemy.x += (dx / dist) * 35;
+                    enemy.y += (dy / dist) * 35;
+                }
                 const dead = enemy.takeDamage(damage);
                 if (dead) {
                     this.handleEnemyDefeat(enemy, true);
@@ -2839,6 +2883,27 @@ export class Game {
 
         if (this.gameOverScreen) this.gameOverScreen.classList.add('active');
         if (this.hud) this.hud.style.display = 'none';
+    }
+
+    // Dynamic Difficulty Scaling based on selected ship
+    getPlayerScalingMetrics() {
+        // Base stats are modeled around 'interceptor'/'scout'
+        const defaultScale = { hpScale: 1.0, damageScale: 1.0, speedScale: 1.0 };
+        if (!this.selectedShip) return defaultScale;
+
+        const ship = SHIP_DATA[this.selectedShip];
+        if (!ship) return defaultScale;
+
+        // Baseline comparison stats (based on typical tier 1 ships like Interceptor/Scout)
+        const baseHp = 5;
+        const baseDamage = 2;
+        const baseSpeed = 350;
+
+        return {
+            hpScale: Math.max(1.0, 1.0 + (ship.hp - baseHp) * 0.05),          // 5% increase in enemy HP per extra player HP
+            damageScale: Math.max(1.0, 1.0 + (ship.damage - baseDamage) * 0.08), // 8% more enemy damage per extra player damage
+            speedScale: Math.max(1.0, 1.0 + (ship.speed - baseSpeed) * 0.001)   // 0.1% speed increase per extra player speed
+        };
     }
 
     // Store System
