@@ -122,8 +122,18 @@ function requireDB(req, res, next) {
 app.get('/api/leaderboard', requireDB, async (req, res) => {
     try {
         const limit = parseInt(req.query.limit) || 10;
+        const type = req.query.type || 'solo'; // solo or coop
+
+        // Determine filter based on requested type
+        let filter = {};
+        if (type === 'solo') {
+            filter.teamMembers = { $eq: null };
+        } else if (type === 'coop') {
+            filter.teamMembers = { $ne: null };
+        }
+
         const leaderboard = await leaderboardCollection
-            .find({})
+            .find(filter)
             .sort({ score: -1 })
             .limit(limit)
             .toArray();
@@ -274,11 +284,20 @@ app.post('/api/score', requireDB, async (req, res) => {
 app.get('/api/player/:playerName', async (req, res) => {
     try {
         const playerName = req.params.playerName;
+        const type = req.query.type || 'solo'; // solo or coop
         if (!playerName) {
             return res.status(400).json({ success: false, error: 'Player name missing' });
         }
 
-        const playerStats = await leaderboardCollection.findOne({ playerName: playerName });
+        // Determine filter to fetch the player's specific stat for that mode
+        let playerFilter = { playerName: playerName };
+        if (type === 'solo') {
+            playerFilter.teamMembers = { $eq: null };
+        } else if (type === 'coop') {
+            playerFilter.teamMembers = { $ne: null };
+        }
+
+        const playerStats = await leaderboardCollection.findOne(playerFilter);
 
         if (!playerStats) {
             return res.json({ success: true, score: 0, globalRank: -1 });
@@ -287,12 +306,15 @@ app.get('/api/player/:playerName', async (req, res) => {
         const score = playerStats.score;
 
         // Competitive Ranking logic (1, 2, 2, 4)
-        // Find how many players have a STRICTLY GREATER score than this player.
-        // The competitive rank is simply that count + 1.
-        // E.g., if 3 people have 500, and this player has 400, rank is 3 + 1 = 4.
-        const higherScoringPlayersCount = await leaderboardCollection.countDocuments({
-            score: { $gt: score }
-        });
+        // Find how many players have a STRICTLY GREATER score than this player in the SAME mode.
+        let rankFilter = { score: { $gt: score } };
+        if (type === 'solo') {
+            rankFilter.teamMembers = { $eq: null };
+        } else if (type === 'coop') {
+            rankFilter.teamMembers = { $ne: null };
+        }
+
+        const higherScoringPlayersCount = await leaderboardCollection.countDocuments(rankFilter);
 
         const globalRank = higherScoringPlayersCount + 1;
 

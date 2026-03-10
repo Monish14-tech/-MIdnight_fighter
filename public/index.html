@@ -256,7 +256,11 @@
 
             <div id="leaderboard-screen" class="screen">
                 <h2>GLOBAL LEADERBOARD</h2>
-                <div id="player-name-section" style="margin-bottom: 20px;">
+                <div id="leaderboard-tabs" class="tab-container">
+                    <button class="tab-btn active" data-mode="solo">SOLO</button>
+                    <button class="tab-btn" data-mode="coop">CO-OP</button>
+                </div>
+                <div id="player-name-section" style="margin-bottom: 20px; margin-top: 15px;">
                     <input type="text" id="player-name-input" placeholder="Enter your pilot name" maxlength="20" style="padding: 10px; background: rgba(0,0,0,0.7); border: 2px solid #00f3ff; color: #00f3ff; 
                         font-family: 'Orbitron', sans-serif; font-size: 16px; text-align: center; width: 300px;">
                     <button id="set-name-btn" class="neon-btn" style="margin-left: 10px; padding: 10px 20px;">SET

@@ -487,6 +487,22 @@ export class Game {
             collabBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.openCollabScreen(); }, { passive: false });
         }
 
+        // Leaderboard Tabs (Solo / Co-op)
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        tabBtns.forEach(btn => {
+            const handleTab = (e) => {
+                if (e.type === 'touchstart') e.preventDefault();
+                tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                if (this.leaderboard) {
+                    this.leaderboard.mode = btn.dataset.mode;
+                    this.leaderboard.displayLeaderboard();
+                }
+            };
+            btn.addEventListener('click', handleTab);
+            btn.addEventListener('touchstart', handleTab, { passive: false });
+        });
+
         const backFromLeaderboardBtn = document.getElementById('back-from-leaderboard-btn');
         if (backFromLeaderboardBtn) {
             backFromLeaderboardBtn.addEventListener('click', () => this.closeLeaderboard());
@@ -886,6 +902,7 @@ export class Game {
             // HOST waits for peer_joined to start game
             this.netplay.on('peer_joined', (msg) => {
                 this.remoteShipType = msg.shipType || 'default';
+                this.collabTeamMembers = [playerName, msg.playerName];
                 if (status) status.innerText = `✅ ${msg.playerName || 'PARTNER'} joined! Starting...`;
                 setTimeout(() => this.startCollaborate('host', data.roomId), 800);
             });
@@ -919,7 +936,8 @@ export class Game {
             this.collabRoomId = roomId;
             if (status) status.innerText = '🔌 Connecting...';
 
-            await this.netplay.connect({ roomId, playerName, shipType: this.selectedShip });
+            const connectData = await this.netplay.connect({ roomId, playerName, shipType: this.selectedShip });
+            this.collabTeamMembers = [connectData.hostName, connectData.guestName];
 
             if (status) status.innerText = '✅ Connected! Starting game...';
             setTimeout(() => this.startCollaborate('guest', roomId), 800);
@@ -1732,6 +1750,14 @@ export class Game {
     openLeaderboard() {
         this.startScreen.classList.remove('active');
         document.getElementById('leaderboard-screen').classList.add('active');
+
+        // Sync tab UI with current mode
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        tabBtns.forEach(btn => {
+            if (btn.dataset.mode === this.leaderboard.mode) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
+
         this.leaderboard.displayLeaderboard();
 
         // Set player name input value if exists
@@ -1751,6 +1777,21 @@ export class Game {
     openLeaderboardFromGameOver() {
         this.gameOverScreen.classList.remove('active');
         document.getElementById('leaderboard-screen').classList.add('active');
+
+        // If we just finished a co-op game, default to co-op view
+        if (this.coopMode) {
+            this.leaderboard.mode = 'coop';
+        } else {
+            this.leaderboard.mode = 'solo';
+        }
+
+        // Sync tab UI
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        tabBtns.forEach(btn => {
+            if (btn.dataset.mode === this.leaderboard.mode) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
+
         this.leaderboard.displayLeaderboard();
 
         // Set player name input value if exists
@@ -1772,7 +1813,7 @@ export class Game {
         this.startScreen.classList.add('active');
     }
 
-    openCollaborate() {
+    openCollabScreen() {
         this.startScreen.classList.remove('active');
         const screen = document.getElementById('collab-screen');
         if (screen) screen.classList.add('active');

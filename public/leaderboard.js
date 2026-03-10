@@ -4,6 +4,7 @@ export class LeaderboardManager {
     constructor() {
         this.apiUrl = `${window.location.origin}/api`;
         this.playerName = localStorage.getItem('midnight_player_name') || null;
+        this.mode = 'solo'; // Default mode
     }
 
     // Set player name
@@ -20,7 +21,7 @@ export class LeaderboardManager {
     // Fetch leaderboard
     async fetchLeaderboard(limit = 10) {
         try {
-            const response = await fetch(`${this.apiUrl}/leaderboard?limit=${limit}`);
+            const response = await fetch(`${this.apiUrl}/leaderboard?limit=${limit}&type=${this.mode}`);
             const data = await response.json();
 
             if (data.success) {
