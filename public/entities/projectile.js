@@ -73,9 +73,9 @@ export class Projectile {
         this.x += Math.cos(this.angle) * this.speed * deltaTime;
         this.y += Math.sin(this.angle) * this.speed * deltaTime;
 
-        // Cleanup
-        if (this.x < 0 || this.x > this.game.width ||
-            this.y < 0 || this.y > this.game.height) {
+        // Cleanup - use logical world bounds
+        if (this.x < -100 || this.x > this.game.logicalWidth + 100 ||
+            this.y < -100 || this.y > this.game.logicalHeight + 100) {
             this.markedForDeletion = true;
         }
     }

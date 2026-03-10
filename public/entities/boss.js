@@ -150,8 +150,8 @@ class BossAI {
             lead = 0.4 * aiAggression;
         }
         return {
-            x: Math.max(20, Math.min(this.game.width - 20, player.x + vx * lead)),
-            y: Math.max(20, Math.min(this.game.height - 20, player.y + vy * lead))
+            x: Math.max(20, Math.min(this.game.logicalWidth - 20, player.x + vx * lead)),
+            y: Math.max(20, Math.min(this.game.logicalHeight - 20, player.y + vy * lead))
         };
     }
 
@@ -220,20 +220,20 @@ export class Boss {
         this.coinReward = Math.floor(200 * level * 0.8); // Balanced linear reward
 
         // Initial Position logic
-        this.targetPoint = { x: game.width / 2, y: 150 };
+        this.targetPoint = { x: game.logicalWidth / 2, y: 150 };
 
         if (this.side === 'left') {
             this.x = -200;
-            this.y = game.height / 2;
-            this.targetPoint = { x: 150, y: game.height / 2 };
+            this.y = game.logicalHeight / 2;
+            this.targetPoint = { x: 150, y: game.logicalHeight / 2 };
         } else if (this.side === 'right') {
-            this.x = game.width + 200;
-            this.y = game.height / 2;
-            this.targetPoint = { x: game.width - 150, y: game.height / 2 };
+            this.x = game.logicalWidth + 200;
+            this.y = game.logicalHeight / 2;
+            this.targetPoint = { x: game.logicalWidth - 150, y: game.logicalHeight / 2 };
         } else { // top
-            this.x = game.width / 2;
+            this.x = game.logicalWidth / 2;
             this.y = -200;
-            this.targetPoint = { x: game.width / 2, y: 150 };
+            this.targetPoint = { x: game.logicalWidth / 2, y: 150 };
         }
 
         this.radius = 70;
@@ -429,8 +429,8 @@ export class Boss {
             this.stateTimer = 0;
             this.velocity = { x: 0, y: 0 };
             // Force position to safe center
-            this.x = this.game.width / 2;
-            this.y = this.game.height / 3;
+            this.x = this.game.logicalWidth / 2;
+            this.y = this.game.logicalHeight / 3;
             return;
         }
 
@@ -457,16 +457,16 @@ export class Boss {
         // Only prevent going too far past the visible area
         const screenBuffer = 150;
         if (this.x < -screenBuffer) this.x = -screenBuffer;
-        if (this.x > this.game.width + screenBuffer) this.x = this.game.width + screenBuffer;
+        if (this.x > this.game.logicalWidth + screenBuffer) this.x = this.game.logicalWidth + screenBuffer;
         if (this.y < -screenBuffer) this.y = -screenBuffer;
-        if (this.y > this.game.height + screenBuffer) this.y = this.game.height + screenBuffer;
+        if (this.y > this.game.logicalHeight + screenBuffer) this.y = this.game.logicalHeight + screenBuffer;
     }
 
     handleIdle(deltaTime) {
         this.y += Math.sin(this.stateTimer * 3) * 0.5;
         this.tilt = Math.sin(this.stateTimer * 2) * 0.1;
         const margin = 70;
-        this.y = Math.max(margin, Math.min(this.game.height - margin, this.y));
+        this.y = Math.max(margin, Math.min(this.game.logicalHeight - margin, this.y));
 
         let idleDuration = this.phase === 3 ? 0.1 : (this.phase === 2 ? 0.15 : 0.2);
         // Tier Aggression: Significantly cut downtime at higher tiers
@@ -548,17 +548,17 @@ export class Boss {
                 const spd = 220 + this.phase * 40;
                 const zigX = Math.sin(this.stateTimer * 3.5) * spd;
                 const zigY = Math.cos(this.stateTimer * 2.1) * spd * 0.5;
-                const cx = this.game.width * 0.5;
-                const cy = this.game.height * 0.5 + Math.sin(this.stateTimer * 0.8) * this.game.height * 0.3;
+                const cx = this.game.logicalWidth * 0.5;
+                const cy = this.game.logicalHeight * 0.5 + Math.sin(this.stateTimer * 0.8) * this.game.logicalHeight * 0.3;
                 this.x += (cx + zigX - this.x) * 3 * deltaTime;
                 this.y += (cy + zigY - this.y) * 3 * deltaTime;
                 break;
             }
             case 'Titan': {
                 // Slow horizontal drift and vertical sweep — full screen
-                const titanY = this.game.height * 0.5 + Math.sin(this.stateTimer * 0.4) * this.game.height * 0.35;
-                const drift = Math.sin(this.stateTimer * 0.6) * this.game.width * 0.28;
-                this.x += (this.game.width * 0.5 + drift - this.x) * 0.8 * deltaTime;
+                const titanY = this.game.logicalHeight * 0.5 + Math.sin(this.stateTimer * 0.4) * this.game.logicalHeight * 0.35;
+                const drift = Math.sin(this.stateTimer * 0.6) * this.game.logicalWidth * 0.28;
+                this.x += (this.game.logicalWidth * 0.5 + drift - this.x) * 0.8 * deltaTime;
                 this.y += (titanY - this.y) * 1.2 * deltaTime;
                 break;
             }
@@ -588,22 +588,22 @@ export class Boss {
             }
             case 'Swarmlord': {
                 // Drifts across full screen space
-                const swY = this.game.height * 0.4 + Math.cos(this.stateTimer * 0.5) * this.game.height * 0.3;
-                const swX = this.game.width * 0.5 + Math.sin(this.stateTimer * 0.5) * this.game.width * 0.3;
+                const swY = this.game.logicalHeight * 0.4 + Math.cos(this.stateTimer * 0.5) * this.game.logicalHeight * 0.3;
+                const swX = this.game.logicalWidth * 0.5 + Math.sin(this.stateTimer * 0.5) * this.game.logicalWidth * 0.3;
                 this.x += (swX - this.x) * 0.9 * deltaTime;
                 this.y += (swY - this.y) * 1.5 * deltaTime;
                 break;
             }
             default: {
-                const cx = this.game.width / 2, cy = this.game.height / 3, r = 200;
+                const cx = this.game.logicalWidth / 2, cy = this.game.logicalHeight / 3, r = 200;
                 const a = this.stateTimer * 1.5;
                 this.x = cx + Math.cos(a) * r;
                 this.y = cy + Math.sin(a) * r * 0.6;
             }
         }
         const m = 80;
-        this.x = Math.max(m, Math.min(this.game.width - m, this.x));
-        this.y = Math.max(m, Math.min(this.game.height - m, this.y));
+        this.x = Math.max(m, Math.min(this.game.logicalWidth - m, this.x));
+        this.y = Math.max(m, Math.min(this.game.logicalHeight - m, this.y));
     }
 
     // ── Personality-specific ambient fire (replaces old fireSimple) ─
@@ -672,11 +672,11 @@ export class Boss {
         // Rotate through several predefined safe positions to avoid getting stuck
         const positionIndex = Math.floor(this.stateTimer * 0.5) % 5;
         const positions = [
-            { x: this.game.width * 0.25, y: this.game.height * 0.25 },
-            { x: this.game.width * 0.75, y: this.game.height * 0.25 },
-            { x: this.game.width * 0.5, y: this.game.height * 0.3 },
-            { x: this.game.width * 0.3, y: this.game.height * 0.35 },
-            { x: this.game.width * 0.7, y: this.game.height * 0.35 }
+            { x: this.game.logicalWidth * 0.25, y: this.game.logicalHeight * 0.25 },
+            { x: this.game.logicalWidth * 0.75, y: this.game.logicalHeight * 0.25 },
+            { x: this.game.logicalWidth * 0.5, y: this.game.logicalHeight * 0.3 },
+            { x: this.game.logicalWidth * 0.3, y: this.game.logicalHeight * 0.35 },
+            { x: this.game.logicalWidth * 0.7, y: this.game.logicalHeight * 0.35 }
         ];
 
         let targetPos = positions[positionIndex];
@@ -689,8 +689,8 @@ export class Boss {
 
         // Clamp to safe zone
         this.targetPoint = {
-            x: Math.max(safeMargin, Math.min(this.game.width - safeMargin, targetPos.x)),
-            y: Math.max(safeMargin, Math.min(this.game.height - safeMargin, targetPos.y))
+            x: Math.max(safeMargin, Math.min(this.game.logicalWidth - safeMargin, targetPos.x)),
+            y: Math.max(safeMargin, Math.min(this.game.logicalHeight - safeMargin, targetPos.y))
         };
     }
 
@@ -727,17 +727,17 @@ export class Boss {
             this.x = hardMargin + 20;
             this.targetPoint.x = Math.max(hardMargin + 100, this.targetPoint.x);
         }
-        if (this.x > this.game.width - hardMargin) {
-            this.x = this.game.width - hardMargin - 20;
-            this.targetPoint.x = Math.min(this.game.width - hardMargin - 100, this.targetPoint.x);
+        if (this.x > this.game.logicalWidth - hardMargin) {
+            this.x = this.game.logicalWidth - hardMargin - 20;
+            this.targetPoint.x = Math.min(this.game.logicalWidth - hardMargin - 100, this.targetPoint.x);
         }
         if (this.y < hardMargin) {
             this.y = hardMargin + 20;
             this.targetPoint.y = Math.max(hardMargin + 100, this.targetPoint.y);
         }
-        if (this.y > this.game.height - hardMargin) {
-            this.y = this.game.height - hardMargin - 20;
-            this.targetPoint.y = Math.min(this.game.height - hardMargin - 100, this.targetPoint.y);
+        if (this.y > this.game.logicalHeight - hardMargin) {
+            this.y = this.game.logicalHeight - hardMargin - 20;
+            this.targetPoint.y = Math.min(this.game.logicalHeight - hardMargin - 100, this.targetPoint.y);
         }
 
         // Ultimate safety: if STILL stuck after 8 seconds, just go idle
@@ -766,8 +766,8 @@ export class Boss {
 
             // Keep boss on screen during charge
             const margin = 50;
-            this.x = Math.max(margin, Math.min(this.game.width - margin, this.x));
-            this.y = Math.max(margin, Math.min(this.game.height - margin, this.y));
+            this.x = Math.max(margin, Math.min(this.game.logicalWidth - margin, this.x));
+            this.y = Math.max(margin, Math.min(this.game.logicalHeight - margin, this.y));
 
             // Lock angle
             const dx = this.dashTarget.x - this.x;
@@ -781,8 +781,8 @@ export class Boss {
 
             // Keep boss on screen during dash
             const margin = 80;
-            this.x = Math.max(margin, Math.min(this.game.width - margin, this.x));
-            this.y = Math.max(margin, Math.min(this.game.height - margin, this.y));
+            this.x = Math.max(margin, Math.min(this.game.logicalWidth - margin, this.x));
+            this.y = Math.max(margin, Math.min(this.game.logicalHeight - margin, this.y));
 
             // Deterministic trail
             if (Math.abs(Math.sin(this.game.lastTime * 0.1)) > 0.5) {

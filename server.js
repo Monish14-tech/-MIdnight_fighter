@@ -839,6 +839,38 @@ function setupRealtimeServer(httpServer) {
             }
         });
 
+        // Hit relay: GUEST sends hit → forward ONLY to HOST so HOST applies damage
+        socket.on('hit_enemy', (data) => {
+            if (!context.roomId) return;
+            const liveRoom = liveRooms.get(context.roomId);
+            if (!liveRoom) return;
+            const host = liveRoom.clients.get('host');
+            if (host && context.role !== 'host') {
+                host.socket.emit('hit_enemy', { ...data, from: context.role });
+            }
+        });
+
+        socket.on('hit_boss', (data) => {
+            if (!context.roomId) return;
+            const liveRoom = liveRooms.get(context.roomId);
+            if (!liveRoom) return;
+            const host = liveRoom.clients.get('host');
+            if (host && context.role !== 'host') {
+                host.socket.emit('hit_boss', { ...data, from: context.role });
+            }
+        });
+
+        // Sync: HOST sends game_snapshot → forward to GUEST only
+        socket.on('game_snapshot', (data) => {
+            if (!context.roomId || context.role !== 'host') return;
+            const liveRoom = liveRooms.get(context.roomId);
+            if (!liveRoom) return;
+            const guest = liveRoom.clients.get('guest');
+            if (guest) {
+                guest.socket.emit('game_snapshot', data);
+            }
+        });
+
 
         socket.on('player_died', async () => {
             if (!context.roomId) return;

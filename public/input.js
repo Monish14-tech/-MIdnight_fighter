@@ -33,8 +33,15 @@ export class InputHandler {
             const fireBtn = document.getElementById('fire-btn');
             const dashBtn = document.getElementById('dash-btn');
 
+            const triggerHaptic = () => {
+                if (navigator.vibrate) navigator.vibrate(12);
+            };
+
             if (joystickZone) {
-                joystickZone.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
+                joystickZone.addEventListener('touchstart', (e) => {
+                    triggerHaptic();
+                    this.onTouchStart(e);
+                }, { passive: false });
                 joystickZone.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });
                 joystickZone.addEventListener('touchend', (e) => this.onTouchEnd(e), { passive: false });
             }
@@ -42,6 +49,7 @@ export class InputHandler {
             if (fireBtn) {
                 const handleFireStart = (e) => {
                     e.preventDefault();
+                    triggerHaptic();
                     this.keys.fire = true;
                 };
                 const handleFireEnd = (e) => {
@@ -50,13 +58,14 @@ export class InputHandler {
                 };
                 fireBtn.addEventListener('touchstart', handleFireStart, { passive: false });
                 fireBtn.addEventListener('touchend', handleFireEnd, { passive: false });
-                fireBtn.addEventListener('mousedown', () => this.keys.fire = true);
+                fireBtn.addEventListener('mousedown', () => { triggerHaptic(); this.keys.fire = true; });
                 fireBtn.addEventListener('mouseup', () => this.keys.fire = false);
             }
 
             if (dashBtn) {
                 const handleDashStart = (e) => {
                     e.preventDefault();
+                    triggerHaptic();
                     this.keys.dash = true;
                 };
                 const handleDashEnd = (e) => {
@@ -65,7 +74,7 @@ export class InputHandler {
                 };
                 dashBtn.addEventListener('touchstart', handleDashStart, { passive: false });
                 dashBtn.addEventListener('touchend', handleDashEnd, { passive: false });
-                dashBtn.addEventListener('mousedown', () => this.keys.dash = true);
+                dashBtn.addEventListener('mousedown', () => { triggerHaptic(); this.keys.dash = true; });
                 dashBtn.addEventListener('mouseup', () => this.keys.dash = false);
             }
 
@@ -73,6 +82,7 @@ export class InputHandler {
             if (missileBtn) {
                 const handleMissileStart = (e) => {
                     e.preventDefault();
+                    triggerHaptic();
                     this.keys.missile = true;
                 };
                 const handleMissileEnd = (e) => {
@@ -81,7 +91,7 @@ export class InputHandler {
                 };
                 missileBtn.addEventListener('touchstart', handleMissileStart, { passive: false });
                 missileBtn.addEventListener('touchend', handleMissileEnd, { passive: false });
-                missileBtn.addEventListener('mousedown', () => this.keys.missile = true);
+                missileBtn.addEventListener('mousedown', () => { triggerHaptic(); this.keys.missile = true; });
                 missileBtn.addEventListener('mouseup', () => this.keys.missile = false);
             }
         }

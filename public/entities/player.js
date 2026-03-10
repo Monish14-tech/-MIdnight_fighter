@@ -56,6 +56,7 @@ export class Player {
         this.prestige = Boolean(stats.prestige);
         this.specialAbility = stats.specialAbility || null;
         this.angle = 0;
+        this.radius = 15;
         this.trail = [];
         this.afterburnerTimer = 0;
 
@@ -354,10 +355,8 @@ export class Player {
         }
 
         // Boundaries
-        if (this.x < this.radius) this.x = this.radius;
-        if (this.x > this.game.width - this.radius) this.x = this.game.width - this.radius;
-        if (this.y < this.radius) this.y = this.radius;
-        if (this.y > this.game.height - this.radius) this.y = this.game.height - this.radius;
+        this.x = Math.max(this.radius, Math.min(this.game.logicalWidth - this.radius, this.x));
+        this.y = Math.max(this.radius, Math.min(this.game.logicalHeight - this.radius, this.y));
 
         // Update Trail
         for (let i = this.trail.length - 1; i >= 0; i--) {
@@ -611,15 +610,22 @@ export class Player {
             ctx.shadowBlur = 35;
             ctx.globalAlpha = 0.7;
         } else {
-            // Check for prestige ship — special permanent glow
-            const shipInfo = this.game.constructor.name === 'Object' ? null : (typeof SHIP_DATA !== 'undefined' ? SHIP_DATA : null);
+            // Co-op Peer Differentiation: If same ship, GUEST (or partner) gets amber glow
+            const isPeer = this.playerId !== this.game.playerId && this.game.onlineCoop;
+            const sameShipAsLocal = this.shipType === this.game.localShipType;
             const isPrestige = this.prestige || false;
-            if (isPrestige) {
+
+            if (isPeer && sameShipAsLocal) {
+                // Amber glow for co-op peer with same ship
+                const pulse = Math.sin(Date.now() * 0.005) * 0.3 + 0.7;
+                ctx.shadowBlur = 35 + pulse * 10;
+                ctx.shadowColor = '#ff9900'; // Distinct amber color
+            } else if (isPrestige) {
                 const pulse = Math.sin(Date.now() * 0.003) * 0.4 + 0.6;
                 ctx.shadowBlur = 30 + pulse * 15;
                 ctx.shadowColor = this.color;
             } else {
-                // Normal cyan glow
+                // Normal cyan/ship color glow
                 ctx.shadowBlur = 25;
                 ctx.shadowColor = this.color;
             }

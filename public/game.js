@@ -129,6 +129,11 @@ export class Game {
         this.width = this.canvas.width = window.innerWidth;
         this.height = this.canvas.height = window.innerHeight;
 
+        // Multiplayer Coordinate Parity Implementation
+        this.logicalWidth = 1920;
+        this.logicalHeight = 1080;
+        this.renderScale = 1.0;
+
         this.lastTime = 0;
         this.score = 0;
 
@@ -339,6 +344,10 @@ export class Game {
 
         // Check for global data reset
         this.checkDataVersion();
+
+        // Initial UI cleanup
+        this.hideGameControls();
+        if (this.hud) this.hud.style.display = 'none';
     }
 
     initAtmosphere() {
@@ -474,38 +483,8 @@ export class Game {
 
         const collabBtn = document.getElementById('collab-btn');
         if (collabBtn) {
-            const showSoon = () => {
-                const existing = document.getElementById('collab-toast');
-                if (existing) return;
-
-                const toast = document.createElement('div');
-                toast.id = 'collab-toast';
-                toast.style.position = 'fixed';
-                toast.style.top = '20px';
-                toast.style.left = '50%';
-                toast.style.transform = 'translateX(-50%)';
-                toast.style.background = 'rgba(255, 0, 100, 0.95)';
-                toast.style.border = '2px solid var(--neon-pink)';
-                toast.style.boxShadow = '0 0 20px var(--neon-pink), inset 0 0 10px var(--neon-pink)';
-                toast.style.padding = '15px 30px';
-                toast.style.borderRadius = '8px';
-                toast.style.zIndex = '4000';
-                toast.style.textAlign = 'center';
-                toast.style.animation = 'toast-slide-down 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards';
-
-                toast.innerHTML = `
-                    <div style="font-weight: bold; color: #fff; letter-spacing: 2px;">COLLABORATIVE MODE</div>
-                    <div style="font-size: 0.9em; color: #ffeb3b; margin-top: 5px;">COMING SOON! 🚀</div>
-                `;
-                document.body.appendChild(toast);
-
-                setTimeout(() => {
-                    toast.style.animation = 'toast-fade-out 0.5s forwards';
-                    setTimeout(() => toast.remove(), 500);
-                }, 2500);
-            };
-            collabBtn.addEventListener('click', showSoon);
-            collabBtn.addEventListener('touchstart', (e) => { e.preventDefault(); showSoon(); }, { passive: false });
+            collabBtn.addEventListener('click', () => this.openCollabScreen());
+            collabBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.openCollabScreen(); }, { passive: false });
         }
 
         const backFromLeaderboardBtn = document.getElementById('back-from-leaderboard-btn');
@@ -658,11 +637,102 @@ export class Game {
         });
 
         this.netplay.on('destroy_powerup', (data) => {
-            if (this.onlineRole === 'guest') {
-                const index = this.powerups.findIndex(p => p.remoteId === data.id);
-                if (index !== -1) {
-                    this.powerups[index].markedForDeletion = true;
+            const index = this.powerups.findIndex(p => p.remoteId === data.id);
+            if (index !== -1) {
+                this.powerups[index].markedForDeletion = true;
+            }
+        });
+
+        // HOST: apply damage from GUEST's hit
+        this.netplay.on('hit_enemy', (data) => {
+            if (this.onlineRole !== 'host') return;
+            const enemy = this.enemies.find(e => e.remoteId === data.id);
+            if (enemy && !enemy.markedForDeletion) {
+                const dead = enemy.takeDamage(data.damage);
+                if (dead) {
+                    this.handleEnemyDefeat(enemy, true, data.missile);
                 }
+            }
+        });
+
+        this.netplay.on('hit_boss', (data) => {
+            if (this.onlineRole !== 'host') return;
+            if (this.boss && !this.boss.markedForDeletion) {
+                const dead = this.boss.takeDamage(data.damage);
+                if (dead) {
+                    this.handleBossDefeat();
+                    this.netplay.emit('destroy_boss', { id: this.boss?.remoteId });
+                }
+            }
+        });
+
+        // GUEST: apply incoming snapshot from HOST — mirror enemy/boss positions
+        this.netplay.on('game_snapshot', (snapshot) => {
+            if (this.onlineRole !== 'guest' || !snapshot) return;
+
+            // Sync level state
+            if (snapshot.level !== undefined) this.currentLevel = snapshot.level;
+            if (snapshot.score !== undefined) this.score = snapshot.score;
+            if (snapshot.enemiesSpawned !== undefined) this.enemiesSpawned = snapshot.enemiesSpawned;
+            if (snapshot.enemiesForLevel !== undefined) this.enemiesForLevel = snapshot.enemiesForLevel;
+
+            // Mirror enemy positions (lerp smoothly)
+            const snapshotIds = new Set();
+            if (snapshot.enemies) {
+                for (const se of snapshot.enemies) {
+                    snapshotIds.add(se.id);
+                    let local = this.enemies.find(e => e.remoteId === se.id);
+                    if (!local) {
+                        // Spawn new enemy if it doesn't exist locally
+                        import('./entities/enemy.js?v=4').then(m => {
+                            const EnemyClass = m.default || m.Enemy;
+                            const e = new EnemyClass(this, se.type || 'chaser');
+                            e.x = se.x; e.y = se.y;
+                            e.remoteId = se.id;
+                            e.hp = se.hp; e.maxHp = se.maxHp || se.hp;
+                            this.enemies.push(e);
+                        });
+                    } else {
+                        // Lerp to host position (smooth interpolation)
+                        local.x += (se.x - local.x) * 0.35;
+                        local.y += (se.y - local.y) * 0.35;
+                        local.hp = se.hp;
+                        local.angle = se.angle || local.angle;
+                    }
+                }
+                // Remove enemies that are gone on host
+                this.enemies = this.enemies.filter(e => !e.remoteId || snapshotIds.has(e.remoteId));
+            }
+
+            // Mirror boss
+            if (snapshot.boss && this.boss) {
+                this.boss.x += (snapshot.boss.x - this.boss.x) * 0.35;
+                this.boss.y += (snapshot.boss.y - this.boss.y) * 0.35;
+                this.boss.hp = snapshot.boss.hp;
+                this.boss.angle = snapshot.boss.angle || this.boss.angle;
+                // Update boss HUD
+                const bossFill = document.getElementById('boss-health-fill');
+                if (bossFill && this.boss.maxHp) {
+                    bossFill.style.width = `${(this.boss.hp / this.boss.maxHp) * 100}%`;
+                }
+            } else if (snapshot.boss && !this.boss) {
+                import('./entities/boss.js?v=4').then(m => {
+                    const BossClass = m.default || m.Boss;
+                    if (!this.boss) {
+                        this.boss = new BossClass(this, snapshot.boss.level || this.currentLevel, snapshot.boss.side || 'top', snapshot.boss.modelIndex || 0);
+                        this.boss.x = snapshot.boss.x;
+                        this.boss.y = snapshot.boss.y;
+                        this.boss.hp = snapshot.boss.hp;
+                        this.boss.remoteId = snapshot.boss.id;
+                        const bossHud = document.getElementById('boss-hud');
+                        if (bossHud) bossHud.classList.add('active');
+                        const bossName = document.getElementById('boss-name');
+                        if (bossName) bossName.innerText = snapshot.boss.name || 'UNIDENTIFIED THREAT';
+                    }
+                });
+            } else if (!snapshot.boss && this.boss) {
+                // Boss was defeated on host
+                this.handleBossDefeat();
             }
         });
 
@@ -755,6 +825,210 @@ export class Game {
 
         // Resize listener is already added in constructor/addEventListeners
 
+    }
+
+    // ─── CO-OP COLLABORATE METHODS ──────────────────────────────────────────────
+
+    openCollabScreen() {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        const screen = document.getElementById('collab-screen');
+        if (screen) screen.classList.add('active');
+        // Reset status
+        const status = document.getElementById('collab-status');
+        if (status) status.innerText = '';
+        const roomDisplay = document.getElementById('collab-room-display');
+        if (roomDisplay) roomDisplay.classList.add('hidden');
+        const waiting = document.getElementById('collab-waiting');
+        if (waiting) waiting.classList.add('hidden');
+        const leaveBtn = document.getElementById('collab-leave-btn');
+        if (leaveBtn) leaveBtn.classList.add('hidden');
+        const createBtn = document.getElementById('collab-create-btn');
+        if (createBtn) createBtn.disabled = false;
+    }
+
+    closeCollaborate() {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        this.startScreen.classList.add('active');
+    }
+
+    async createCollaborateRoom() {
+        const playerName = this.leaderboard.getPlayerName();
+        if (!playerName) { alert('Please set your pilot name first!'); return; }
+
+        const status = document.getElementById('collab-status');
+        const createBtn = document.getElementById('collab-create-btn');
+        if (status) status.innerText = 'Creating room...';
+        if (createBtn) createBtn.disabled = true;
+
+        try {
+            const res = await fetch('/api/rooms/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ hostName: playerName })
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Failed to create room');
+
+            this.collabRoomId = data.roomId;
+            const roomIdEl = document.getElementById('collab-room-id');
+            if (roomIdEl) roomIdEl.innerText = data.roomId;
+            const roomDisplay = document.getElementById('collab-room-display');
+            if (roomDisplay) roomDisplay.classList.remove('hidden');
+            const waiting = document.getElementById('collab-waiting');
+            if (waiting) waiting.classList.remove('hidden');
+            const leaveBtn = document.getElementById('collab-leave-btn');
+            if (leaveBtn) leaveBtn.classList.remove('hidden');
+            if (status) status.innerText = '📡 Waiting for partner to join...';
+
+            // Connect to socket room as host
+            await this.netplay.connect({ roomId: data.roomId, playerName, shipType: this.selectedShip });
+
+            // HOST waits for peer_joined to start game
+            this.netplay.on('peer_joined', (msg) => {
+                this.remoteShipType = msg.shipType || 'default';
+                if (status) status.innerText = `✅ ${msg.playerName || 'PARTNER'} joined! Starting...`;
+                setTimeout(() => this.startCollaborate('host', data.roomId), 800);
+            });
+
+        } catch (e) {
+            if (status) status.innerText = `❌ ${e.message}`;
+            if (createBtn) createBtn.disabled = false;
+        }
+    }
+
+    async joinCollaborateRoom() {
+        const playerName = this.leaderboard.getPlayerName();
+        if (!playerName) { alert('Please set your pilot name first!'); return; }
+
+        const input = document.getElementById('collab-room-input');
+        const roomId = (input?.value || '').trim().toUpperCase();
+        if (!roomId) { alert('Please enter a room ID!'); return; }
+
+        const status = document.getElementById('collab-status');
+        if (status) status.innerText = 'Joining room...';
+
+        try {
+            const res = await fetch('/api/rooms/join', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roomId, playerName })
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Failed to join room');
+
+            this.collabRoomId = roomId;
+            if (status) status.innerText = '🔌 Connecting...';
+
+            await this.netplay.connect({ roomId, playerName, shipType: this.selectedShip });
+
+            if (status) status.innerText = '✅ Connected! Starting game...';
+            setTimeout(() => this.startCollaborate('guest', roomId), 800);
+
+        } catch (e) {
+            if (status) status.innerText = `❌ ${e.message}`;
+        }
+    }
+
+    startCollaborate(role, roomId) {
+        this.onlineCoop = true;
+        this.onlineRole = role;
+        this.collabRoomId = roomId;
+        this.coopMode = true;
+        this.netSyncTimer = 0;
+
+        // Seed PRNG with room ID for deterministic world generation
+        this.initRandom(roomId);
+
+        if (role === 'host') {
+            this.localShipType = this.selectedShip;
+        } else {
+            // Guest is player2
+            this.localShipType = this.selectedShip;
+        }
+
+        this.startGame();
+    }
+
+    leaveCollaborateRoom(fromGame = false, silent = false) {
+        if (this.netplay) {
+            this.netplay.emit('leave_room');
+            this.netplay.disconnect();
+        }
+
+        this.onlineCoop = false;
+        this.onlineRole = null;
+        this.collabRoomId = null;
+        this.coopMode = false;
+        this.isRunning = false;
+        this.gameOver = false;
+
+        if (!silent) {
+            this.hideGameControls();
+            if (this.hud) this.hud.style.display = 'none';
+            window.location.reload();
+        }
+    }
+
+    // HOST: broadcast world snapshot to GUEST every ~100ms
+    updateNetworkSync(dt) {
+        if (!this.onlineCoop || !this.netplay.isConnected) return;
+
+        // Broadcast local player state regardless of role
+        if (this.player) {
+            this.netplay.emit('state_update', {
+                state: {
+                    x: this.player.x,
+                    y: this.player.y,
+                    angle: this.player.angle,
+                    hp: this.player.health,
+                    maxHp: this.player.maxHealth,
+                    ship: this.player.shipType,
+                    playerId: this.player.playerId
+                }
+            });
+        }
+
+        // HOST sends world snapshot
+        if (this.onlineRole === 'host') {
+            this.netSyncTimer += dt;
+            if (this.netSyncTimer >= 0.1) { // 10 times per second
+                this.netSyncTimer = 0;
+
+                const enemySnapshot = this.enemies
+                    .filter(e => !e.markedForDeletion)
+                    .map(e => ({
+                        id: e.remoteId,
+                        type: e.type,
+                        x: Math.round(e.x),
+                        y: Math.round(e.y),
+                        angle: e.angle,
+                        hp: e.hp,
+                        maxHp: e.maxHp
+                    }));
+
+                const bossSnapshot = this.boss ? {
+                    id: this.boss.remoteId,
+                    x: Math.round(this.boss.x),
+                    y: Math.round(this.boss.y),
+                    angle: this.boss.angle,
+                    hp: this.boss.hp,
+                    maxHp: this.boss.maxHp,
+                    level: this.currentLevel,
+                    side: this.boss.entrySide,
+                    modelIndex: this.boss.modelIndex,
+                    name: this.boss.name
+                } : null;
+
+                this.netplay.emit('game_snapshot', {
+                    enemies: enemySnapshot,
+                    boss: bossSnapshot,
+                    level: this.currentLevel,
+                    score: this.score,
+                    enemiesSpawned: this.enemiesSpawned,
+                    enemiesForLevel: this.enemiesForLevel
+                });
+            }
+        }
     }
 
 
@@ -1262,6 +1536,12 @@ export class Game {
     resize() {
         this.width = this.canvas.width = window.innerWidth;
         this.height = this.canvas.height = window.innerHeight;
+
+        // Calculate scale to fit the logical 1920x1080 world into the actual window
+        this.renderScale = Math.min(
+            window.innerWidth / this.logicalWidth,
+            window.innerHeight / this.logicalHeight
+        );
         this.drawBackground();
     }
 
@@ -1437,6 +1717,7 @@ export class Game {
         }
 
         // Auto-refresh to ensure leaderboard/starting ui is updated
+        this.hideGameControls();
         window.location.reload();
     }
 
@@ -1892,6 +2173,9 @@ export class Game {
         }
 
         this.updateUI();
+
+        // Co-op network sync (HOST broadcasts snapshot, all players send position)
+        if (this.onlineCoop) this.updateNetworkSync(dt);
     }
 
     updateBossUI() {
@@ -1922,6 +2206,10 @@ export class Game {
         this.ctx.fillRect(0, 0, this.width, this.height);
 
         this.ctx.save();
+
+        // Logical Coordinate Scaling
+        this.ctx.scale(this.renderScale, this.renderScale);
+
         this.ctx.translate(this.screenShake.offsetX, this.screenShake.offsetY);
 
         // Draw Players
@@ -1949,26 +2237,31 @@ export class Game {
         this.ctx.fillStyle = '#050510';
         this.ctx.fillRect(0, 0, this.width, this.height);
 
+        this.ctx.save();
+        // Scale background grid as well
+        this.ctx.scale(this.renderScale, this.renderScale);
+
         // Draw AAA Atmosphere
         this.nebulas.forEach(n => n.draw(this.ctx));
         this.cosmicDust.forEach(d => d.draw(this.ctx));
 
-        // Grid lines
+        // Grid lines (Logical 1920x1080)
         this.ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
         this.ctx.lineWidth = 1;
         const gridSize = 50;
-        for (let x = 0; x < this.width; x += gridSize) {
+        for (let x = 0; x < this.logicalWidth; x += gridSize) {
             this.ctx.beginPath();
             this.ctx.moveTo(x, 0);
-            this.ctx.lineTo(x, this.height);
+            this.ctx.lineTo(x, this.logicalHeight);
             this.ctx.stroke();
         }
-        for (let y = 0; y < this.height; y += gridSize) {
+        for (let y = 0; y < this.logicalHeight; y += gridSize) {
             this.ctx.beginPath();
             this.ctx.moveTo(0, y);
-            this.ctx.lineTo(this.width, y);
+            this.ctx.lineTo(this.logicalWidth, y);
             this.ctx.stroke();
         }
+        this.ctx.restore();
     }
 
     addScore(points, useCombo = true) {
@@ -2431,6 +2724,9 @@ export class Game {
     checkProjectileCollisions() {
         if (this.isWarping) return;
 
+        // GUEST in co-op: relay hits to HOST for authoritative damage resolution
+        const isGuestInCoop = this.onlineCoop && this.onlineRole === 'guest';
+
         this.projectiles.forEach(proj => {
             if (proj.markedForDeletion) return;
 
@@ -2457,10 +2753,14 @@ export class Game {
                             if (proj.slowsEnemies) {
                                 enemy.speed = Math.max(enemy.speed * 0.5, enemy.speed * 0.95);
                             }
-                            // Don't delete, just damage
-                            const dead = enemy.takeDamage(proj.damage);
-                            if (dead) {
-                                this.handleEnemyDefeat(enemy, true, proj.type === 'missile');
+                            if (isGuestInCoop && enemy.remoteId) {
+                                // Relay hit to HOST
+                                this.netplay.emit('hit_enemy', { id: enemy.remoteId, damage: proj.damage, missile: proj.type === 'missile' });
+                            } else {
+                                const dead = enemy.takeDamage(proj.damage);
+                                if (dead) {
+                                    this.handleEnemyDefeat(enemy, true, proj.type === 'missile');
+                                }
                             }
                         } else {
                             if (proj.autoSplit && proj.type === 'missile') {
@@ -2473,9 +2773,14 @@ export class Game {
                                 }
                             }
                             proj.markedForDeletion = true;
-                            const dead = enemy.takeDamage(proj.damage);
-                            if (dead) {
-                                this.handleEnemyDefeat(enemy, true, proj.type === 'missile');
+                            if (isGuestInCoop && enemy.remoteId) {
+                                // Relay hit to HOST
+                                this.netplay.emit('hit_enemy', { id: enemy.remoteId, damage: proj.damage, missile: proj.type === 'missile' });
+                            } else {
+                                const dead = enemy.takeDamage(proj.damage);
+                                if (dead) {
+                                    this.handleEnemyDefeat(enemy, true, proj.type === 'missile');
+                                }
                             }
                         }
                     }
@@ -2495,9 +2800,13 @@ export class Game {
                             }
                             proj.markedForDeletion = true;
                         } else if (proj.piercing) {
-                            const dead = this.boss.takeDamage(proj.damage);
-                            if (this.audio) this.audio.bossHit();
-                            if (dead) this.handleBossDefeat();
+                            if (isGuestInCoop) {
+                                this.netplay.emit('hit_boss', { damage: proj.damage });
+                            } else {
+                                const dead = this.boss.takeDamage(proj.damage);
+                                if (this.audio) this.audio.bossHit();
+                                if (dead) this.handleBossDefeat();
+                            }
                         } else {
                             if (proj.autoSplit && proj.type === 'missile') {
                                 for (let s = 0; s < 3; s++) {
@@ -2509,9 +2818,13 @@ export class Game {
                                 }
                             }
                             proj.markedForDeletion = true;
-                            const dead = this.boss.takeDamage(proj.damage);
-                            if (this.audio) this.audio.bossHit();
-                            if (dead) this.handleBossDefeat();
+                            if (isGuestInCoop) {
+                                this.netplay.emit('hit_boss', { damage: proj.damage });
+                            } else {
+                                const dead = this.boss.takeDamage(proj.damage);
+                                if (this.audio) this.audio.bossHit();
+                                if (dead) this.handleBossDefeat();
+                            }
                         }
                     }
                 }
@@ -2870,6 +3183,7 @@ export class Game {
 
         this.screenShake.trigger(50, 0.5);
         this.triggerGameOver(earnedCoins);
+        this.hideGameControls();
     }
 
     async triggerGameOver(earnedCoins) {

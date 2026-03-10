@@ -217,17 +217,18 @@ export class Enemy {
             this.y = y;
         } else {
             if (rng() < 0.5) {
-                this.x = rng() < 0.5 ? -50 : this.game.width + 50;
-                this.y = rng() * this.game.height;
+                this.x = rng() < 0.5 ? -50 : this.game.logicalWidth + 50;
+                this.y = rng() * this.game.logicalHeight;
             } else {
-                this.x = rng() * this.game.width;
-                this.y = rng() < 0.5 ? -50 : this.game.height + 50;
+                this.x = rng() * this.game.logicalWidth;
+                this.y = rng() < 0.5 ? -50 : this.game.logicalHeight + 50;
             }
         }
 
         this.angle = 0;
         this.speed = 0;
-        this.radius = 15;
+        const sf = this.game.scaleFactor || 1;
+        this.radius = 15 * sf;
         this.color = '#ff0000';
         this.points = 100;
 
@@ -287,7 +288,7 @@ export class Enemy {
             this.health = Math.max(1, Math.floor((2 + hpBonus) * playerScale.hpMultiplier));
             this.shootTimer = 0;
             // Snipers back off more as levels increase
-            this.preferredRange = 260 + Math.min((level - 1) * 8, 200);
+            this.preferredRange = (260 + Math.min((level - 1) * 8, 200));
             baseDamage = 2;
         } else if (this.type === 'splitter') {
             this.speed = 140 * diffSpeedMultiplier * playerScale.speedScale;

@@ -7,8 +7,8 @@ export class PowerUp {
         // Use game.random() so co-op clients generate identical positions
         const rng = () => game.random ? game.random() : Math.random();
         const margin = 100;
-        this.x = x !== null ? x : margin + rng() * (game.width - margin * 2);
-        this.y = y !== null ? y : margin + rng() * (game.height - margin * 2);
+        this.x = x !== null ? x : margin + rng() * (game.logicalWidth - margin * 2);
+        this.y = y !== null ? y : margin + rng() * (game.logicalHeight - margin * 2);
 
         this.radius = 22;
         this.lifetime = 18; // 18 seconds before despawn

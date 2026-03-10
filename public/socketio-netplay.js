@@ -113,6 +113,30 @@ export class SocketIONetplay {
                 }
             });
 
+            // Host receives hit_enemy from guest (forwarded by server)
+            this.socket.on('hit_enemy', (data) => {
+                const handler = this.handlers['hit_enemy'];
+                if (handler) handler(data);
+            });
+
+            // Host receives hit_boss from guest (forwarded by server)
+            this.socket.on('hit_boss', (data) => {
+                const handler = this.handlers['hit_boss'];
+                if (handler) handler(data);
+            });
+
+            // Guest receives game_snapshot from host (forwarded by server)
+            this.socket.on('game_snapshot', (data) => {
+                const handler = this.handlers['game_snapshot'];
+                if (handler) handler(data);
+            });
+
+            // Peer destroy powerup
+            this.socket.on('destroy_powerup', (data) => {
+                const handler = this.handlers['destroy_powerup'];
+                if (handler) handler(data);
+            });
+
             // Force game over
             this.socket.on('force_game_over', (data) => {
                 console.log('[SocketIONetplay] Force game over:', data);

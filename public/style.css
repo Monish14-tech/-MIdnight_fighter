@@ -115,6 +115,26 @@ canvas {
 }
 
 /* UI Overlay */
+#mobile-controls {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 20;
+    display: none !important;
+    /* Strict hidden by default */
+}
+
+#mobile-controls.active {
+    display: flex !important;
+    /* Strict show when active */
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: clamp(20px, 5vh, 40px) clamp(20px, 5vw, 40px);
+}
+
 #ui-layer {
     position: absolute;
     top: 0;
@@ -987,76 +1007,94 @@ h1 {
     }
 }
 
-/* HUD - Three Column Layout */
+/* HUD - Horizontal Top Bar Layout */
 #hud {
-    position: absolute;
-    top: 5px;
-    left: 10px;
-    right: 10px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 46px;
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    z-index: 10;
+    justify-content: center;
+    align-items: center;
+    padding: 0 10px;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0) 100%);
+    border-bottom: 1px solid rgba(0, 243, 255, 0.15);
+    z-index: 2500;
     font-family: 'Orbitron', monospace;
+    pointer-events: none;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 #hud-left {
     display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: flex-start;
+    flex-wrap: nowrap;
+    justify-content: center;
     align-items: center;
-    gap: 8px;
-    flex: 1;
+    gap: 6px;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    pointer-events: auto;
 }
 
 /* Mobile HUD optimization */
 @media screen and (max-width: 900px) {
     #hud {
-        top: 5px;
-        left: 5px;
-        right: 5px;
-        flex-wrap: nowrap;
-        align-items: flex-start;
+        height: 40px;
+        padding: 0 6px;
+        background: rgba(0, 0, 0, 0.75);
     }
 
     #hud-left {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
         gap: 4px;
-        width: 100%;
-        padding-right: 60px;
     }
 
     #hud-left .score-container,
     #hud-left .health-container,
     #hud-left .missile-container,
     #hud-left .dash-container {
-        width: 100%;
-        font-size: 0.55rem;
-        padding: 2px 4px;
-        border-width: 1px;
+        font-size: 0.5rem;
+        padding: 2px 3px;
+        border: none;
         background: rgba(0, 0, 0, 0.3);
-        backdrop-filter: none;
-        -webkit-backdrop-filter: none;
+        box-shadow: none;
+        gap: 2px;
+        flex-shrink: 1;
+        min-width: 0;
+    }
+
+    .score-container span {
+        margin-left: 3px;
     }
 
     #health-bar,
     #missile-bar,
     #dash-bar {
-        width: 100%;
-        height: 6px;
-        border-width: 1px;
+        width: 28px;
+        height: 5px;
+        flex-shrink: 0;
+    }
+
+    /* Hide non-essential HUD items on mobile */
+    #hud-left .score-container:has(#high-score-display),
+    #hud-left #enemy-counter,
+    #p1-hud-ship,
+    #p2-hud-ship {
+        display: none !important;
     }
 }
 
 .score-container {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: #00f3ff;
     text-shadow: 0 0 5px #00f3ff;
     background: rgba(0, 0, 0, 0.4);
-    padding: 3px 6px;
+    padding: 2px 6px;
     border: 1px solid #00f3ff;
     border-radius: 4px;
     box-shadow: 0 0 5px rgba(0, 243, 255, 0.2);
@@ -1065,26 +1103,16 @@ h1 {
     white-space: nowrap;
     display: flex;
     align-items: center;
-}
-
-/* Mobile score containers - More compact */
-@media screen and (max-width: 900px) {
-    .score-container {
-        font-size: 0.7rem;
-        padding: 4px 8px;
-        border-width: 1px;
-        letter-spacing: 0.5px;
-        font-size: 0.8rem;
-        padding: 5px 10px;
-        letter-spacing: 1px;
-        margin-bottom: 3px;
-        border-width: 1px;
-    }
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .score-container span {
     color: #ffffff;
-    margin-left: 10px;
+    margin-left: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .health-container {
@@ -1538,42 +1566,46 @@ screen and (max-width: 1024px) {
 #joystick-zone {
     width: 120px;
     height: 120px;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.1);
+    border: 3px solid rgba(0, 243, 255, 0.3);
+    background: radial-gradient(circle, rgba(0, 243, 255, 0.1) 0%, rgba(0, 0, 0, 0.4) 100%);
     border-radius: 50%;
     position: relative;
     pointer-events: auto;
     touch-action: none;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: inset 0 0 20px rgba(0, 243, 255, 0.1);
 }
 
 /* Mobile joystick - Bigger for easier control */
 @media screen and (max-width: 900px) and (orientation: landscape) {
     #joystick-zone {
-        width: 100px;
-        height: 100px;
+        width: clamp(90px, 22vh, 130px);
+        height: clamp(90px, 22vh, 130px);
     }
 }
 
 #joystick-knob {
     width: 50px;
     height: 50px;
-    background: var(--neon-blue);
+    background: radial-gradient(circle at 30% 30%, var(--neon-blue), #00aaff, #004466);
     border-radius: 50%;
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     /* Start centered */
-    box-shadow: 0 0 15px var(--neon-blue);
+    box-shadow: 0 0 20px var(--neon-blue), inset 0 0 10px rgba(255, 255, 255, 0.4);
     pointer-events: none;
-    opacity: 0.8;
+    opacity: 0.95;
+    transition: opacity 0.3s;
 }
 
 /* Mobile joystick knob optimization */
 @media screen and (max-width: 900px) and (orientation: landscape) {
     #joystick-knob {
-        width: 40px;
-        height: 40px;
+        width: clamp(35px, 9vh, 55px);
+        height: clamp(35px, 9vh, 55px);
     }
 }
 
@@ -1581,25 +1613,31 @@ screen and (max-width: 1024px) {
     width: 100px;
     height: 100px;
     border-radius: 50%;
-    background: rgba(0, 243, 255, 0.1);
-    border: 2px solid rgba(0, 243, 255, 0.5);
+    background: rgba(0, 243, 255, 0.05);
+    /* Lighter base for glass effect */
+    border: 2px solid rgba(0, 243, 255, 0.3);
     color: rgba(255, 255, 255, 0.9);
     font-family: inherit;
-    font-weight: bold;
+    font-weight: 900;
     pointer-events: auto;
     touch-action: manipulation;
-    -webkit-backdrop-filter: blur(2px);
-    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
     font-size: 0.9rem;
-    /* Slight blur to distinguish from game */
+    transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.1);
 }
 
 /* Mobile action buttons optimization */
 @media screen and (max-width: 900px) and (orientation: landscape) {
     .mobile-btn {
-        width: 70px;
-        height: 70px;
-        font-size: 0.7rem;
+        width: clamp(60px, 15vh, 90px);
+        height: clamp(60px, 15vh, 90px);
+        font-size: clamp(0.6rem, 2vh, 0.8rem);
     }
 }
 
@@ -1607,22 +1645,20 @@ screen and (max-width: 1024px) {
     background: rgba(0, 243, 255, 0.4);
     color: #fff;
     border-color: var(--neon-blue);
+    transform: scale(0.92);
+    box-shadow: 0 0 30px var(--neon-blue);
 }
 
 #mobile-actions {
     display: flex;
-    gap: 20px;
+    gap: clamp(10px, 3vw, 25px);
     align-items: flex-end;
 }
 
 #action-buttons-vertical {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-
-    #action-buttons-vertical {
-        gap: 8px;
-    }
+    gap: clamp(8px, 2vh, 15px);
 }
 
 #missile-btn {
@@ -1666,9 +1702,10 @@ screen and (max-width: 1024px) {
 
 #rotate-message h2 {
     color: var(--neon-red);
-    font-size: 2rem;
-    margin-bottom: 1rem;
-    animation: blink 1s infinite;
+    font-size: 2.5rem;
+    margin-bottom: 1.5rem;
+    text-shadow: 0 0 20px var(--neon-red);
+    animation: blink 1s infinite, glitch-anim-1 2s infinite;
 }
 
 /* Mobile rotate message optimization */
