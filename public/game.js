@@ -691,6 +691,8 @@ export class Game {
             if (snapshot.score !== undefined) this.score = snapshot.score;
             if (snapshot.enemiesSpawned !== undefined) this.enemiesSpawned = snapshot.enemiesSpawned;
             if (snapshot.enemiesForLevel !== undefined) this.enemiesForLevel = snapshot.enemiesForLevel;
+            if (snapshot.gameTime !== undefined) this.gameTime = snapshot.gameTime;
+            if (snapshot.randomSeed !== undefined) this.randomSeed = snapshot.randomSeed;
 
             // Mirror enemy positions (lerp smoothly)
             const snapshotIds = new Set();
@@ -787,6 +789,23 @@ export class Game {
                 const pu = new PowerUp(this, data.type, data.x, data.y);
                 pu.remoteId = data.id;
                 this.powerups.push(pu);
+            }
+        });
+
+        this.netplay.on('boss_alert', () => {
+            if (this.onlineRole === 'guest') {
+                this.showBossAlert();
+            }
+        });
+
+        this.netplay.on('shared_powerup', (data) => {
+            // Apply to local player
+            if (this.player) {
+                this.player.applyPowerUp(data.type);
+            }
+            // Apply to peer player (guest's view of host or host's view of guest)
+            if (this.playerTwo) {
+                this.playerTwo.applyPowerUp(data.type);
             }
         });
     }
@@ -1043,7 +1062,9 @@ export class Game {
                     level: this.currentLevel,
                     score: this.score,
                     enemiesSpawned: this.enemiesSpawned,
-                    enemiesForLevel: this.enemiesForLevel
+                    enemiesForLevel: this.enemiesForLevel,
+                    gameTime: this.gameTime,
+                    randomSeed: this.randomSeed
                 });
             }
         }
@@ -1454,6 +1475,17 @@ export class Game {
                 // Show Level Up Text
                 this.showLevelUpText(this.currentLevel);
             }
+
+            // Sync level-up to peer
+            if (this.onlineCoop && this.onlineRole === 'host') {
+                this.netplay.emit('level_up', {
+                    level: this.currentLevel,
+                    enemiesForLevel: this.enemiesForLevel,
+                    score: this.score,
+                    difficultyMultiplier: this.difficultyMultiplier,
+                    enemyInterval: this.enemyInterval
+                });
+            }
         }
     }
 
@@ -1480,6 +1512,11 @@ export class Game {
     triggerWarp() {
         // Show boss alert instead of slow motion
         this.showBossAlert();
+
+        // Sync alert to peer
+        if (this.onlineCoop && this.onlineRole === 'host') {
+            this.netplay.emit('boss_alert');
+        }
 
         setTimeout(() => {
             this.spawnBoss();
@@ -2008,6 +2045,12 @@ export class Game {
 
     update(deltaTime) {
         if (this.isPaused) return;
+        if (this.gameOver) return;
+
+        // Increment local time (Host leads, Guest follows via snapshot)
+        if (!this.onlineCoop || this.onlineRole === 'host') {
+            this.gameTime += deltaTime;
+        }
 
         // Hit-Stop Impact Effect (Temporal Freeze)
         if (this.impactTimer > 0) {
@@ -3067,9 +3110,14 @@ export class Game {
                     // Mutual Optimistic Combat: Whoever grabs it claims it
                     if (this.onlineCoop && p.remoteId) {
                         this.netplay.emit('destroy_powerup', { id: p.remoteId });
+                        // Emit shared powerup event
+                        this.netplay.emit('shared_powerup', { type: p.type });
                     }
 
-                    player.applyPowerUp(p.type);
+                    // Apply to ALL players locally (sharing the buff)
+                    this.getPlayers().forEach(pEnt => {
+                        pEnt.applyPowerUp(p.type);
+                    });
 
                     if (p.type === 'nuke') {
                         [...this.enemies].forEach(e => this.handleEnemyDefeat(e, false));

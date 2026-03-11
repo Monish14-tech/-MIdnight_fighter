@@ -356,7 +356,7 @@ export class Boss {
             this.rageParticleTimer += deltaTime;
             if (this.rageParticleTimer > 0.15) {
                 this.rageParticleTimer = 0;
-                const ra = Math.abs(Math.sin(this.game.lastTime * 0.009)) * Math.PI * 2;
+                const ra = Math.abs(Math.sin(this.game.gameTime * 0.009)) * Math.PI * 2;
                 this.game.particles.push(new Explosion(this.game, this.x + Math.cos(ra) * 40, this.y + Math.sin(ra) * 40, '#ff4400'));
             }
         }
@@ -760,9 +760,9 @@ export class Boss {
     handleDashing(deltaTime) {
         // Charge up — use deterministic shake (no Math.random)
         if (this.stateTimer < 0.6) {
-            const shake = Math.sin(this.game.lastTime * 0.05) * 6;
+            const shake = Math.sin(this.game.gameTime * 0.05) * 6;
             this.x += shake;
-            this.y += Math.cos(this.game.lastTime * 0.05) * 6;
+            this.y += Math.cos(this.game.gameTime * 0.05) * 6;
 
             // Keep boss on screen during charge
             const margin = 50;
@@ -785,7 +785,7 @@ export class Boss {
             this.y = Math.max(margin, Math.min(this.game.logicalHeight - margin, this.y));
 
             // Deterministic trail
-            if (Math.abs(Math.sin(this.game.lastTime * 0.1)) > 0.5) {
+            if (Math.abs(Math.sin(this.game.gameTime * 0.1)) > 0.5) {
                 this.game.particles.push(new Explosion(this.game, this.x, this.y, this.color));
             }
         } else {
@@ -1469,14 +1469,14 @@ export class Boss {
 
         // ── Phantom blink (invisible during blinkDash) ────────
         if (this.isBlinking) {
-            ctx.globalAlpha = 0.08 + Math.abs(Math.sin(this.game.lastTime * 0.04)) * 0.15;
+            ctx.globalAlpha = 0.08 + Math.abs(Math.sin(this.game.gameTime * 0.04)) * 0.15;
         }
 
         // ── Pulsing phase aura ring ───────────────────────────
         const auraColors = ['#00ff88', '#ff8800', '#ff2222'];
         const auraColor = auraColors[this.phase - 1] || '#00ff88';
-        const auraPulse = 0.35 + Math.abs(Math.sin(this.game.lastTime * (this.phase === 3 ? 0.012 : 0.005))) * 0.55;
-        const auraR = this.radius + 14 + Math.abs(Math.sin(this.game.lastTime * 0.004)) * 8;
+        const auraPulse = 0.35 + Math.abs(Math.sin(this.game.gameTime * (this.phase === 3 ? 0.012 : 0.005))) * 0.55;
+        const auraR = this.radius + 14 + Math.abs(Math.sin(this.game.gameTime * 0.004)) * 8;
         ctx.save();
         ctx.globalAlpha = auraPulse * (this.isBlinking ? 0.2 : 1.0);
         ctx.shadowBlur = 40;
@@ -1492,7 +1492,7 @@ export class Boss {
         if (this.forceFieldActive) {
             // NOTE: _updateForceField() is called solely from update() - do NOT call it here.
             const ffPhase = (this.forceFieldTimer / this.forceFieldDuration);
-            const ffRadius = this.radius + 15 + Math.sin(this.game.lastTime * 0.015) * 5;
+            const ffRadius = this.radius + 15 + Math.sin(this.game.gameTime * 0.015) * 5;
             ctx.save();
             ctx.globalAlpha = 0.7 - ffPhase * 0.5;
             ctx.shadowBlur = 60;
@@ -1508,7 +1508,7 @@ export class Boss {
             ctx.lineWidth = 1.5;
             for (let i = 0; i < 6; i++) {
                 ctx.beginPath();
-                const a = (i / 6) * Math.PI * 2 + this.game.lastTime * 0.003;
+                const a = (i / 6) * Math.PI * 2 + this.game.gameTime * 0.003;
                 ctx.moveTo(0, 0);
                 ctx.lineTo(Math.cos(a) * ffRadius * 0.9, Math.sin(a) * ffRadius * 0.9);
                 ctx.stroke();

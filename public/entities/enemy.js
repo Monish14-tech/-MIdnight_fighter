@@ -49,7 +49,7 @@ class EnemyBrain {
 
     // Deterministic pseudo-random [0,1) — NO Math.random
     _prng(offset = 0) {
-        return Math.abs(Math.sin(this._seed + offset + this.game.lastTime * 0.0001));
+        return Math.abs(Math.sin(this._seed + offset + this.game.gameTime * 0.0001));
     }
 
     update(deltaTime) {
@@ -60,7 +60,7 @@ class EnemyBrain {
         this.sampleTimer += deltaTime;
         if (this.sampleTimer >= this.sampleInterval) {
             this.sampleTimer = 0;
-            this.playerSamples.push({ x: player.x, y: player.y, t: this.game.lastTime });
+            this.playerSamples.push({ x: player.x, y: player.y, t: this.game.gameTime });
             if (this.playerSamples.length > 20) this.playerSamples.shift();
         }
 
@@ -598,7 +598,7 @@ export class Enemy {
                 ? Math.hypot(this.brain.playerVelX, this.brain.playerVelY)
                 : 0;
             // Dash if player is accelerating away
-            const pseudoRandom = Math.abs(Math.sin(this.getNumericId() + this.game.lastTime * 0.005));
+            const pseudoRandom = Math.abs(Math.sin(this.getNumericId() + this.game.gameTime * 0.005));
             if (this.dashTimer <= 0 && (pseudoRandom < 0.3 || playerSpeed > 220)) {
                 this.dashTimer = this.dashCooldown;
                 effectiveSpeed *= 2.5;
@@ -611,7 +611,7 @@ export class Enemy {
 
         } else if (this.type === 'heavy') {
             // ★ Zigzag approach — harder to hit
-            const zigzag = Math.sin(this.game.lastTime * 0.002 + this.getNumericId()) * 0.6;
+            const zigzag = Math.sin(this.game.gameTime * 0.002 + this.getNumericId()) * 0.6;
             const moveAngle = directAngle + zigzag;
             this.x += (Math.cos(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
             this.y += (Math.sin(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
@@ -731,7 +731,7 @@ export class Enemy {
                         this.hasFiredSingleMissile = true;
                     }
                 } else {
-                    const seed = this.getNumericId() + this.game.lastTime;
+                    const seed = this.getNumericId() + this.game.gameTime;
                     // Accuracy improves at higher levels: clamp base error down
                     const accuracyRange = Math.max(0.05, 0.3 - (level * 0.01));
                     const accuracyError = (this.brain ? (this.brain._prng(99) - 0.5) * accuracyRange : 0);
@@ -777,7 +777,7 @@ export class Enemy {
                     }
                 } else {
                     // Precision lead shot — accuracy improves heavily at higher levels
-                    const seed = this.getNumericId() + this.game.lastTime;
+                    const seed = this.getNumericId() + this.game.gameTime;
                     const accuracyRange = Math.max(0.02, 0.15 - (level * 0.005));
                     const accuracyError = (this.brain ? (this.brain._prng(88) - 0.5) * accuracyRange : 0);
                     const spread = (Math.sin(seed * 2.1) * 0.15) * spreadMultiplier;
