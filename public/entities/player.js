@@ -129,9 +129,38 @@ export class Player {
         }
         // scout: speed bonus flag (applied in update when at full HP)
         this._scoutFullHpSpeed = (shipType === 'scout') ? this.speed * 1.10 : null;
+
+        // ── Entry Animation ─────────────────────────────────────────────────────
+        this.isEntering = true;
+        this.enterTimer = 0;
+        this.enterDuration = 1.5; // seconds to fly in
+        // Start below the visible area; will animate to the vertical centre
+        this.y = (game.logicalHeight || game.height || 600) + 100;
+        this.invulnerableTimer = this.enterDuration + 0.2; // invincible during entry
     }
 
     update(deltaTime, input) {
+        // ── Entry Fly-In Animation ───────────────────────────────────────────────
+        if (this.isEntering) {
+            this.enterTimer += deltaTime;
+            const t = Math.min(this.enterTimer / this.enterDuration, 1);
+            // Ease-out cubic so the ship slows into position
+            const eased = 1 - Math.pow(1 - t, 3);
+            const startY = (this.game.logicalHeight || this.game.height || 600) + 100;
+            const targetY = (this.game.logicalHeight || this.game.height || 600) / 2;
+            this.y = startY + (targetY - startY) * eased;
+            // Angle the ship straight up during approach
+            this.angle = -Math.PI / 2;
+            // Spawn afterburner trails for visual flair
+            this.afterburnerTimer += deltaTime;
+            if (this.afterburnerTimer > 0.05) {
+                this.afterburnerTimer = 0;
+                this.spawnAfterburner();
+            }
+            if (t >= 1) this.isEntering = false;
+            return; // skip all combat / input logic during entry
+        }
+
         // Handle Cooldowns
 
 

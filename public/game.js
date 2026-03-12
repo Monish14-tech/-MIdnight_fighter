@@ -1664,6 +1664,17 @@ export class Game {
         // Show game controls (pause and settings buttons)
         this.showGameControls();
 
+        // ── SYSTEMS ONLINE entry overlay ──────────────────────────────────────
+        const entryOverlay = document.getElementById('entry-overlay');
+        if (entryOverlay) {
+            entryOverlay.classList.remove('hidden');
+            // Re-trigger animation by cloning the node
+            const clone = entryOverlay.cloneNode(true);
+            entryOverlay.parentNode.replaceChild(clone, entryOverlay);
+            // Hide after CSS animation completes (2.4s)
+            setTimeout(() => clone.classList.add('hidden'), 2400);
+        }
+
         requestAnimationFrame(this.loop);
     }
 

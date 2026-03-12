@@ -57,9 +57,9 @@
             originalLog.apply(console, arguments);
         };
     </script>
-    <link rel="stylesheet" href="style.css?v=17">
-    <link rel="stylesheet" href="ranks.css?v=17">
-    <script type="module" src="main.js?v=17"></script>
+    <link rel="stylesheet" href="style.css?v=18">
+    <link rel="stylesheet" href="ranks.css?v=18">
+    <script type="module" src="main.js?v=18"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
@@ -139,6 +139,22 @@
 
             <div id="warp-overlay"></div>
             <div id="impact-overlay"></div>
+
+            <!-- Entry Animation Overlay -->
+            <div id="entry-overlay" class="hidden">
+                <div class="entry-scanline"></div>
+                <div class="entry-content">
+                    <div class="entry-logo">⚡</div>
+                    <div class="entry-title">SYSTEMS ONLINE</div>
+                    <div class="entry-subtitle">ALL UNITS DEPLOYED</div>
+                    <div class="entry-bars">
+                        <div class="entry-bar-item"><span>WEAPONS</span><div class="entry-bar-track"><div class="entry-bar-fill" style="animation-delay:0s"></div></div></div>
+                        <div class="entry-bar-item"><span>SHIELDS</span><div class="entry-bar-track"><div class="entry-bar-fill" style="animation-delay:0.2s"></div></div></div>
+                        <div class="entry-bar-item"><span>ENGINES</span><div class="entry-bar-track"><div class="entry-bar-fill" style="animation-delay:0.4s"></div></div></div>
+                    </div>
+                </div>
+            </div>
+
 
             <div id="achievement-toast" class="hidden">
                 <div class="toast-icon">🏆</div>
