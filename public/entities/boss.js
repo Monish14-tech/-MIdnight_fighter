@@ -929,8 +929,8 @@ export class Boss {
     pickNewPosition() {
         // Ensure safe zone away from corners (minimum 150px margin from edges)
         const safeMargin = 150;
-        const maxX = this.game.width - safeMargin;
-        const maxY = this.game.height - safeMargin;
+        const maxX = this.game.logicalWidth - safeMargin;
+        const maxY = this.game.logicalHeight - safeMargin;
         const minX = safeMargin;
         const minY = safeMargin;
 
