@@ -1,0 +1,17 @@
+{
+  "name": "Midnight Fighter | Neon Survival",
+  "short_name": "Midnight Fighter",
+  "description": "High-octane neon survival space shooter.",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#050510",
+  "theme_color": "#00f3ff",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png"
+    }
+  ]
+}

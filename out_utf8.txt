@@ -1,0 +1,14 @@
+﻿≡ƒÄ« MIDNIGHT FIGHTER - Starting server...
+[Socket.IO] Server initialized
+≡ƒöä Connecting to MongoDB Atlas (Leaderboard)...
+========================================
+≡ƒÜÇ MIDNIGHT FIGHTER - Server Running
+========================================
+≡ƒîÉ Game URL:        http://localhost:3000
+≡ƒôè Leaderboard API: http://localhost:3000/api/leaderboard
+≡ƒöî Socket.IO ready on port 3000
+========================================
+Γ£à Connected to Leaderboard Database!
+≡ƒöä Connecting to MongoDB Atlas (Rooms)...
+Γ£à Connected to Rooms Database!
+Γ£à All MongoDB connections established!

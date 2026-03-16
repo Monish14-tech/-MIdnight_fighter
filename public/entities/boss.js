@@ -1,5 +1,5 @@
-import { Projectile } from './projectile.js?v=4';
-import { Explosion } from './particle.js?v=4';
+import { Projectile } from './projectile.js';
+import { Explosion } from './particle.js';
 
 // ============================================================
 //  BossAI — Smart Strategy Module
@@ -12,24 +12,65 @@ class BossAI {
         this.boss = boss;
         this.game = boss.game;
 
-        // Player dodge tracking
+        // ── Player position sampling ─────────────────────────────────────
         this.playerSamples = [];
         this.sampleTimer = 0;
-        this.sampleInterval = 0.25; // sample every 0.25s
+        this.sampleInterval = 0.25;
 
-        // Derived from samples
-        this.dodgeBias = 0;     // -1 = left, +1 = right
+        // ── Derived movement analytics ───────────────────────────────────
+        this.dodgeBias = 0;           // -1 = prefers left, +1 = prefers right (vs boss)
         this.playerSpeedProfile = 0;  // 0=slow, 1=medium, 2=fast
+        this.preferredQuadrant = 0;   // 0=TL, 1=TR, 2=BL, 3=BR (most used quadrant)
+        this.quadrantCounts = [0, 0, 0, 0];
+
+        // ── Player FIRE rhythm tracking ──────────────────────────────────
+        this.lastPlayerShotTime = 0;
+        this.playerFireGaps = [];       // rolling last 10 gaps between shots
+        this.avgPlayerFireGap = 0.4;    // estimated; 0=never, 0.15=spam, 0.4=moderate
+        this.playerFireBurstsDetected = 0;
+
+        // ── Player DASH tracking ─────────────────────────────────────────
+        this.lastPlayerDashTime = 0;
+        this.playerDashCount = 0;
+        this.playerDashFreq = 0;        // dashes per second (rolling)
+
+        // ── Hit tracking ─────────────────────────────────────────────────
         this.hitsLanded = 0;
         this.shotsFired = 0;
         this.hitRate = 0;
+        this.consecutiveMisses = 0;
 
-        // Active strategy
-        this.strategy = 'standard'; // 'standard'|'counter-dodge'|'suppress'|'overwhelm'
+        // ── Strategy ─────────────────────────────────────────────────────
+        this.strategy = 'standard';
         this.strategyTimer = 0;
-        this.strategyInterval = 4.0;
+        this.strategyInterval = 3.5;
 
-        // Per-personality, per-phase combo tables
+        // ── Fight memory ─────────────────────────────────────────────────
+        this.memory = {
+            lastAttackUsed: null,
+            attackHistory: [],         // last 6 attacks used
+            timeInSameQuadrant: 0,
+            lastQuadrant: -1,
+            playerFiredBursts: 0,
+        };
+
+        // ── Dodge system (blind-spot: only update every 0.3 s) ───────────
+        this.dodgeVector = { x: 0, y: 0 };
+        this.dodgeUpdateTimer = 0;
+        this.dodgeUpdateInterval = 0.3;
+
+        // ── Telegraph / vulnerability ─────────────────────────────────────
+        // These are READ by Boss for visual + damage calc
+        this.telegraphing = false;      // boss glowing orange = attack incoming
+        this.telegraphTimer = 0;
+        this.telegraphDuration = 0.6;   // player advantage window
+        this.pendingAttack = null;      // attack queued during telegraph
+
+        this.weakened = false;          // +50% player damage bonus window
+        this.weakenedTimer = 0;
+        this.weakenedDuration = 0.8;
+
+        // ── Per-personality, per-phase combo tables ──────────────────────
         this.personalityCombos = {
             Phantom: {
                 1: ['phantomShot', 'blinkDash', 'phantomShot', 'rapid'],
@@ -57,7 +98,6 @@ class BossAI {
                 3: ['monsoonBarrage', 'clusterStrike', 'annihilationBeam', 'monsoonBarrage'],
             },
         };
-        // Fallback generic combos
         this.combos = {
             A: ['spiral', 'spread', 'missiles'],
             B: ['rapid', 'dash', 'annihilationBeam'],
@@ -67,19 +107,58 @@ class BossAI {
         this.comboStep = 0;
     }
 
+    // ── Called every frame ──────────────────────────────────────────────
     update(deltaTime) {
         const player = this.game.player;
         if (!player) return;
 
-        // ── Sample player position ─────────────────────────────
+        // ── Sample player ────────────────────────────────────────────────
         this.sampleTimer += deltaTime;
         if (this.sampleTimer >= this.sampleInterval) {
             this.sampleTimer = 0;
-            this.playerSamples.push({ x: player.x, y: player.y });
-            if (this.playerSamples.length > 15) this.playerSamples.shift();
+            this._samplePlayer(player);
         }
 
-        // ── Compute dodge bias ─────────────────────────────────
+        // ── Detect fire rhythm ───────────────────────────────────────────
+        this._detectFireRhythm(player, deltaTime);
+
+        // ── Detect dash frequency ────────────────────────────────────────
+        this._detectDashFrequency(player, deltaTime);
+
+        // ── Update memory ────────────────────────────────────────────────
+        this._updateMemory(player, deltaTime);
+
+        // ── Telegraph countdown ──────────────────────────────────────────
+        if (this.telegraphing) {
+            this.telegraphTimer += deltaTime;
+            if (this.telegraphTimer >= this.telegraphDuration) {
+                this.telegraphing = false;
+                this.telegraphTimer = 0;
+            }
+        }
+
+        // ── Vulnerability window countdown ───────────────────────────────
+        if (this.weakened) {
+            this.weakenedTimer += deltaTime;
+            if (this.weakenedTimer >= this.weakenedDuration) {
+                this.weakened = false;
+                this.weakenedTimer = 0;
+            }
+        }
+
+        // ── Strategy update ──────────────────────────────────────────────
+        this.strategyTimer += deltaTime;
+        if (this.strategyTimer >= this.strategyInterval) {
+            this.strategyTimer = 0;
+            this._updateStrategy();
+        }
+    }
+
+    // ── Core sampling ────────────────────────────────────────────────────
+    _samplePlayer(player) {
+        this.playerSamples.push({ x: player.x, y: player.y });
+        if (this.playerSamples.length > 20) this.playerSamples.shift();
+
         if (this.playerSamples.length >= 6) {
             let leftMoves = 0, rightMoves = 0, totalMag = 0;
             for (let i = 1; i < this.playerSamples.length; i++) {
@@ -87,46 +166,233 @@ class BossAI {
                 const ddy = this.playerSamples[i].y - this.playerSamples[i - 1].y;
                 const mag = Math.hypot(ddx, ddy);
                 totalMag += mag;
-                // Project movement onto perpendicular (left/right from boss perspective)
                 const bossAngle = Math.atan2(player.y - this.boss.y, player.x - this.boss.x);
                 const perp = ddx * Math.sin(bossAngle) - ddy * Math.cos(bossAngle);
-                if (perp > 0) rightMoves += mag;
-                else leftMoves += mag;
+                if (perp > 0) rightMoves += mag; else leftMoves += mag;
             }
-            if (totalMag > 0) {
-                this.dodgeBias = (rightMoves - leftMoves) / totalMag; // [-1,+1]
-            }
-
-            // Player speed profile
+            if (totalMag > 0) this.dodgeBias = (rightMoves - leftMoves) / totalMag;
             const avgMag = totalMag / (this.playerSamples.length - 1);
             this.playerSpeedProfile = avgMag > 80 ? 2 : (avgMag > 30 ? 1 : 0);
         }
 
-        // ── Select strategy every few seconds ─────────────────
-        this.strategyTimer += deltaTime;
-        if (this.strategyTimer >= this.strategyInterval) {
-            this.strategyTimer = 0;
-            this.updateStrategy();
+        // Quadrant tracking
+        const gw = this.game.logicalWidth, gh = this.game.logicalHeight;
+        const q = (player.x > gw / 2 ? 1 : 0) + (player.y > gh / 2 ? 2 : 0);
+        this.quadrantCounts[q]++;
+        this.preferredQuadrant = this.quadrantCounts.indexOf(Math.max(...this.quadrantCounts));
+    }
+
+    _detectFireRhythm(player, deltaTime) {
+        // Track player fire gaps via fireTimer changes (fireTimer decreasing means just fired)
+        if (player.fireTimer <= 0 && this._lastPlayerFireTimerWasPositive) {
+            const now = (this.game.lastTime || 0) / 1000;
+            if (this.lastPlayerShotTime > 0) {
+                const gap = now - this.lastPlayerShotTime;
+                if (gap > 0 && gap < 3) {
+                    this.playerFireGaps.push(gap);
+                    if (this.playerFireGaps.length > 10) this.playerFireGaps.shift();
+                    this.avgPlayerFireGap = this.playerFireGaps.reduce((a, b) => a + b, 0) / this.playerFireGaps.length;
+                    // Burst detection: gap < 0.2 s = heavy fire
+                    if (gap < 0.20) {
+                        this.memory.playerFiredBursts++;
+                        this.playerFireBurstsDetected++;
+                    }
+                }
+            }
+            this.lastPlayerShotTime = now;
+        }
+        this._lastPlayerFireTimerWasPositive = player.fireTimer > 0;
+    }
+
+    _detectDashFrequency(player, deltaTime) {
+        if (player.isDashing && !this._playerWasDashing) {
+            this.playerDashCount++;
+            const now = (this.game.lastTime || 0) / 1000;
+            this.lastPlayerDashTime = now;
+        }
+        this._playerWasDashing = player.isDashing;
+        // Rolling dashes-per-10s estimate
+        this.playerDashFreq = this.playerDashCount / Math.max(1, (this.game.lastTime || 1) / 1000) * 10;
+    }
+
+    _updateMemory(player, deltaTime) {
+        // Track how long player stays in same quadrant
+        const gw = this.game.logicalWidth, gh = this.game.logicalHeight;
+        const q = (player.x > gw / 2 ? 1 : 0) + (player.y > gh / 2 ? 2 : 0);
+        if (q === this.memory.lastQuadrant) {
+            this.memory.timeInSameQuadrant += deltaTime;
+        } else {
+            this.memory.lastQuadrant = q;
+            this.memory.timeInSameQuadrant = 0;
         }
     }
 
-    updateStrategy() {
+    _updateStrategy() {
         const phase = this.boss.phase;
-        const absDodgeBias = Math.abs(this.dodgeBias);
+        const absDodge = Math.abs(this.dodgeBias);
+        const camping = this.memory.timeInSameQuadrant > 4.0;
+        const rapidFirer = this.avgPlayerFireGap < 0.18;
+        const dasher = this.playerDashFreq > 2;
 
         if (phase === 3) {
             this.strategy = 'overwhelm';
-        } else if (absDodgeBias > 0.4 && phase >= 2) {
+        } else if (camping) {
+            this.strategy = 'flank';
+        } else if (rapidFirer) {
+            this.strategy = 'shield';        // triggers force field to absorb burst
+        } else if (dasher) {
+            this.strategy = 'suppress';      // spread/saturation to counter dash mobility
+        } else if (absDodge > 0.4 && phase >= 2) {
             this.strategy = 'counter-dodge';
-        } else if (this.playerSpeedProfile === 2 || (this.hitRate < 0.2 && this.shotsFired > 20)) {
-            // If the player is very fast OR the boss is missing 80%+ of shots, try to suppress/overwhelm
+        } else if (this.consecutiveMisses >= 3) {
             this.strategy = 'suppress';
         } else {
             this.strategy = 'standard';
         }
     }
 
-    // Get the predicted player position (lead time based on strategy)
+    // ── Projectile dodge (blind-spot: only updates every 0.3 s) ─────────
+    dodgeProjectiles(deltaTime) {
+        this.dodgeUpdateTimer += deltaTime;
+        const shouldUpdate = this.dodgeUpdateTimer >= this.dodgeUpdateInterval;
+        if (shouldUpdate) this.dodgeUpdateTimer = 0;
+
+        if (shouldUpdate && this.game.projectiles) {
+            let fx = 0, fy = 0;
+            for (const p of this.game.projectiles) {
+                if (p.ownerId === 'enemy' || p.ownerId === this.boss) continue;
+                const dx = this.boss.x - p.x;
+                const dy = this.boss.y - p.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist > 220) continue;
+                // Only count projectiles heading toward the boss
+                const velX = Math.cos(p.angle) * p.speed;
+                const velY = Math.sin(p.angle) * p.speed;
+                const dot = -dx * velX - dy * velY;
+                if (dot <= 0) continue;
+                // Repulsion weighted by proximity
+                const weight = (220 - dist) / 220;
+                fx += (dx / dist) * weight;
+                fy += (dy / dist) * weight;
+            }
+            const len = Math.hypot(fx, fy);
+            if (len > 0) {
+                this.dodgeVector = { x: (fx / len) * 280, y: (fy / len) * 280 };
+            } else {
+                this.dodgeVector = { x: 0, y: 0 };
+            }
+        }
+
+        // Apply the dodge impulse
+        if (this.dodgeVector.x !== 0 || this.dodgeVector.y !== 0) {
+            this.boss.x += this.dodgeVector.x * deltaTime;
+            this.boss.y += this.dodgeVector.y * deltaTime;
+            const m = 80;
+            this.boss.x = Math.max(m, Math.min(this.game.logicalWidth - m, this.boss.x));
+            this.boss.y = Math.max(m, Math.min(this.game.logicalHeight - m, this.boss.y));
+        }
+    }
+
+    // ── Weighted attack picker — replaces nextComboAttack for idle state ─
+    getWeightedAttack() {
+        // Build counter pool based on current strategy, memory, and pattern variety
+        const phase = this.boss.phase;
+        const pers = this.boss.personality;
+        const hist = this.memory.attackHistory;
+
+        // Penalise recently used attacks
+        const penalise = (name) => hist.slice(-3).includes(name);
+
+        let pool = [];
+
+        // Strategy-specific counters
+        if (this.strategy === 'flank') {
+            pool = pers === 'Tactician'
+                ? ['flankVolley', 'coordinatedStrike', 'precisioShot']
+                : ['spread', 'thunderstrike', 'missiles'];
+        } else if (this.strategy === 'shield') {
+            pool = ['forceField', 'spread', 'cannonBarrage'];
+        } else if (this.strategy === 'suppress' || this.strategy === 'overwhelm') {
+            pool = ['spiral', 'rapid', 'frenzyStorm', 'monsoonBarrage', 'groundZero'];
+        } else if (this.strategy === 'counter-dodge') {
+            pool = ['rapidShoot', 'precisioShot', 'railSalvo', 'flankVolley'];
+        }
+
+        // Fallback to personality combo
+        if (pool.length === 0) {
+            const table = (this.personalityCombos[pers] && this.personalityCombos[pers][phase])
+                ? this.personalityCombos[pers][phase]
+                : this.combos[this.currentCombo];
+            this.comboStep = (this.comboStep + 1) % table.length;
+            const attack = table[this.comboStep];
+            this._recordAttack(attack);
+            return attack;
+        }
+
+        // Filter penalised attacks, pick from remainder
+        const fresh = pool.filter(a => !penalise(a));
+        const chosen = (fresh.length > 0 ? fresh : pool)[
+            Math.floor(Math.abs(Math.sin((this.game.lastTime || 1) * 0.001 + pool.length)) * (fresh.length > 0 ? fresh : pool).length)
+        ];
+        this._recordAttack(chosen);
+        return chosen;
+    }
+
+    _recordAttack(name) {
+        this.memory.lastAttackUsed = name;
+        this.memory.attackHistory.push(name);
+        if (this.memory.attackHistory.length > 6) this.memory.attackHistory.shift();
+    }
+
+    // ── PLAYER ADVANTAGE: Telegraph upcoming attack ──────────────────────
+    telegraphAttack(attackName) {
+        this.telegraphing = true;
+        this.telegraphTimer = 0;
+        this.pendingAttack = attackName;
+    }
+
+    // ── PLAYER ADVANTAGE: Trigger vulnerability window ───────────────────
+    triggerWeakened() {
+        this.weakened = true;
+        this.weakenedTimer = 0;
+    }
+
+    // ── PLAYER ADVANTAGE: Pattern interrupt on heavy hit ─────────────────
+    onHeavyHit(damage) {
+        if (damage >= 15 && this.telegraphing) {
+            // Cancel the pending attack, short stun
+            this.telegraphing = false;
+            this.pendingAttack = null;
+            this.boss.state = 'idle';
+            this.boss.stateTimer = -0.4; // 0.4 s stun
+            if (this.game.floatingTexts) {
+                this.game.floatingTexts.push({
+                    x: this.boss.x, y: this.boss.y - 50,
+                    text: 'INTERRUPTED!', color: '#ffff00', life: 1.2
+                });
+            }
+        }
+        // Always start vulnerability window after a heavy hit resolves
+        this.triggerWeakened();
+        this.consecutiveMisses = 0;
+    }
+
+    // ── Reset memory between phases ───────────────────────────────────────
+    resetMemory() {
+        this.memory = {
+            lastAttackUsed: null,
+            attackHistory: [],
+            timeInSameQuadrant: 0,
+            lastQuadrant: -1,
+            playerFiredBursts: 0,
+        };
+        this.consecutiveMisses = 0;
+        this.dodgeVector = { x: 0, y: 0 };
+        this.weakened = false;
+        this.telegraphing = false;
+    }
+
+    // ── Retained helpers ─────────────────────────────────────────────────
     getTargetPosition() {
         const player = this.game.player;
         if (!player || this.playerSamples.length < 2) {
@@ -137,58 +403,35 @@ class BossAI {
         const dt = this.sampleInterval;
         const vx = (b.x - a.x) / dt;
         const vy = (b.y - a.y) / dt;
-
-        // Lead time depends on strategy and AI aggression
         const aiAggression = this.boss.aiAggression || 1.0;
         let lead = 0.3 * aiAggression;
-        if (this.strategy === 'counter-dodge') {
-            // Counter the dodge direction
-            lead = 0.5 * aiAggression;
-        } else if (this.strategy === 'suppress') {
-            lead = 0.6 * aiAggression; // Further lead for fast players
-        } else if (this.strategy === 'overwhelm') {
-            lead = 0.4 * aiAggression;
-        }
+        if (this.strategy === 'counter-dodge') lead = 0.5 * aiAggression;
+        else if (this.strategy === 'suppress' || this.strategy === 'overwhelm') lead = 0.6 * aiAggression;
         return {
             x: Math.max(20, Math.min(this.game.logicalWidth - 20, player.x + vx * lead)),
             y: Math.max(20, Math.min(this.game.logicalHeight - 20, player.y + vy * lead))
         };
     }
 
-    // Get angle toward the counter-dodge zone (opposite of player's expected dodge)
     getCounterDodgeAngle() {
         const target = this.getTargetPosition();
         const dx = target.x - this.boss.x;
         const dy = target.y - this.boss.y;
-        // Offset angle in the counter-dodge direction
         const counterOffset = -this.dodgeBias * 0.5;
         return Math.atan2(dy, dx) + counterOffset;
     }
 
-    // Advance to next attack — personality + phase aware
-    nextComboAttack() {
-        const pers = this.boss.personality;
-        const phase = this.boss.phase;
-        const table = (this.personalityCombos[pers] && this.personalityCombos[pers][phase])
-            ? this.personalityCombos[pers][phase]
-            : this.combos[this.currentCombo];
-        this.comboStep = (this.comboStep + 1) % table.length;
-        return table[this.comboStep];
-    }
+    nextComboAttack() { return this.getWeightedAttack(); }
 
-    // Pick the best combo for current strategy (generic fallback)
     selectCombo() {
-        if (this.boss.phase === 3) {
-            this.currentCombo = 'C';
-        } else if (this.strategy === 'counter-dodge' || this.strategy === 'suppress') {
-            this.currentCombo = 'B';
-        } else {
-            this.currentCombo = 'A';
-        }
+        this.currentCombo = this.boss.phase === 3 ? 'C'
+            : (this.strategy === 'counter-dodge' || this.strategy === 'suppress') ? 'B' : 'A';
         this.comboStep = 0;
         return this.combos[this.currentCombo][0];
     }
 }
+
+
 
 export class Boss {
     constructor(game, level, side = 'top', modelIndex = null) {
@@ -309,6 +552,44 @@ export class Boss {
         return map[this.modelIndex] || 'Berserker';
     }
 
+    // Server-Authoritative Hook: Evaluates purely visual elements (flashes, beam charge, shield spin) 
+    // without running AI logic, movement simulation, or phase transitions
+    visualUpdate(deltaTime) {
+        if (this.game.isPaused) return;
+
+        // Visual flash fading
+        if (this.damageFlashTimer > 0) {
+            this.damageFlashTimer -= deltaTime;
+        }
+
+        // Beam visual charging
+        if (this.beamCharging && this.beamChargeTime > 0) {
+            this.beamTimer += deltaTime;
+            if (this.beamTimer >= this.beamChargeTime) {
+                this.beamCharging = false;
+                this.beamTimer = 0;
+            }
+        }
+
+        // Force Field visual fading
+        if (this.forceFieldActive) {
+            this.forceFieldTimer += deltaTime;
+            if (this.forceFieldTimer >= this.forceFieldDuration) {
+                this.forceFieldActive = false;
+                this.forceFieldTimer = 0;
+            }
+        }
+
+        // Phantom Blink visual fading
+        if (this.isBlinking) {
+            this.blinkTimer = (this.blinkTimer || 0) + deltaTime;
+            if (this.blinkTimer >= 0.25) { 
+                this.isBlinking = false;
+                this.blinkTimer = 0;
+            }
+        }
+    }
+
     update(deltaTime) {
         if (this.game.gameOver) return;
 
@@ -324,6 +605,7 @@ export class Boss {
         if (!this.phase2Triggered && hpPct <= 0.6) {
             this.phase = 2;
             this.phase2Triggered = true;
+            this.ai.resetMemory();
             if (this.game.screenShake) this.game.screenShake.trigger(30, 0.5);
             this.game.particles.push(new Explosion(this.game, this.x, this.y, '#ffffff'));
             this.color = '#ff0000'; // Enrage color
@@ -335,6 +617,7 @@ export class Boss {
             this.phase = 3;
             this.phase3Triggered = true;
             this.rageMode = true;
+            this.ai.resetMemory();
             if (this.game.screenShake) this.game.screenShake.trigger(50, 1.0);
             // Rage burst — 6 explosions
             for (let i = 0; i < 6; i++) {
@@ -379,10 +662,16 @@ export class Boss {
             this._updateForceField(deltaTime);
         }
 
+        // ── Dodge incoming projectiles ────────────────────────
+        if (this.state !== 'dashing' && !this.beamActive && this.state !== 'entering') {
+            this.ai.dodgeProjectiles(deltaTime);
+        }
+
         // ── State Machine ─────────────────────────────────────
         switch (this.state) {
             case 'entering': this.handleEntering(deltaTime); break;
             case 'idle': this.handleIdle(deltaTime); break;
+            case 'telegraphing': this.handleTelegraphing(deltaTime); break;
             case 'attacking':
                 this.handleAttacking(deltaTime);
                 // Always move around screen while attacking
@@ -475,11 +764,25 @@ export class Boss {
         }
 
         if (this.stateTimer > idleDuration) {
-            this.state = 'attacking';
             this.stateTimer = 0;
             this.fireTimer = 0;
-            // Phase-aware personality attack—combo table always gives correct attack
-            this.currentAttack = this.ai.nextComboAttack();
+            const nextAttack = this.ai.nextComboAttack();
+            this.ai.telegraphAttack(nextAttack);
+            this.state = 'telegraphing';
+        }
+    }
+
+    handleTelegraphing(deltaTime) {
+        // AI handles the telegraph timer. When done:
+        if (!this.ai.telegraphing) {
+            if (this.ai.pendingAttack) {
+                // Telegraph finished normally
+                this.currentAttack = this.ai.pendingAttack;
+                this.state = 'attacking';
+                this.stateTimer = 0;
+                this.ai.pendingAttack = null;
+            }
+            // If ai.pendingAttack is null, it was interrupted by heavy hit (handled in BossAI)
         }
     }
 
@@ -601,6 +904,20 @@ export class Boss {
                 this.y = cy + Math.sin(a) * r * 0.6;
             }
         }
+        // Proximity Smoothing: prevent erratic jitter when player is very close
+        if (this.game.player) {
+            const dxp = this.game.player.x - this.x;
+            const dyp = this.game.player.y - this.y;
+            const distP = Math.hypot(dxp, dyp);
+            if (distP < 150) {
+                // Apply a repulsion force or slow down to prevent "glitching" through player
+                const push = (150 - distP) / 150;
+                this.x -= (dxp / distP) * 100 * push * deltaTime;
+                this.y -= (dyp / distP) * 100 * push * deltaTime;
+                deltaTime *= (0.5 + 0.5 * (distP / 150)); // Slow down locally
+            }
+        }
+
         const m = 80;
         this.x = Math.max(m, Math.min(this.game.logicalWidth - m, this.x));
         this.y = Math.max(m, Math.min(this.game.logicalHeight - m, this.y));
@@ -664,8 +981,8 @@ export class Boss {
     pickNewPosition() {
         // Ensure safe zone away from corners (minimum 150px margin from edges)
         const safeMargin = 150;
-        const maxX = this.game.width - safeMargin;
-        const maxY = this.game.height - safeMargin;
+        const maxX = this.game.logicalWidth - safeMargin;
+        const maxY = this.game.logicalHeight - safeMargin;
         const minX = safeMargin;
         const minY = safeMargin;
 
@@ -1438,9 +1755,19 @@ export class Boss {
 
     takeDamage(amount) {
         if (this.isInvulnerable) return false;
+
+        // PLAYER ADVANTAGE: +50% damage during vulnerability window
+        if (this.ai && this.ai.weakened) {
+            amount *= 1.5;
+        }
+
         this.health -= amount;
-        // Track hits for AI accuracy adaptation
-        if (this.ai) this.ai.hitsLanded++;
+
+        if (this.ai) {
+            this.ai.hitsLanded++;
+            this.ai.onHeavyHit(amount); // Triggers interrupt/weakened if applicable
+        }
+
         if (this.health <= 0) {
             this.health = 0;
             // ─ Death burst: 12 explosions in a ring ────────────────────────
@@ -1551,6 +1878,38 @@ export class Boss {
             ctx.fillStyle = 'rgba(255,255,255,0.95)';
             ctx.fillRect(0, -6, beamLen, 12);
             ctx.restore();
+        }
+
+        // ── PLAYER ADVANTAGES VISUALS ───────────────────────────
+        if (this.ai) {
+            if (this.ai.telegraphing) {
+                // Danger flash / charge up
+                ctx.save();
+                ctx.globalAlpha = Math.abs(Math.sin(this.game.lastTime * 0.02)) * 0.8;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius + 10, 0, Math.PI * 2);
+                ctx.strokeStyle = '#ff3300';
+                ctx.lineWidth = 6;
+                ctx.stroke();
+                // Add a warning exclamation indicator
+                ctx.fillStyle = '#ffaa00';
+                ctx.font = 'bold 30px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('!', 0, -this.radius - 20);
+                ctx.restore();
+            }
+
+            if (this.ai.weakened) {
+                // Weakened glimmer
+                ctx.save();
+                ctx.globalAlpha = 0.5 + Math.sin(this.game.lastTime * 0.01) * 0.3;
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.globalCompositeOperation = 'overlay';
+                ctx.fill();
+                ctx.restore();
+            }
         }
 
         ctx.rotate(this.angle);

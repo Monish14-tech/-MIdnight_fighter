@@ -1,6 +1,6 @@
-import { Game } from './game.js?v=16';
-import { InputHandler } from './input.js?v=16';
-import { LeaderboardManager } from './leaderboard.js?v=16';
+import { Game } from './game.js?v=25';
+import { InputHandler } from './input.js?v=25';
+import { LeaderboardManager } from './leaderboard.js?v=25';
 
 window.addEventListener('DOMContentLoaded', () => {
     const game = new Game();

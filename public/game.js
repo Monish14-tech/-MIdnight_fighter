@@ -1,15 +1,16 @@
-import { InputHandler } from './input.js?v=16';
-import { Player } from './entities/player.js?v=16';
-import { Enemy } from './entities/enemy.js?v=16';
-import { Explosion, FloatingText } from './entities/particle.js?v=16';
-import { Projectile } from './entities/projectile.js?v=16';
-import { AudioController } from './audio.js?v=16';
-import { ScreenShake, Nebula, CosmicDust, Planet, Asteroid } from './utils.js?v=16';
-import { PowerUp } from './entities/powerup.js?v=16';
-import { LeaderboardManager } from './leaderboard.js?v=16';
-import { SocketIONetplay } from './socketio-netplay.js?v=16';
-import { AchievementManager, ACHIEVEMENT_DATA } from './achievements.js?v=16';
-import { RANK_DATA, getRankByGlobalPosition } from './ranks.js?v=16';
+import { InputHandler } from './input.js';
+import { Player } from './entities/player.js';
+import { Enemy } from './entities/enemy.js';
+import { Explosion, FloatingText } from './entities/particle.js';
+import { Projectile } from './entities/projectile.js';
+import { AudioController } from './audio.js';
+import { ScreenShake, Nebula, CosmicDust, Planet, Asteroid } from './utils.js';
+import { PowerUp } from './entities/powerup.js';
+import { LeaderboardManager } from './leaderboard.js';
+import { ServerAuthoritativeNetplay } from './server-authoritative-netplay.js'; // <-- NEW MULTIPLAYER
+import { AchievementManager, ACHIEVEMENT_DATA } from './achievements.js';
+import { RANK_DATA, getRankByGlobalPosition } from './ranks.js';
+import { NotificationManager } from './notifications.js';
 
 class AssetLoader {
     constructor() {
@@ -46,37 +47,36 @@ export const SHIP_DATA = {
     // ── Tier 0: Starter ──────────────────────────────────────────────────────
     'default': { name: 'INTERCEPTOR', price: 0, hp: 5, speed: 450, damage: 3, fireRate: 0.12, missileCooldown: 4.0, missileCount: 2, color: '#00f3ff', bulletType: 'normal', desc: 'Standard issue. Reliable & fast.', passive: 'None' },
     // ── Tier 1: Early ──────────────────────────────────────
-    'scout': { name: 'RAZORBACK', price: 15000, hp: 5, speed: 600, damage: 3, fireRate: 0.10, missileCooldown: 4.0, missileCount: 2, color: '#ffff00', bulletType: 'spread', desc: 'Blazing speed. Fan spread.', passive: 'Speed Demon: Dash CD = 3s. +10% speed at full HP.' },
-    'phantom': { name: 'PHANTOM', price: 35000, hp: 6, speed: 550, damage: 3, fireRate: 0.08, missileCooldown: 4.0, missileCount: 2, color: '#9900ff', bulletType: 'spread', desc: 'Nimble spread fighter.', passive: 'Ghost Protocol: 15% chance to ignore incoming damage.' },
-    'rapid': { name: 'STORM BRINGER', price: 65000, hp: 6, speed: 450, damage: 3, fireRate: 0.06, missileCooldown: 4.0, missileCount: 3, color: '#aa00ff', bulletType: 'normal', desc: 'Hyper fire rate. Dual missiles.', passive: 'Rapid Suppression: Every 5th shot fires a burst of 3.' },
-    'fighter': { name: 'CRIMSON FURY', price: 100000, hp: 8, speed: 460, damage: 5, fireRate: 0.12, missileCooldown: 4.0, missileCount: 3, color: '#ff0055', bulletType: 'normal', desc: 'High damage. Extra HP.', passive: 'Blood Rush: +5% damage per kill (stacks ×5, resets on hit).' },
-    'pulse': { name: 'NEON PULSE', price: 150000, hp: 8, speed: 500, damage: 5, fireRate: 0.04, missileCooldown: 4.0, missileCount: 3, color: '#00ffff', bulletType: 'normal', desc: 'Extreme fire rate. Neon core.', passive: 'Overcharge: Each kill reduces missile CD by 0.1s.' },
+    'scout': { name: 'RAZORBACK', price: 500, hp: 5, speed: 600, damage: 3, fireRate: 0.10, missileCooldown: 4.0, missileCount: 2, color: '#ffff00', bulletType: 'spread', desc: 'Blazing speed. Fan spread.', passive: 'Speed Demon: Dash CD = 3s. +10% speed at full HP.' },
+    'phantom': { name: 'PHANTOM', price: 1500, hp: 6, speed: 550, damage: 3, fireRate: 0.08, missileCooldown: 4.0, missileCount: 2, color: '#9900ff', bulletType: 'spread', desc: 'Nimble spread fighter.', passive: 'Ghost Protocol: 15% chance to ignore incoming damage.' },
+    'rapid': { name: 'STORM BRINGER', price: 3000, hp: 6, speed: 450, damage: 3, fireRate: 0.06, missileCooldown: 4.0, missileCount: 3, color: '#aa00ff', bulletType: 'normal', desc: 'Hyper fire rate. Dual missiles.', passive: 'Rapid Suppression: Every 5th shot fires a burst of 3.' },
+    'fighter': { name: 'CRIMSON FURY', price: 5000, hp: 8, speed: 460, damage: 5, fireRate: 0.12, missileCooldown: 4.0, missileCount: 3, color: '#ff0055', bulletType: 'normal', desc: 'High damage. Extra HP.', passive: 'Blood Rush: +5% damage per kill (stacks ×5, resets on hit).' },
+    'pulse': { name: 'NEON PULSE', price: 7500, hp: 8, speed: 500, damage: 5, fireRate: 0.04, missileCooldown: 4.0, missileCount: 3, color: '#00ffff', bulletType: 'normal', desc: 'Extreme fire rate. Neon core.', passive: 'Overcharge: Each kill reduces missile CD by 0.1s.' },
     // ── Tier 2: Mid ──────────────────────────────────────
-    'quantum': { name: 'QUANTUM GHOST', price: 250000, hp: 10, speed: 650, damage: 16, fireRate: 0.05, missileCooldown: 4.0, missileCount: 4, color: '#39ff14', bulletType: 'railgun', desc: 'Quantum entity. Hyper velocity.', passive: 'Quantum Tunnel: Railgun pierces asteroids.' },
-    'void': { name: 'VOID STALKER', price: 400000, hp: 10, speed: 500, damage: 12, fireRate: 0.20, missileCooldown: 4.0, missileCount: 4, color: '#4400ff', bulletType: 'railgun', desc: 'Experimental railgun. Shadow walk.', passive: 'Shadow Step: Dash leaves a damage zone (75px, 1 dmg).' },
-    'solar': { name: 'SOLAR FLARE', price: 600000, hp: 10, speed: 460, damage: 8, fireRate: 0.12, missileCooldown: 4.0, missileCount: 4, color: '#ffcc00', bulletType: 'explosive', desc: 'Explosive solar rounds.', passive: 'Solar Burn: Explosions leave fire DOT patch (0.8s).' },
-    'bomber': { name: 'DOOMSDAY', price: 850000, hp: 10, speed: 420, damage: 8, fireRate: 0.10, missileCooldown: 4.0, missileCount: 5, color: '#ff6600', bulletType: 'explosive', desc: 'Triple missile barrage.', passive: 'Triple Volley: Missiles fire in a triple spread.' },
-    'tank': { name: 'V.G. TITAN', price: 1200000, hp: 7, speed: 400, damage: 8, fireRate: 0.12, missileCooldown: 4.0, missileCount: 4, color: '#00ff44', bulletType: 'piercing', desc: 'Heavy armor. Piercing shots.', passive: 'Reactive Plating: Reflect bullets during dash.' },
-    'laser_drone': { name: 'LASER DRONE', price: 1600000, hp: 10, speed: 480, damage: 6, fireRate: 0.03, missileCooldown: 4.0, missileCount: 4, color: '#ff00cc', bulletType: 'laser', desc: 'Sustained laser pulses. High DPS.', passive: 'Amplifier: 3s sustained fire gives +20% damage.' },
+    'quantum': { name: 'QUANTUM GHOST', price: 12000, hp: 10, speed: 650, damage: 16, fireRate: 0.05, missileCooldown: 4.0, missileCount: 4, color: '#39ff14', bulletType: 'railgun', desc: 'Quantum entity. Hyper velocity.', passive: 'Quantum Tunnel: Railgun pierces asteroids.' },
+    'void': { name: 'VOID STALKER', price: 20000, hp: 10, speed: 500, damage: 12, fireRate: 0.20, missileCooldown: 4.0, missileCount: 4, color: '#4400ff', bulletType: 'railgun', desc: 'Experimental railgun. Shadow walk.', passive: 'Shadow Step: Dash leaves a damage zone (75px, 1 dmg).' },
+    'solar': { name: 'SOLAR FLARE', price: 30000, hp: 10, speed: 460, damage: 8, fireRate: 0.12, missileCooldown: 4.0, missileCount: 4, color: '#ffcc00', bulletType: 'explosive', desc: 'Explosive solar rounds.', passive: 'Solar Burn: Explosions leave fire DOT patch (0.8s).' },
+    'bomber': { name: 'DOOMSDAY', price: 45000, hp: 10, speed: 420, damage: 8, fireRate: 0.10, missileCooldown: 4.0, missileCount: 5, color: '#ff6600', bulletType: 'explosive', desc: 'Triple missile barrage.', passive: 'Triple Volley: Missiles fire in a triple spread.' },
+    'tank': { name: 'V.G. TITAN', price: 60000, hp: 7, speed: 400, damage: 8, fireRate: 0.12, missileCooldown: 4.0, missileCount: 4, color: '#00ff44', bulletType: 'piercing', desc: 'Heavy armor. Piercing shots.', passive: 'Reactive Plating: Reflect bullets during dash.' },
+    'laser_drone': { name: 'LASER DRONE', price: 80000, hp: 10, speed: 480, damage: 6, fireRate: 0.03, missileCooldown: 4.0, missileCount: 4, color: '#ff00cc', bulletType: 'laser', desc: 'Sustained laser pulses. High DPS.', passive: 'Amplifier: 3s sustained fire gives +20% damage.' },
     // ── Tier 3: Upper-Mid ────────────────────────────────
-    'wraith': { name: 'COSMIC WRAITH', price: 2200000, hp: 6, speed: 600, damage: 20, fireRate: 0.05, missileCooldown: 4.0, missileCount: 5, color: '#cc44ff', bulletType: 'railgun', desc: 'Void phantom. Reality breaker.', passive: 'Reality Shatter: 10% chance each kill spawns a coin burst (+10c).' },
-    'vanguard': { name: 'VANGUARD', price: 3000000, hp: 6, speed: 480, damage: 8, fireRate: 0.06, missileCooldown: 4.0, missileCount: 5, color: '#00ffcc', bulletType: 'piercing', desc: 'Elite piercing fighter.', passive: 'Piercing Barrage: Piercing rounds slow enemies 15%.' },
-    'eclipse': { name: 'ECLIPSE SERAPH', price: 4000000, hp: 7, speed: 500, damage: 12, fireRate: 0.05, missileCooldown: 4.0, missileCount: 6, color: '#66ccff', bulletType: 'piercing', desc: 'Angel core. Enhanced hull.', passive: 'Time Warp: 10 kill streak triggers 3s Slow Motion.' },
-    'shadowblade': { name: 'SHADOWBLADE', price: 5500000, hp: 7, speed: 560, damage: 15, fireRate: 0.06, missileCooldown: 4.0, missileCount: 6, color: '#5522aa', bulletType: 'piercing', desc: 'Silent assassin. Stealth.', passive: 'Stealth Mode: Dash range is 30% longer.' },
-    'guardian': { name: 'GALAXY GUARDIAN', price: 7500000, hp: 8, speed: 380, damage: 8, fireRate: 0.10, missileCooldown: 4.0, missileCount: 5, color: '#ffffff', bulletType: 'normal', desc: 'Elite protector. High HP.', passive: 'Repulsor Shield: Damage taken triggers knockback wave.' },
+    'wraith': { name: 'COSMIC WRAITH', price: 110000, hp: 6, speed: 600, damage: 20, fireRate: 0.05, missileCooldown: 4.0, missileCount: 5, color: '#cc44ff', bulletType: 'railgun', desc: 'Void phantom. Reality breaker.', passive: 'Reality Shatter: 10% chance each kill spawns a coin burst (+10c).' },
+    'vanguard': { name: 'VANGUARD', price: 150000, hp: 6, speed: 480, damage: 8, fireRate: 0.06, missileCooldown: 4.0, missileCount: 5, color: '#00ffcc', bulletType: 'piercing', desc: 'Elite piercing fighter.', passive: 'Piercing Barrage: Piercing rounds slow enemies 15%.' },
+    'eclipse': { name: 'ECLIPSE SERAPH', price: 200000, hp: 7, speed: 500, damage: 12, fireRate: 0.05, missileCooldown: 4.0, missileCount: 6, color: '#66ccff', bulletType: 'piercing', desc: 'Angel core. Enhanced hull.', passive: 'Time Warp: 10 kill streak triggers 3s Slow Motion.' },
+    'shadowblade': { name: 'SHADOWBLADE', price: 250000, hp: 7, speed: 560, damage: 15, fireRate: 0.06, missileCooldown: 4.0, missileCount: 6, color: '#5522aa', bulletType: 'piercing', desc: 'Silent assassin. Stealth.', passive: 'Stealth Mode: Dash range is 30% longer.' },
+    'guardian': { name: 'GALAXY GUARDIAN', price: 350000, hp: 8, speed: 380, damage: 8, fireRate: 0.10, missileCooldown: 4.0, missileCount: 5, color: '#ffffff', bulletType: 'normal', desc: 'Elite protector. High HP.', passive: 'Repulsor Shield: Damage taken triggers knockback wave.' },
     // ── Tier 4: Advanced ────────────────────────────────
-    'obliterator': { name: 'OBLITERATOR PRIME', price: 9500000, hp: 8, speed: 440, damage: 18, fireRate: 0.06, missileCooldown: 4.0, missileCount: 7, color: '#ff3366', bulletType: 'explosive', desc: 'Siege frame. Reinforced core.', passive: 'Siege Frame: Explosions deal +25% area damage.' },
-    'inferno': { name: 'INFERNO KING', price: 12000000, hp: 8, speed: 520, damage: 22, fireRate: 0.07, missileCooldown: 4.0, missileCount: 7, color: '#ff4500', bulletType: 'explosive', desc: 'Blazing hellfire. Pure devastation.', passive: 'Hellfire: 3+ consecutive kills give +15% fire rate.' },
-    'juggernaut': { name: 'JUGGERNAUT', price: 15000000, hp: 10, speed: 380, damage: 10, fireRate: 0.12, missileCooldown: 4.0, missileCount: 7, color: '#ff9900', bulletType: 'piercing', desc: 'Adrenaline rush. Rapid fire.', passive: 'Adrenaline Rush: Below 40% HP, gain +30% fire rate.' },
-    'tempest': { name: 'TEMPEST LORD', price: 18000000, hp: 9, speed: 500, damage: 18, fireRate: 0.06, missileCooldown: 4.0, missileCount: 8, color: '#00d9ff', bulletType: 'spread', desc: 'Lightning god. Storm incarnate.', passive: 'Lightning God: Spread bullets gain +20% speed.' },
-    'reaper': { name: 'VOID REAPER', price: 22000000, hp: 9, speed: 550, damage: 28, fireRate: 0.05, missileCooldown: 4.0, missileCount: 8, color: '#880022', bulletType: 'explosive', desc: 'Death embodied. Final judgment.', passive: 'Death Mark: First hit on each new enemy deals double damage.' },
-    'crimson_emperor': { name: 'CRIMSON EMPEROR', price: 27000000, hp: 10, speed: 490, damage: 25, fireRate: 0.06, missileCooldown: 4.0, missileCount: 10, color: '#dc143c', bulletType: 'piercing', desc: 'Royal ruler. Absolute dominion.', passive: 'Absolute Dominion: Missile CD -10% per boss kill (max 50%).' },
-    'phoenix': { name: 'CELESTIAL PHOENIX', price: 33000000, hp: 11, speed: 530, damage: 26, fireRate: 0.07, missileCooldown: 4.0, missileCount: 10, color: '#ffa500', bulletType: 'explosive', desc: 'Mythic firebird. Solar rebirth.', passive: 'Solar Rebirth: Once per run, revive at 3 HP with solar nova.' },
-    'starborn': { name: 'STARBORN TITAN', price: 40000000, hp: 11, speed: 480, damage: 18, fireRate: 0.04, missileCooldown: 4.0, missileCount: 9, color: '#99ffcc', bulletType: 'railgun', desc: 'Mythic relic. Celestial pull.', passive: 'Celestial Pull: Passive vacuum for all items & powerups.' },
-    'leviathan': { name: 'LEVIATHAN ROX', price: 50000000, hp: 13, speed: 460, damage: 24, fireRate: 0.08, missileCooldown: 4.0, missileCount: 10, color: '#003d82', bulletType: 'explosive', desc: 'Deep sea titan. Unstoppable.', passive: 'Tsunami Force: Explosions knock back nearby enemies.' },
-    'sentinel': { name: 'ETERNAL SENTINEL', price: 75000000, hp: 15, speed: 500, damage: 32, fireRate: 0.06, missileCooldown: 4.0, missileCount: 14, color: '#e8e8e8', bulletType: 'railgun', desc: 'Ultimate guardian. Infinite power.', passive: 'Infinite Power: Railgun shots slightly home toward nearest enemy.' },
-    'nova': { name: 'NOVA ASCENDANT', price: 100000000, hp: 12, speed: 580, damage: 36, fireRate: 0.04, missileCooldown: 4.0, missileCount: 16, color: '#ffeeaa', bulletType: 'railgun', desc: 'Supernova core. Reality-shattering.', passive: 'Supernova: All shots deal ×2 damage but drain 1 HP every 15s.' },
-
+    'obliterator': { name: 'OBLITERATOR PRIME', price: 500000, hp: 8, speed: 440, damage: 18, fireRate: 0.06, missileCooldown: 4.0, missileCount: 7, color: '#ff3366', bulletType: 'explosive', desc: 'Siege frame. Reinforced core.', passive: 'Siege Frame: Explosions deal +25% area damage.' },
+    'inferno': { name: 'INFERNO KING', price: 650000, hp: 8, speed: 520, damage: 22, fireRate: 0.07, missileCooldown: 4.0, missileCount: 7, color: '#ff4500', bulletType: 'explosive', desc: 'Blazing hellfire. Pure devastation.', passive: 'Hellfire: 3+ consecutive kills give +15% fire rate.' },
+    'juggernaut': { name: 'JUGGERNAUT', price: 800000, hp: 10, speed: 380, damage: 10, fireRate: 0.12, missileCooldown: 4.0, missileCount: 7, color: '#ff9900', bulletType: 'piercing', desc: 'Adrenaline rush. Rapid fire.', passive: 'Adrenaline Rush: Below 40% HP, gain +30% fire rate.' },
+    'tempest': { name: 'TEMPEST LORD', price: 1000000, hp: 9, speed: 500, damage: 18, fireRate: 0.06, missileCooldown: 4.0, missileCount: 8, color: '#00d9ff', bulletType: 'spread', desc: 'Lightning god. Storm incarnate.', passive: 'Lightning God: Spread bullets gain +20% speed.' },
+    'reaper': { name: 'VOID REAPER', price: 1250000, hp: 9, speed: 550, damage: 28, fireRate: 0.05, missileCooldown: 4.0, missileCount: 8, color: '#880022', bulletType: 'explosive', desc: 'Death embodied. Final judgment.', passive: 'Death Mark: First hit on each new enemy deals double damage.' },
+    'crimson_emperor': { name: 'CRIMSON EMPEROR', price: 1500000, hp: 10, speed: 490, damage: 25, fireRate: 0.06, missileCooldown: 4.0, missileCount: 10, color: '#dc143c', bulletType: 'piercing', desc: 'Royal ruler. Absolute dominion.', passive: 'Absolute Dominion: Missile CD -10% per boss kill (max 50%).' },
+    'phoenix': { name: 'CELESTIAL PHOENIX', price: 1800000, hp: 11, speed: 530, damage: 26, fireRate: 0.07, missileCooldown: 4.0, missileCount: 10, color: '#ffa500', bulletType: 'explosive', desc: 'Mythic firebird. Solar rebirth.', passive: 'Solar Rebirth: Once per run, revive at 3 HP with solar nova.' },
+    'starborn': { name: 'STARBORN TITAN', price: 2200000, hp: 11, speed: 480, damage: 18, fireRate: 0.04, missileCooldown: 4.0, missileCount: 9, color: '#99ffcc', bulletType: 'railgun', desc: 'Mythic relic. Celestial pull.', passive: 'Celestial Pull: Passive vacuum for all items & powerups.' },
+    'leviathan': { name: 'LEVIATHAN ROX', price: 2600000, hp: 13, speed: 460, damage: 24, fireRate: 0.08, missileCooldown: 4.0, missileCount: 10, color: '#003d82', bulletType: 'explosive', desc: 'Deep sea titan. Unstoppable.', passive: 'Tsunami Force: Explosions knock back nearby enemies.' },
+    'sentinel': { name: 'ETERNAL SENTINEL', price: 3200000, hp: 15, speed: 500, damage: 32, fireRate: 0.06, missileCooldown: 4.0, missileCount: 14, color: '#e8e8e8', bulletType: 'railgun', desc: 'Ultimate guardian. Infinite power.', passive: 'Infinite Power: Railgun shots slightly home toward nearest enemy.' },
+    'nova': { name: 'NOVA ASCENDANT', price: 4000000, hp: 12, speed: 580, damage: 36, fireRate: 0.04, missileCooldown: 4.0, missileCount: 16, color: '#ffeeaa', bulletType: 'railgun', desc: 'Supernova core. Reality-shattering.', passive: 'Supernova: All shots deal ×2 damage but drain 1 HP every 15s.' },
     // ── PRESTIGE TIER: Achievement-locked only — cannot be purchased (hidden from armory) ──────────
     'nemesis': {
         name: 'NEMESIS PRIME', price: 0,
@@ -132,7 +132,7 @@ export class Game {
         // Multiplayer Coordinate Parity Implementation
         this.logicalWidth = 1920;
         this.logicalHeight = 1080;
-        this.renderScale = 1.0;
+        this.renderScale = Math.min(this.width / this.logicalWidth, this.height / this.logicalHeight);
 
         this.lastTime = 0;
         this.score = 0;
@@ -199,6 +199,7 @@ export class Game {
         // Achievements & Ranks
         this.achievementManager = new AchievementManager(this);
         this.leaderboard = new LeaderboardManager();
+        this.notifications = new NotificationManager(this);
 
         // Global Sync
         this.syncGlobalData();
@@ -316,7 +317,7 @@ export class Game {
         };
         this.remoteShipType = this.selectedShip;
         this.localShipType = this.selectedShip;
-        this.netplay = new SocketIONetplay();
+        this.netplay = new ServerAuthoritativeNetplay(this);
         this.netSyncTimer = 0;
         this.rankPerk = { coinBonus: 0, hpMercy: false, nameGlow: false, hudBorder: false };
         this.globalRank = Infinity; // Store competitive ranking position
@@ -584,59 +585,55 @@ export class Game {
             }
         });
 
-        this.netplay.on('peer_state', (message) => this.applyPeerState(message));
-        this.netplay.on('peer_input', (message) => this.applyPeerInput(message));
-        this.netplay.on('peer_joined', (message) => {
-            if (message?.shipType) {
-                this.remoteShipType = message.shipType;
-                this.updatePlayerHudInfo();
-            }
-        });
-        this.netplay.on('force_game_over', () => this.handleGameOver());
-        this.netplay.on('room_closed', () => {
-            this.leaveCollaborateRoom(true, true);
-        });
-        this.netplay.on('closed', () => {
-            if (this.onlineCoop) {
-                this.leaveCollaborateRoom(true, true);
-            }
-        });
+        // ── SERVER AUTHORITATIVE HOOKS ──
+        // (Listeners like 'spawn_enemy', 'level_up', etc. are now handled internally 
+        // by ServerAuthoritativeNetplay, which calls the spawnAuthoritative... methods below.)
+        this.authoritativeBullets = []; 
 
-        // Remote Spawn Listeners
-        this.netplay.on('spawn_enemy', (data) => {
-            if (this.onlineRole === 'guest') {
-                const enemy = new Enemy(this, data.type);
+
+        // ── AUTHORITATIVE CO-OP METHODS ── //
+        // These are called by `ServerAuthoritativeNetplay` when it receives specific events.
+        
+        this.spawnAuthoritativeEnemy = (data) => {
+            // Use the same dynamic import logic ensure ESM compatibility
+            import('./entities/enemy.js').then(m => {
+                const EnemyClass = m.default || m.Enemy;
+                if (!EnemyClass) return;
+                const enemy = new EnemyClass(this, data.type);
+                enemy.remoteId = data.id;
                 enemy.x = data.x;
                 enemy.y = data.y;
-                enemy.remoteId = data.id;
                 this.enemies.push(enemy);
-            }
-        });
+            }).catch(err => console.error('Error spawning authoritative enemy:', err));
+        };
 
-        this.netplay.on('destroy_enemy', (data) => {
-            if (this.onlineRole === 'guest') {
-                const index = this.enemies.findIndex(e => e.remoteId === data.id);
-                if (index !== -1) {
-                    const enemy = this.enemies[index];
-                    if (!enemy.markedForDeletion) {
-                        enemy.markedForDeletion = true;
-                        this.addScore(enemy.points, data.useCombo);
-                        this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
-                    }
-                }
-            }
-        });
+        this.spawnAuthoritativeBoss = (data) => {
+            import('./entities/boss.js').then(m => {
+                const BossClass = m.default || m.Boss;
+                if (!BossClass) return;
+                this.boss = new BossClass(this, data.level, 'top', 0);
+                this.boss.remoteId = data.id;
+                this.boss.x = data.x;
+                this.boss.y = data.y;
+                this.boss.health = this.boss.maxHealth;
+                const bossHud = document.getElementById('boss-hud');
+                if (bossHud) bossHud.classList.add('active');
+            }).catch(err => console.error('Error spawning authoritative boss:', err));
+        };
 
-        this.netplay.on('spawn_boss', (data) => {
-            if (this.onlineRole === 'guest' && !this.boss) {
-                this.spawnBoss(data.type);
-                if (this.boss) {
-                    this.boss.remoteId = data.id;
-                    this.boss.x = data.x;
-                    this.boss.y = data.y;
-                }
+        this.destroyAuthoritativeEnemy = (id) => {
+            const ix = this.enemies.findIndex(e => e.remoteId === id);
+            if (ix !== -1) {
+                const enemy = this.enemies[ix];
+                this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
+                this.addScore(enemy.points, true);
+                this.enemies.splice(ix, 1);
             }
-        });
+        };
+
+        this.destroyAuthoritativeBoss = () => {
+             this.handleBossDefeat(); 
+        };
 
         this.netplay.on('destroy_boss', (data) => {
             if (this.onlineRole === 'guest' && this.boss && this.boss.remoteId === data.id) {
@@ -784,14 +781,6 @@ export class Game {
             }
         });
 
-        this.netplay.on('spawn_powerup', (data) => {
-            if (this.onlineRole === 'guest') {
-                const pu = new PowerUp(this, data.type, data.x, data.y);
-                pu.remoteId = data.id;
-                this.powerups.push(pu);
-            }
-        });
-
         this.netplay.on('boss_alert', () => {
             if (this.onlineRole === 'guest') {
                 this.showBossAlert();
@@ -808,6 +797,17 @@ export class Game {
                 this.playerTwo.applyPowerUp(data.type);
             }
         });
+
+        this.authoritativeLevelUp = (data) => {
+            this.currentLevel = data.level;
+            this.enemiesForLevel = data.enemiesForLevel;
+            this.enemiesSpawned = 0;
+            this.score = data.score;
+            this.difficultyMultiplier = data.difficultyMultiplier;
+            this.enemyInterval = data.enemyInterval || this.enemyInterval;
+            this.showLevelUpText(this.currentLevel);
+            if (this.audio) this.audio.play('levelUp');
+        };
     }
 
     initRandom(seedStr) {
@@ -829,6 +829,29 @@ export class Game {
     init() {
         this.resize();
         this.drawBackground();
+
+        // BRAND SPLASH TRANSITION
+        const splash = document.getElementById('brand-splash');
+        if (splash) {
+            setTimeout(() => {
+                splash.classList.add('fade-out');
+                // Ensure audio context is ready on first interaction with start screen
+                this.startScreen.addEventListener('mousedown', () => {
+                   if (this.audio && this.audio.ctx && this.audio.ctx.state === 'suspended') {
+                       this.audio.ctx.resume();
+                   }
+                }, { once: true });
+                
+                // APP NOTIFICATIONS DEMO
+                setTimeout(() => {
+                    this.notifications.notify('System Online', 'Welcome back, Pilot. All engines ready at 100%.');
+                }, 1000);
+                setTimeout(() => {
+                    this.notifications.notify('Daily Bonus', 'You received +25 Coins for your loyalty.');
+                    this.addCoins(25);
+                }, 5000);
+            }, 2500);
+        }
 
         this.entityCounter = 0;
 
@@ -1701,6 +1724,17 @@ export class Game {
         // Show game controls (pause and settings buttons)
         this.showGameControls();
 
+        // ── SYSTEMS ONLINE entry overlay ──────────────────────────────────────
+        const entryOverlay = document.getElementById('entry-overlay');
+        if (entryOverlay) {
+            entryOverlay.classList.remove('hidden');
+            // Re-trigger animation by cloning the node
+            const clone = entryOverlay.cloneNode(true);
+            entryOverlay.parentNode.replaceChild(clone, entryOverlay);
+            // Hide after CSS animation completes (2.4s)
+            setTimeout(() => clone.classList.add('hidden'), 2400);
+        }
+
         requestAnimationFrame(this.loop);
     }
 
@@ -2098,80 +2132,43 @@ export class Game {
         }
 
         if (!this.gameOver) {
-            const players = this.getPlayers();
-            if (players.length > 0) {
-                if (this.onlineCoop && this.coopMode) {
-                    if (this.player) this.player.update(dt, this.input);
-                    if (this.playerTwo) this.playerTwo.update(dt, this.remoteInputState);
-                } else {
+            
+            // ── CO-OP SERVER AUTHORITATIVE FAST-PATH ──
+            if (this.onlineCoop) {
+                // In Server Authoritative mode, we DO NOT run local update logic.
+                // The ServerAuthoritativeNetplay handles pushing our input to the server at 60Hz.
+                // It also receives the physics delta and overwrites our x, y, hp.
+                
+                // We ONLY do visual updates for Player/Enemies/Boss here (animations, shield flares, etc.)
+                if (this.player && typeof this.player.visualUpdate === 'function') this.player.visualUpdate(dt);
+                if (this.playerTwo && typeof this.playerTwo.visualUpdate === 'function') this.playerTwo.visualUpdate(dt);
+                
+                this.enemies.forEach(e => { if (typeof e.visualUpdate === 'function') e.visualUpdate(dt); });
+                if (this.boss && typeof this.boss.visualUpdate === 'function') this.boss.visualUpdate(dt);
+                
+                this.powerups.forEach(p => p.update(dt)); // Visual bounding box / flashing
+                
+                if (this.boss) this.updateBossUI();
+                
+            } else {
+                // ── SINGLE PLAYER LOCAL PHYSICS ──
+                const players = this.getPlayers();
+                if (players.length > 0) {
                     players.forEach((player, index) => {
                         const input = index === 0 ? this.input : this.inputTwo;
                         player.update(dt, input);
                     });
                 }
-            }
-
-            if (this.onlineCoop) {
-                this.netSyncTimer += dt;
-                this.netplay.emit('input_update', { input: { ...this.input.keys } });
-
-                if (this.netSyncTimer >= (1 / 60) && this.player) {
-                    this.netSyncTimer = 0;
-                    this.netplay.emit('state_update', {
-                        state: {
-                            x: this.player.x,
-                            y: this.player.y,
-                            angle: this.player.angle,
-                            health: this.player.currentHealth,
-                            maxHealth: this.player.maxHealth,
-                            shipType: this.player.shipType,
-                            isDashing: this.player.isDashing,
-                            score: this.score,
-                            level: this.currentLevel
-                        }
-                    });
-                }
-
-                if (this.playerTwo && this.remotePlayerState) {
-                    const s = this.remotePlayerState;
-                    const lerpFactor = 0.3;
-                    this.playerTwo.x += (s.x - this.playerTwo.x) * lerpFactor;
-                    this.playerTwo.y += (s.y - this.playerTwo.y) * lerpFactor;
-                    this.playerTwo.angle = s.angle;
-                    this.playerTwo.currentHealth = s.health;
-                    this.playerTwo.maxHealth = s.maxHealth;
-                    this.playerTwo.isDashing = s.isDashing;
-
-                    if (this.onlineRole === 'guest') {
-                        if (s.score !== undefined) this.score = s.score;
-                        if (s.level !== undefined) this.currentLevel = s.level;
-                    }
-
-                    if (s.shipType && this.playerTwo.shipType !== s.shipType) {
-                        this.playerTwo.shipType = s.shipType;
-                        this.remoteShipType = s.shipType;
-                        this.updatePlayerHudInfo();
-                    }
-                }
-            }
-
-            // Spawning logic - Only the host handles spawning
-            const isHost = !this.onlineCoop || this.onlineRole === 'host';
-            if (isHost) {
+                
                 this.enemyTimer += dt;
-
-                // Burst Spawn Logic: If screen is too empty, spawn faster
                 const maxOnScreen = this.getMaxEnemiesOnScreen();
                 const currentCount = this.enemies.length;
                 const burstThreshold = Math.ceil(maxOnScreen * 0.4);
 
                 if (this.enemyTimer > this.enemyInterval && !this.boss) {
-                    // Decide how many to spawn: 2 if screen is empty, 1 otherwise
                     let spawnCount = (currentCount < burstThreshold) ? 2 : 1;
-
                     for (let i = 0; i < spawnCount; i++) {
-                        if (this.enemies.length < maxOnScreen &&
-                            this.enemiesSpawned < this.enemiesForLevel) {
+                        if (this.enemies.length < maxOnScreen && this.enemiesSpawned < this.enemiesForLevel) {
                             const enemy = this.spawnEnemy();
                             this.enemiesSpawned += (enemy ? enemy.weight : 1);
                         }
@@ -2180,40 +2177,36 @@ export class Game {
                 }
 
                 this.powerupTimer += dt;
-                // During boss fights, spawn power-ups more frequently (every 8s)
                 const powerupCooldown = this.boss ? 8.0 : this.powerupInterval;
                 if (this.powerupTimer > powerupCooldown && this.powerups.length < (this.boss ? 5 : 3)) {
                     if (this.boss) {
-                        // Guaranteed mercy drop during boss fight
-                        this.spawnPowerUpAt(
-                            this.random() * this.width * 0.8 + this.width * 0.1,
-                            this.random() * this.height * 0.8 + this.height * 0.1
-                        );
+                        this.spawnPowerUpAt(this.random() * this.width * 0.8 + this.width * 0.1, this.random() * this.height * 0.8 + this.height * 0.1);
                     } else {
                         this.spawnPowerUp();
                     }
                     this.powerupTimer = 0;
                 }
-            }
 
-            // Entity Updates
-            if (this.empTimer > 0) {
-                this.empTimer -= dt;
-                // Draw only: enemies and boss logic skipped while frozen
-            } else {
-                this.enemies.forEach(e => e.update(dt));
-                if (this.boss) {
-                    this.boss.update(dt);
+                if (this.empTimer > 0) {
+                    this.empTimer -= dt;
+                } else {
+                    this.enemies.forEach(e => e.update(dt));
+                    if (this.boss) this.boss.update(dt);
                 }
+
+                this.projectiles.forEach(p => p.update(dt));
+                this.powerups.forEach(p => p.update(dt));
+
+                if (this.boss) this.updateBossUI();
+
+                // Local Collisions
+                this.checkCollisions();
+                this.checkProjectileCollisions();
+                this.checkPowerUpCollisions();
+                this.checkLevelUp();
             }
-
-            this.projectiles.forEach(p => p.update(dt));
-            this.powerups.forEach(p => p.update(dt));
-
-            if (this.boss) {
-                this.updateBossUI();
-            }
-
+            
+            // Universal Effects
             this.afterburners.forEach(a => {
                 if (a.update) a.update(dt);
                 else {
@@ -2221,14 +2214,13 @@ export class Game {
                     if (a.life <= 0) a.markedForDeletion = true;
                 }
             });
-
-            // Collisions
-            this.checkCollisions();
-            this.checkProjectileCollisions();
-            this.checkPowerUpCollisions();
-            this.checkLevelUp();
+            
         } else {
-            this.enemies.forEach(e => e.update(dt));
+            // GAME OVER STATE LOCAL UPDATES
+            this.enemies.forEach(e => {
+                 if (this.onlineCoop && typeof e.visualUpdate === 'function') e.visualUpdate(dt);
+                 else if (!this.onlineCoop) e.update(dt);
+            });
             this.projectiles.forEach(p => p.update(dt));
             this.afterburners.forEach(a => {
                 if (a.update) a.update(dt);
@@ -2257,9 +2249,6 @@ export class Game {
         }
 
         this.updateUI();
-
-        // Co-op network sync (HOST broadcasts snapshot, all players send position)
-        if (this.onlineCoop) this.updateNetworkSync(dt);
     }
 
     updateBossUI() {
@@ -2306,8 +2295,18 @@ export class Game {
         if (this.boss) this.boss.draw(this.ctx);
 
         // Draw Entities
+        if (this.onlineCoop && this.authoritativeBullets) {
+            this.authoritativeBullets.forEach(p => {
+                this.ctx.fillStyle = p.c || '#ffffff';
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, p.r || 4, 0, Math.PI * 2);
+                this.ctx.fill();
+            });
+        } else {
+            this.projectiles.forEach(p => p.draw(this.ctx));
+        }
+
         this.enemies.forEach(e => e.draw(this.ctx));
-        this.projectiles.forEach(p => p.draw(this.ctx));
         this.afterburners.forEach(a => {
             if (a.draw) a.draw(this.ctx);
         });
@@ -3633,135 +3632,24 @@ export class Game {
         }
     }
 
-    async createCollaborateRoom() {
-        if (!this.playerName) {
-            const name = prompt("Enter your pilot name:");
-            if (!name) return;
-            this.playerName = name;
-            localStorage.setItem('midnight_playerName', name);
-            this.updatePlayerNameDisplay();
-        }
-
-        const statusEl = document.getElementById('collab-status');
-        statusEl.innerText = "Creating secure room...";
-        statusEl.style.color = "#00f3ff";
-
+    async checkDataVersion() {
         try {
-            const response = await fetch('/api/rooms/create', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ hostName: this.playerName })
-            });
-            const data = await response.json();
+            const response = await fetch('/api/version');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    const serverVersion = data.version;
+                    const localVersion = parseInt(localStorage.getItem('midnight_data_version') || '1');
 
-            if (data.success) {
-                const roomId = data.roomId;
-                this.collabRoomId = roomId;
-                this.initRandom(roomId); // Initialize deterministic PRNG
-
-                await this.netplay.connect({
-                    roomId,
-                    playerName: this.playerName,
-                    shipType: this.selectedShip
-                });
-
-                this.netplay.on('peer_joined', (peerData) => {
-                    statusEl.innerText = `${peerData.playerName} joined! Starting mission...`;
-                    this.collabTeamMembers = [this.playerName, peerData.playerName];
-                    this.remoteShipType = peerData.shipType || 'default';
-                    this.spawnRemotePlayer(peerData.playerName, this.remoteShipType);
-
-                    setTimeout(() => {
-                        this.closeCollaborate();
-                        this.startGame();
-                    }, 1000);
-                });
-
-                document.getElementById('collab-room-id').innerText = roomId;
-                document.getElementById('collab-room-display').classList.remove('hidden');
-                document.getElementById('collab-waiting').classList.remove('hidden');
-                document.getElementById('collab-leave-btn').classList.remove('hidden');
-                document.getElementById('collab-create-btn').classList.add('hidden');
-                document.getElementById('collab-join-btn').disabled = true;
-
-                statusEl.innerText = "Room created. Waiting for partner...";
-                this.isRunning = true;
-                this.onlineRole = 'host';
-                this.onlineCoop = true;
-                this.coopMode = true;
-                this.collabTeamMembers = [this.playerName];
-
-            } else {
-                statusEl.innerText = "Failed to create room: " + (data.error || "Unknown error");
-                statusEl.style.color = "#ff0000";
+                    if (serverVersion > localVersion) {
+                        console.log(`🚨 Data version mismatch! Server: ${serverVersion}, Local: ${localVersion}. Resetting progress...`);
+                        this.resetProgress();
+                        localStorage.setItem('midnight_data_version', serverVersion);
+                    }
+                }
             }
-        } catch (error) {
-            statusEl.innerText = "Connection error. Please check internet.";
-            statusEl.style.color = "#ff0000";
-        }
-    }
-
-    async joinCollaborateRoom() {
-        const roomIdInput = document.getElementById('collab-room-input');
-        const roomId = roomIdInput.value.trim();
-
-        if (!roomId) {
-            alert("Please enter a Room ID");
-            return;
-        }
-
-        if (!this.playerName) {
-            const name = prompt("Enter your pilot name:");
-            if (!name) return;
-            this.playerName = name;
-            localStorage.setItem('midnight_playerName', name);
-            this.updatePlayerNameDisplay();
-        }
-
-        const statusEl = document.getElementById('collab-status');
-        statusEl.innerText = "Connecting to room " + roomId + "...";
-        statusEl.style.color = "#00f3ff";
-
-        try {
-            const response = await fetch('/api/rooms/join', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ roomId, playerName: this.playerName })
-            });
-            const data = await response.json();
-
-            if (data.success) {
-                this.collabRoomId = roomId;
-                this.initRandom(roomId); // Initialize deterministic PRNG
-
-                await this.netplay.connect({
-                    roomId,
-                    playerName: this.playerName,
-                    shipType: this.selectedShip
-                });
-
-                statusEl.innerText = "Connected to room: " + roomId;
-                this.isRunning = true;
-                this.onlineRole = 'guest';
-                this.onlineCoop = true;
-                this.coopMode = true;
-                this.collabTeamMembers = [data.room.hostName, this.playerName];
-                this.remoteShipType = data.room.hostShipType || 'default';
-
-                this.spawnRemotePlayer(data.room.hostName, this.remoteShipType);
-
-                setTimeout(() => {
-                    this.closeCollaborate();
-                    this.startGame();
-                }, 1000);
-
-            } else {
-                statusEl.innerText = "Error: " + (data.error || "Could not join room");
-                statusEl.style.color = "#ff0000";
-            }
-        } catch (error) {
-            statusEl.innerText = "Connection error. Please check internet.";
-            statusEl.style.color = "#ff0000";
+        } catch (e) {
+            console.warn('Could not check data version:', e);
         }
     }
 
@@ -3775,69 +3663,5 @@ export class Game {
         this.playerTwo = new Player(this, shipType || 'default', { playerId: remotePlayerId });
         this.playerTwo.playerName = name;
         this.updatePlayerHudInfo();
-    }
-
-    leaveCollaborateRoom(stopGame = false, silent = false) {
-        if (this.onlineCoop) {
-            this.netplay.disconnect();
-            this.onlineCoop = false;
-            this.onlineRole = null;
-        }
-
-        this.coopMode = false;
-        this.playerTwo = null;
-        this.collabRoomId = null;
-
-        document.getElementById('collab-room-display').classList.add('hidden');
-        document.getElementById('collab-waiting').classList.add('hidden');
-        document.getElementById('collab-leave-btn').classList.add('hidden');
-        document.getElementById('collab-create-btn').classList.remove('hidden');
-        document.getElementById('collab-join-btn').disabled = false;
-        document.getElementById('collab-status').innerText = silent ? "" : "You left the session.";
-
-        if (stopGame && this.isRunning) {
-            this.goToMainMenu();
-        }
-
-        this.updatePlayerHudInfo();
-    }
-
-
-    async checkDataVersion() {
-        try {
-            const response = await fetch('/api/version');
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success) {
-                    const serverVersion = data.version;
-                    const localVersion = parseInt(localStorage.getItem('midnight_data_version') || '1');
-
-                    if (serverVersion > localVersion) {
-                        console.log(`🚨 Data version mismatch! Server: ${serverVersion}, Local: ${localVersion}. Resetting progress...`);
-                        this.resetLocalProgress();
-                        localStorage.setItem('midnight_data_version', serverVersion);
-                    }
-                }
-            }
-        } catch (e) {
-            console.warn('Could not check data version:', e);
-        }
-    }
-
-    resetLocalProgress() {
-        // Clear gameplay progress from localStorage
-        localStorage.removeItem('midnight_coins');
-        localStorage.removeItem('midnight_owned_ships');
-        localStorage.removeItem('midnight_high_score');
-        localStorage.removeItem('midnight_lifetime_coins');
-        localStorage.removeItem('midnight_play_count');
-        localStorage.removeItem('midnight_achievements');
-
-        console.log('✅ Local progress data cleared.');
-
-        // Force reload to apply changes if already on main menu
-        if (!this.isRunning) {
-            window.location.reload();
-        }
     }
 }

@@ -1,5 +1,5 @@
-import { Projectile } from './projectile.js?v=4';
-import { Explosion } from './particle.js?v=4';
+import { Projectile } from './projectile.js';
+import { Explosion } from './particle.js';
 
 // ============================================================
 //  EnemyBrain — Advanced AI Module
@@ -488,6 +488,54 @@ export class Enemy {
         if (typeof this.remoteId === 'number') return this.remoteId;
         const match = this.remoteId.match(/\d+$/);
         return match ? parseInt(match[0]) : 0;
+    }
+
+    // Server-Authoritative Hook: Evaluates visually dependent timings (flash, blink, lasers)
+    // but skips AI logic, collisions, movement, and spawning computations.
+    visualUpdate(deltaTime) {
+        if (this.game.isPaused) return;
+
+        // Visual spawning warping burst
+        if (this.isSpawning) {
+            this.spawnTimer -= deltaTime;
+            if (this.spawnTimer <= 0) {
+                this.isSpawning = false;
+                for (let i = 0; i < 10; i++) {
+                    this.game.particles.push(new Explosion(this.game, this.x, this.y, '#ffffff'));
+                }
+            }
+            return;
+        }
+
+        if (this.invulnTimer > 0) this.invulnTimer -= deltaTime;
+
+        // Phantom blink visually fading
+        if (this.isBlinking) {
+            this.blinkTimer = (this.blinkTimer || 0) + deltaTime;
+            if (this.blinkTimer > 0.3) {
+                this.isBlinking = false;
+                this.blinkTimer = 0;
+            }
+        }
+        
+        // Beam visual charging
+        if (this.beamAngle !== null) {
+            if (this.beamCharging) {
+                this.beamChargeTimer += deltaTime;
+                if (this.beamChargeTimer >= this.beamChargeTime) {
+                    this.beamCharging = false;
+                    this.beamActive = true;
+                    this.beamActiveTimer = 0;
+                    this.beamChargeTimer = 0;
+                }
+            } else if (this.beamActive) {
+                this.beamActiveTimer += deltaTime;
+                if (this.beamActiveTimer >= this.beamDuration) {
+                    this.beamActive = false;
+                    this.beamAngle = null;
+                }
+            }
+        }
     }
 
     update(deltaTime) {
