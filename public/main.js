@@ -1,10 +1,52 @@
-import { Game } from './game.js?v=25';
-import { InputHandler } from './input.js?v=25';
-import { LeaderboardManager } from './leaderboard.js?v=25';
+import { Game } from './game.js?v=56';
+import { InputHandler } from './input.js?v=56';
+import { LeaderboardManager } from './leaderboard.js?v=56';
 
 window.addEventListener('DOMContentLoaded', () => {
     const game = new Game();
     game.init();
+    window.__midnightGame = game;
+    window.__midnightShowNamePrompt = () => showNamePrompt(game);
+
+    // Fallback click router: ensures core buttons still work if direct bindings fail.
+    document.addEventListener('click', (e) => {
+        const button = e.target.closest('button');
+        if (!button) return;
+
+        const g = window.__midnightGame;
+        if (!g) return;
+
+        switch (button.id) {
+            case 'start-btn':
+            case 'restart-btn':
+                g.startRequested = true;
+                g.lastStartIntent = Date.now();
+                g.startGame();
+                break;
+            case 'store-btn':
+                g.openStore();
+                break;
+            case 'back-btn':
+                g.closeStore();
+                break;
+            case 'leaderboard-btn':
+                g.openLeaderboard();
+                break;
+            case 'back-from-leaderboard-btn':
+                g.closeLeaderboard();
+                break;
+            case 'pause-btn':
+            case 'resume-btn':
+                g.togglePause();
+                break;
+            case 'settings-btn':
+            case 'close-settings-btn':
+                g.toggleSettingsMenu();
+                break;
+            default:
+                break;
+        }
+    }, true);
 
     // Check if player has a name set
     const leaderboard = new LeaderboardManager();
@@ -22,6 +64,11 @@ function showNamePrompt(game) {
     const submitBtn = document.getElementById('name-prompt-submit');
 
     if (!modal || !input || !submitBtn) return;
+
+    if (game.leaderboard?.isPlayerNameLocked?.()) {
+        modal.style.display = 'none';
+        return;
+    }
 
     modal.style.display = 'flex';
 
@@ -47,6 +94,11 @@ function showNamePrompt(game) {
     }, { once: true });
 
     const handleSubmit = () => {
+        if (game.leaderboard?.isPlayerNameLocked?.()) {
+            modal.style.display = 'none';
+            return;
+        }
+
         const name = input.value.trim();
 
         if (!name) {
@@ -62,7 +114,12 @@ function showNamePrompt(game) {
         }
 
         // Set the name
-        game.leaderboard.setPlayerName(name);
+        const saved = game.leaderboard.setPlayerName(name);
+        if (!saved) {
+            alert('Pilot name is locked and cannot be changed.');
+            modal.style.display = 'none';
+            return;
+        }
         game.updatePlayerNameDisplay();
 
         // Hide modal

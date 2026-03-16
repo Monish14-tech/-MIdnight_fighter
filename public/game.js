@@ -126,8 +126,13 @@ export class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
-        this.width = this.canvas.width = window.innerWidth;
-        this.height = this.canvas.height = window.innerHeight;
+        this.width = window.innerWidth;
+        this.height = window.innerHeight;
+        this.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+        this.canvas.width = Math.floor(this.width * this.pixelRatio);
+        this.canvas.height = Math.floor(this.height * this.pixelRatio);
+        this.canvas.style.width = `${this.width}px`;
+        this.canvas.style.height = `${this.height}px`;
 
         // Multiplayer Coordinate Parity Implementation
         this.logicalWidth = 1920;
@@ -142,6 +147,12 @@ export class Game {
             localStorage.clear();
             localStorage.setItem('midnight_hard_reset_v3', 'true');
             console.log('Game Hard Reset Executed');
+        }
+
+        if (!localStorage.getItem('midnight_plane_progression_v1')) {
+            localStorage.setItem('midnight_owned_ships', JSON.stringify(['default']));
+            localStorage.setItem('midnight_selected_ship', 'default');
+            localStorage.setItem('midnight_plane_progression_v1', 'true');
         }
 
         // Persistence
@@ -195,6 +206,12 @@ export class Game {
 
         this.gameOver = false;
         this.isRunning = false;
+        this.startRequested = false;
+        this.lastStartIntent = 0;
+        this.uiWatchdog = null;
+        const isLocalStaticHost =
+            (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost');
+        this.apiUnavailable = isLocalStaticHost && !window.__MIDNIGHT_FORCE_API;
 
         // Achievements & Ranks
         this.achievementManager = new AchievementManager(this);
@@ -254,6 +271,7 @@ export class Game {
         this.isWarping = false;
         this.warpTimer = 0;
         this.boss = null;
+        this.bossHudBaseName = 'DETECTING ANOMALY...';
         this.bossTimer = 0;
         this.bossJustDefeated = false;
         this.bossDefeatTimer = 0;
@@ -268,9 +286,14 @@ export class Game {
         // Timers
         this.enemyTimer = 0;
         this.enemyInterval = 0.8;      // Balanced spawn rate
+        this.spawnFailSafeTimer = 0;
+        this.minActiveSpawnTimer = 0;
+        this.spawnSideIndex = 0;
+        this.spawnDirector = { openingDone: false };
         this.powerupTimer = 0;
         this.powerupInterval = 12.0;
         this.enemiesSpawned = 0;
+        this.enemiesDefeated = 0;
         this.enemiesForLevel = 12 + (this.currentLevel * 4); // Level 1 = 16, L2 = 20, L5 = 32 ...
         this.entityCounter = 0;
         this.comboMultiplier = 1;
@@ -333,15 +356,9 @@ export class Game {
         this.addEventListeners();
         this.updatePlayerNameDisplay();
 
-        // Check for autostart after match restart
-        if (sessionStorage.getItem('midnight_autostart') === 'true') {
-            sessionStorage.removeItem('midnight_autostart');
-            // Give a tiny delay for everything to settle
-            setTimeout(() => this.startGame(), 250);
-        } else {
-            // Start Menu music if not autostarting
-            this.audio.playTrack('menu');
-        }
+        // Always clear stale restart flags and return to menu flow after splash.
+        sessionStorage.removeItem('midnight_autostart');
+        this.audio.playTrack('menu');
 
         // Check for global data reset
         this.checkDataVersion();
@@ -377,8 +394,8 @@ export class Game {
             if (this.audio && this.audio.ctx && this.audio.ctx.state === 'suspended') {
                 this.audio.ctx.resume().catch(() => { });
             }
-            // Auto-fullscreen on game start
-            this.enterFullscreen();
+            this.startRequested = true;
+            this.lastStartIntent = Date.now();
             this.startGame();
         };
 
@@ -687,6 +704,7 @@ export class Game {
             if (snapshot.level !== undefined) this.currentLevel = snapshot.level;
             if (snapshot.score !== undefined) this.score = snapshot.score;
             if (snapshot.enemiesSpawned !== undefined) this.enemiesSpawned = snapshot.enemiesSpawned;
+            if (snapshot.enemiesDefeated !== undefined) this.enemiesDefeated = snapshot.enemiesDefeated;
             if (snapshot.enemiesForLevel !== undefined) this.enemiesForLevel = snapshot.enemiesForLevel;
             if (snapshot.gameTime !== undefined) this.gameTime = snapshot.gameTime;
             if (snapshot.randomSeed !== undefined) this.randomSeed = snapshot.randomSeed;
@@ -724,6 +742,11 @@ export class Game {
                 this.boss.x += (snapshot.boss.x - this.boss.x) * 0.35;
                 this.boss.y += (snapshot.boss.y - this.boss.y) * 0.35;
                 this.boss.hp = snapshot.boss.hp;
+                this.boss.health = snapshot.boss.hp;
+                if (Number.isFinite(snapshot.boss.maxHp)) {
+                    this.boss.maxHp = snapshot.boss.maxHp;
+                    this.boss.maxHealth = snapshot.boss.maxHp;
+                }
                 this.boss.angle = snapshot.boss.angle || this.boss.angle;
                 // Update boss HUD
                 const bossFill = document.getElementById('boss-health-fill');
@@ -738,11 +761,21 @@ export class Game {
                         this.boss.x = snapshot.boss.x;
                         this.boss.y = snapshot.boss.y;
                         this.boss.hp = snapshot.boss.hp;
+                        this.boss.health = snapshot.boss.hp;
+                        if (Number.isFinite(snapshot.boss.maxHp)) {
+                            this.boss.maxHp = snapshot.boss.maxHp;
+                            this.boss.maxHealth = snapshot.boss.maxHp;
+                        }
                         this.boss.remoteId = snapshot.boss.id;
                         const bossHud = document.getElementById('boss-hud');
                         if (bossHud) bossHud.classList.add('active');
                         const bossName = document.getElementById('boss-name');
-                        if (bossName) bossName.innerText = snapshot.boss.name || 'UNIDENTIFIED THREAT';
+                        this.bossHudBaseName = snapshot.boss.name || 'UNIDENTIFIED THREAT';
+                        if (bossName) {
+                            bossName.dataset.baseName = this.bossHudBaseName;
+                            bossName.innerText = this.bossHudBaseName;
+                        }
+                        this.updateBossUI();
                     }
                 });
             } else if (!snapshot.boss && this.boss) {
@@ -756,6 +789,7 @@ export class Game {
                 this.currentLevel = data.level;
                 this.enemiesForLevel = data.enemiesForLevel;
                 this.enemiesSpawned = 0;
+                this.enemiesDefeated = 0;
                 this.score = data.score;
                 this.difficultyMultiplier = data.difficultyMultiplier;
                 this.enemyInterval = data.enemyInterval;
@@ -775,7 +809,12 @@ export class Game {
                         const bossHud = document.getElementById('boss-hud');
                         if (bossHud) bossHud.classList.add('active');
                         const bossName = document.getElementById('boss-name');
-                        if (bossName) bossName.innerText = data.name || "UNIDENTIFIED THREAT";
+                        this.bossHudBaseName = data.name || 'UNIDENTIFIED THREAT';
+                        if (bossName) {
+                            bossName.dataset.baseName = this.bossHudBaseName;
+                            bossName.innerText = this.bossHudBaseName;
+                        }
+                        this.updateBossUI();
                     }
                 });
             }
@@ -802,6 +841,7 @@ export class Game {
             this.currentLevel = data.level;
             this.enemiesForLevel = data.enemiesForLevel;
             this.enemiesSpawned = 0;
+            this.enemiesDefeated = 0;
             this.score = data.score;
             this.difficultyMultiplier = data.difficultyMultiplier;
             this.enemyInterval = data.enemyInterval || this.enemyInterval;
@@ -830,6 +870,28 @@ export class Game {
         this.resize();
         this.drawBackground();
 
+        const ensureMenuVisible = () => {
+            const activeScreen = document.querySelector('.screen.active');
+            const invalidRunningState = this.isRunning && !this.player;
+
+            if (invalidRunningState) {
+                this.isRunning = false;
+                this.gameOver = false;
+                this.isPaused = false;
+                this.startRequested = false;
+                this.hideGameControls();
+                if (this.hud) this.hud.style.display = 'none';
+                if (this.startScreen) this.startScreen.classList.add('active');
+                return;
+            }
+
+            if (!this.isRunning && !activeScreen && this.startScreen) {
+                this.startScreen.classList.add('active');
+                this.hideGameControls();
+                if (this.hud) this.hud.style.display = 'none';
+            }
+        };
+
         // ── Splash screen: CSS handles animation & fade automatically ──
         // We just reveal the start screen after the splash duration (3.5 s).
         const SPLASH_DURATION = 3500; // ms — keep in sync with CSS animation total
@@ -837,6 +899,15 @@ export class Game {
             // 1. Hide splash completely
             const splash = document.getElementById('brand-splash');
             if (splash) splash.classList.add('hidden');
+
+            // Safety reset: ensure startup always lands on front page even if a stale flag started gameplay.
+            this.isRunning = false;
+            this.gameOver = false;
+            this.isPaused = false;
+            this.startRequested = false;
+            this.player = null;
+            this.playerTwo = null;
+            this.hideGameControls();
 
             // 2. Ensure HUD and game overlays are hidden
             if (this.hud) this.hud.style.display = 'none';
@@ -850,6 +921,7 @@ export class Game {
 
             // 4. Show the main menu
             if (this.startScreen) this.startScreen.classList.add('active');
+            ensureMenuVisible();
 
             // 5. Welcome notifications (safe, wrapped)
             setTimeout(() => {
@@ -862,6 +934,9 @@ export class Game {
                 } catch(e) {}
             }, 4000);
         }, SPLASH_DURATION);
+
+        if (this.uiWatchdog) clearInterval(this.uiWatchdog);
+        this.uiWatchdog = setInterval(ensureMenuVisible, 500);
 
         this.entityCounter = 0;
 
@@ -1016,6 +1091,8 @@ export class Game {
             this.localShipType = this.selectedShip;
         }
 
+        this.startRequested = true;
+        this.lastStartIntent = Date.now();
         this.startGame();
     }
 
@@ -1095,6 +1172,7 @@ export class Game {
                     level: this.currentLevel,
                     score: this.score,
                     enemiesSpawned: this.enemiesSpawned,
+                    enemiesDefeated: this.enemiesDefeated,
                     enemiesForLevel: this.enemiesForLevel,
                     gameTime: this.gameTime,
                     randomSeed: this.randomSeed
@@ -1218,6 +1296,84 @@ export class Game {
         return baseDamage;
     }
 
+    canRunAuthoritativeOnline() {
+        // On static localhost builds there is no realtime authoritative backend.
+        if (this.apiUnavailable) return false;
+        return this.onlineCoop && this.coopMode && !!this.onlineRole && this.netplay && this.netplay.isConnected && !!this.collabRoomId;
+    }
+
+    spawnCombatEnemy() {
+        // Use native edge spawn distribution from Enemy constructor (mobilefight-stable behavior).
+        return this.spawnEnemy();
+    }
+
+    getSpawnBudgetCost(enemy) {
+        // Early game should feel dense and forgiving: every enemy costs exactly 1 budget.
+        if ((this.currentLevel || 1) <= 3) return 1;
+        return enemy && Number.isFinite(enemy.weight) ? Math.max(1, enemy.weight) : 1;
+    }
+
+    primeOpeningWave() {
+        if (this.spawnDirector.openingDone || this.boss) return;
+
+        const maxOnScreen = this.getMaxEnemiesOnScreen();
+        const openingCount = Math.min(maxOnScreen, 3);
+
+        for (let i = 0; i < openingCount; i++) {
+            if (this.enemiesSpawned >= this.enemiesForLevel) break;
+            const enemy = this.spawnCombatEnemy();
+            this.enemiesSpawned += this.getSpawnBudgetCost(enemy);
+        }
+
+        this.spawnDirector.openingDone = true;
+    }
+
+    updateEnemySpawnDirector(dt) {
+        if (this.boss) return;
+
+        this.enemyTimer += dt;
+        this.spawnFailSafeTimer += dt;
+        this.minActiveSpawnTimer += dt;
+
+        const maxOnScreen = this.getMaxEnemiesOnScreen();
+        const canSpawnMore = () => this.enemies.length < maxOnScreen && (this.enemiesDefeated + this.enemies.length) < this.enemiesForLevel;
+
+        if (this.minActiveSpawnTimer >= 0.5) {
+            const minActive = Math.min(maxOnScreen, Math.max(2, 2 + Math.floor(this.currentLevel / 4)));
+            const deficit = Math.max(0, minActive - this.enemies.length);
+            const instantSpawn = Math.min(deficit, 1);
+
+            for (let i = 0; i < instantSpawn; i++) {
+                if (!canSpawnMore()) break;
+                const enemy = this.spawnCombatEnemy();
+                this.enemiesSpawned += this.getSpawnBudgetCost(enemy);
+            }
+
+            this.minActiveSpawnTimer = 0;
+        }
+
+        if (this.enemyTimer >= this.enemyInterval) {
+            const burstThreshold = Math.ceil(maxOnScreen * 0.45);
+            const spawnCount = (this.currentLevel <= 2) ? 1 : (this.enemies.length < burstThreshold ? 2 : 1);
+
+            for (let i = 0; i < spawnCount; i++) {
+                if (!canSpawnMore()) break;
+                const enemy = this.spawnCombatEnemy();
+                this.enemiesSpawned += this.getSpawnBudgetCost(enemy);
+            }
+
+            this.enemyTimer = 0;
+        }
+
+        if (this.spawnFailSafeTimer >= 1.5) {
+            if (this.enemies.length <= 1 && canSpawnMore()) {
+                const enemy = this.spawnCombatEnemy();
+                this.enemiesSpawned += this.getSpawnBudgetCost(enemy);
+            }
+            this.spawnFailSafeTimer = 0;
+        }
+    }
+
     generateLevelThresholds() {
         const thresholds = [];
         for (let i = 1; i <= 50; i++) {
@@ -1227,9 +1383,16 @@ export class Game {
     }
 
     async syncGlobalData() {
+        if (this.apiUnavailable) return;
+
         // 1. Check Data Version from Server
         try {
             const versionRes = await fetch(`${this.leaderboard.apiUrl}/version`);
+            if (!versionRes.ok) {
+                // On static hosting (no API), stop retrying noisy version checks.
+                this.apiUnavailable = true;
+                return;
+            }
             const versionData = await versionRes.json();
             if (versionData.success) {
                 const serverVersion = versionData.version;
@@ -1245,7 +1408,9 @@ export class Game {
                 }
             }
         } catch (e) {
+            this.apiUnavailable = true;
             console.warn('[Sync] Failed to check game version:', e);
+            return;
         }
 
         const playerName = this.leaderboard.getPlayerName();
@@ -1475,7 +1640,7 @@ export class Game {
     checkLevelUp() {
         // Wave Completion Logic - Symmetric (Both clients independently calculate)
 
-        if (this.enemiesSpawned >= this.enemiesForLevel &&
+        if (this.enemiesDefeated >= this.enemiesForLevel &&
             this.enemies.length === 0 &&
             !this.boss) {
 
@@ -1488,6 +1653,7 @@ export class Game {
                 this.enemiesForLevel = 10 + (this.currentLevel * 3);
             }
             this.enemiesSpawned = 0;
+            this.enemiesDefeated = 0;
 
             this.difficultyMultiplier = Math.min(5.0, 1 + (this.currentLevel - 1) * 0.15);
             // Spawn interval baseline adjusted (1.2s) to increase gaps between spawning
@@ -1614,7 +1780,12 @@ export class Game {
             const name = (this.currentLevel % 10 === 0 ? 'ELITE ' : '') + names[modelIndex];
 
             const bossName = document.getElementById('boss-name');
-            if (bossName) bossName.innerText = name;
+            this.bossHudBaseName = name;
+            if (bossName) {
+                bossName.dataset.baseName = name;
+                bossName.innerText = name;
+            }
+            this.updateBossUI();
 
             // Symmetric spawning - both clients assign same ID
             this.boss.remoteId = 'boss_' + (this.entityCounter++);
@@ -1622,8 +1793,13 @@ export class Game {
     }
 
     resize() {
-        this.width = this.canvas.width = window.innerWidth;
-        this.height = this.canvas.height = window.innerHeight;
+        this.width = window.innerWidth;
+        this.height = window.innerHeight;
+        this.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+        this.canvas.width = Math.floor(this.width * this.pixelRatio);
+        this.canvas.height = Math.floor(this.height * this.pixelRatio);
+        this.canvas.style.width = `${this.width}px`;
+        this.canvas.style.height = `${this.height}px`;
 
         // Calculate scale to fit the logical 1920x1080 world into the actual window
         this.renderScale = Math.min(
@@ -1634,10 +1810,29 @@ export class Game {
     }
 
     startGame() {
+        if (!this.startRequested) {
+            return;
+        }
+        const startIntentAge = Date.now() - this.lastStartIntent;
+        if (!this.onlineCoop && startIntentAge > 10000) {
+            this.startRequested = false;
+            return;
+        }
+        this.startRequested = false;
+
+        const playerName = (this.leaderboard.getPlayerName() || '').trim();
+        if (!playerName) {
+            if (typeof window.__midnightShowNamePrompt === 'function') {
+                window.__midnightShowNamePrompt();
+            } else {
+                alert('Please enter your pilot name first.');
+            }
+            return;
+        }
+
         // If we want a fresh state after every match, we can use location.reload().
         // If we are calling startGame while gameOver is true, it means it's a RESTART.
         if (this.gameOver) {
-            sessionStorage.setItem('midnight_autostart', 'true');
             window.location.reload();
             return;
         }
@@ -1646,13 +1841,21 @@ export class Game {
             this.initRandom(Date.now().toString()); // Single player fallback
         }
 
+        const isCollaborativeRun = this.onlineCoop && !!this.collabRoomId && this.netplay && this.netplay.isConnected;
+        // Safety: unless we are in a real connected collab room, force local single-player simulation.
+        if (!isCollaborativeRun) {
+            this.onlineCoop = false;
+            this.onlineRole = null;
+            this.coopMode = false;
+            this.collabRoomId = null;
+        }
+
         // Rank Perks Initialization
         const rank = getRankByGlobalPosition(this.globalRank);
         this.rankPerk = rank.perk || { coinBonus: 0, hpMercy: false };
         this.applyRankPerks();
         if (this.audio) this.audio.playTrack('gameplay');
 
-        this.isRunning = true;
         this.gameOver = false;
         this.revivedThisRun = false;
         this.isPaused = false;
@@ -1677,11 +1880,16 @@ export class Game {
         }
         // Always reset spawn counters so the spawn condition never starts as undefined
         this.enemiesSpawned = 0;
+        this.enemiesDefeated = 0;
         this.enemiesForLevel = 12 + (this.currentLevel * 4);
         this.entityCounter = 0;
 
         this.enemyTimer = 0;
         this.enemyInterval = 0.8;
+        this.spawnFailSafeTimer = 0;
+        this.minActiveSpawnTimer = 0;
+        this.spawnSideIndex = 0;
+        this.spawnDirector.openingDone = false;
         this.powerupTimer = 0;
         this.powerupInterval = 12.0;
 
@@ -1689,12 +1897,14 @@ export class Game {
         this.gameOverScreen.classList.remove('active');
         if (this.hud) this.hud.style.display = 'flex';
 
-        // Always enter fullscreen when starting game
-        this.enterFullscreen();
+        // Fullscreen is optional and user-controlled; avoid forced calls.
 
         // Fix: Ensure Boss HUD is hidden on restart
         const bossHud = document.getElementById('boss-hud');
-        if (bossHud) bossHud.classList.remove('active');
+        if (bossHud) {
+            bossHud.classList.remove('active');
+            bossHud.style.display = 'none';
+        }
 
         const healthP2 = document.getElementById('health-container-p2');
         if (healthP2) healthP2.style.display = this.coopMode ? 'flex' : 'none';
@@ -1721,6 +1931,11 @@ export class Game {
             this.playerTwo = null;
         }
 
+        // Opening wave so combat starts immediately.
+        if (!this.onlineCoop || this.onlineRole === 'host') {
+            this.primeOpeningWave();
+        }
+
         const leaveRoomBtn = document.getElementById('leave-room-btn');
         if (leaveRoomBtn) leaveRoomBtn.style.display = this.onlineCoop ? 'inline-block' : 'none';
 
@@ -1745,6 +1960,7 @@ export class Game {
             setTimeout(() => clone.classList.add('hidden'), 2400);
         }
 
+        this.isRunning = true;
         requestAnimationFrame(this.loop);
     }
 
@@ -1752,6 +1968,15 @@ export class Game {
         // Show pause and settings buttons
         const pauseBtn = document.getElementById('pause-btn');
         const settingsBtn = document.getElementById('settings-btn');
+
+        // Keep control buttons outside pointer-events:none containers so clicks always work.
+        if (pauseBtn && pauseBtn.parentElement !== document.body) {
+            document.body.appendChild(pauseBtn);
+        }
+        if (settingsBtn && settingsBtn.parentElement !== document.body) {
+            document.body.appendChild(settingsBtn);
+        }
+
         if (pauseBtn) pauseBtn.style.display = 'flex';
         if (settingsBtn) settingsBtn.style.display = 'flex';
 
@@ -1853,6 +2078,10 @@ export class Game {
         if (setNameBtn) {
             setNameBtn.style.display = playerName ? 'none' : 'inline-block';
         }
+        const playerNameSection = document.getElementById('player-name-section');
+        if (playerNameSection) {
+            playerNameSection.style.display = playerName ? 'none' : 'block';
+        }
     }
 
     openLeaderboardFromGameOver() {
@@ -1886,6 +2115,10 @@ export class Game {
         const playerName = this.leaderboard.getPlayerName();
         if (setNameBtn) {
             setNameBtn.style.display = playerName ? 'none' : 'inline-block';
+        }
+        const playerNameSection = document.getElementById('player-name-section');
+        if (playerNameSection) {
+            playerNameSection.style.display = playerName ? 'none' : 'block';
         }
     }
 
@@ -1930,8 +2163,17 @@ export class Game {
             return;
         }
 
+        if (this.leaderboard.isPlayerNameLocked()) {
+            alert('Pilot name is locked and cannot be changed.');
+            return;
+        }
+
         const name = input.value.trim();
-        this.leaderboard.setPlayerName(name);
+        const saved = this.leaderboard.setPlayerName(name);
+        if (!saved) {
+            alert('Pilot name is locked and cannot be changed.');
+            return;
+        }
         this.updatePlayerNameDisplay();
         alert(`Pilot name set to: ${name}`);
 
@@ -1939,6 +2181,10 @@ export class Game {
         const setNameBtn = document.getElementById('set-name-btn');
         if (setNameBtn) {
             setNameBtn.style.display = 'none';
+        }
+        const playerNameSection = document.getElementById('player-name-section');
+        if (playerNameSection) {
+            playerNameSection.style.display = 'none';
         }
     }
 
@@ -2114,15 +2360,6 @@ export class Game {
         // Safety cap for deltaTime
         const dt = Math.min(deltaTime, 0.1);
 
-        // Periodically check and maintain fullscreen during gameplay
-        this.fullscreenCheckTimer += dt;
-        if (this.fullscreenCheckTimer >= 2.0) { // Check every 2 seconds
-            this.fullscreenCheckTimer = 0;
-            if (!document.fullscreenElement && this.isRunning && !this.gameOver) {
-                this.enterFullscreen();
-            }
-        }
-
         this.screenShake.update(dt);
 
         if (this.comboTimer > 0) {
@@ -2144,7 +2381,8 @@ export class Game {
         if (!this.gameOver) {
             
             // ── CO-OP SERVER AUTHORITATIVE FAST-PATH ──
-            if (this.onlineCoop) {
+            const useAuthoritativeOnline = this.canRunAuthoritativeOnline();
+            if (useAuthoritativeOnline) {
                 // In Server Authoritative mode, we DO NOT run local update logic.
                 // The ServerAuthoritativeNetplay handles pushing our input to the server at 60Hz.
                 // It also receives the physics delta and overwrites our x, y, hp.
@@ -2170,21 +2408,7 @@ export class Game {
                     });
                 }
                 
-                this.enemyTimer += dt;
-                const maxOnScreen = this.getMaxEnemiesOnScreen();
-                const currentCount = this.enemies.length;
-                const burstThreshold = Math.ceil(maxOnScreen * 0.4);
-
-                if (this.enemyTimer > this.enemyInterval && !this.boss) {
-                    let spawnCount = (currentCount < burstThreshold) ? 2 : 1;
-                    for (let i = 0; i < spawnCount; i++) {
-                        if (this.enemies.length < maxOnScreen && this.enemiesSpawned < this.enemiesForLevel) {
-                            const enemy = this.spawnEnemy();
-                            this.enemiesSpawned += (enemy ? enemy.weight : 1);
-                        }
-                    }
-                    this.enemyTimer = 0;
-                }
+                this.updateEnemySpawnDirector(dt);
 
                 this.powerupTimer += dt;
                 const powerupCooldown = this.boss ? 8.0 : this.powerupInterval;
@@ -2203,6 +2427,24 @@ export class Game {
                     this.enemies.forEach(e => e.update(dt));
                     if (this.boss) this.boss.update(dt);
                 }
+
+                // Runtime self-heal: keep enemy states valid and visible.
+                const worldWidth = this.logicalWidth || this.width || 1920;
+                const worldHeight = this.logicalHeight || this.height || 1080;
+
+                this.enemies.forEach((e) => {
+                    if (!e || e.markedForDeletion) return;
+
+                    const finiteX = Number.isFinite(e.x);
+                    const finiteY = Number.isFinite(e.y);
+                    if (!finiteX || !finiteY) {
+                        e.x = this.random() * worldWidth;
+                        e.y = this.random() * worldHeight;
+                    }
+
+                    e.x = Math.max(-260, Math.min(worldWidth + 260, e.x));
+                    e.y = Math.max(-260, Math.min(worldHeight + 260, e.y));
+                });
 
                 this.projectiles.forEach(p => p.update(dt));
                 this.powerups.forEach(p => p.update(dt));
@@ -2253,9 +2495,11 @@ export class Game {
             this.boss = null;
             this.bossJustDefeated = true;
             this.spawnedEnemyTypes.clear(); // Clear spawned types for new unique enemies
-            this.removeLowestHPEnemy(); // Remove the weakest enemy after boss defeat
             const bossHud = document.getElementById('boss-hud');
-            if (bossHud) bossHud.classList.remove('active');
+            if (bossHud) {
+                bossHud.classList.remove('active');
+                bossHud.style.display = 'none';
+            }
         }
 
         this.updateUI();
@@ -2263,14 +2507,37 @@ export class Game {
 
     updateBossUI() {
         if (!this.boss) return;
+
+        const bossHud = document.getElementById('boss-hud');
+        if (bossHud) {
+            bossHud.classList.add('active');
+            bossHud.style.display = 'flex';
+        }
+
+        const currentHealth = Number.isFinite(this.boss.hp)
+            ? this.boss.hp
+            : (Number.isFinite(this.boss.health) ? this.boss.health : 0);
+        const maxHealth = Number.isFinite(this.boss.maxHp)
+            ? this.boss.maxHp
+            : (Number.isFinite(this.boss.maxHealth) ? this.boss.maxHealth : Math.max(1, currentHealth));
+
         const fill = document.getElementById('boss-health-fill');
         if (fill) {
-            const pct = (this.boss.health / this.boss.maxHealth) * 100;
+            const pct = (currentHealth / Math.max(1, maxHealth)) * 100;
             fill.style.width = `${pct}%`;
+        }
+
+        const bossName = document.getElementById('boss-name');
+        if (bossName) {
+            const baseName = this.bossHudBaseName || bossName.dataset.baseName || bossName.innerText.split(' | HP ')[0] || 'ANOMALY';
+            bossName.dataset.baseName = baseName;
+            bossName.innerText = `${baseName} | HP ${Math.max(0, Math.ceil(currentHealth))}/${Math.max(1, Math.ceil(maxHealth))}`;
         }
     }
 
     draw() {
+        this.ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
+
         // Cosmic Atmosphere Background Layer
         // Draw nebulas (volumetric gas clouds)
         this.nebulas.forEach(nebula => nebula.draw(this.ctx));
@@ -2327,6 +2594,8 @@ export class Game {
     }
 
     drawBackground() {
+        this.ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
+
         this.ctx.fillStyle = '#050510';
         this.ctx.fillRect(0, 0, this.width, this.height);
 
@@ -2383,6 +2652,7 @@ export class Game {
         }
 
         enemy.markedForDeletion = true;
+        this.enemiesDefeated += 1;
         this.addScore(enemy.points, useCombo);
         if (this.achievementManager) this.achievementManager.addStat('kills', 1);
         // Track kill streak
@@ -3075,7 +3345,10 @@ export class Game {
         this.boss = null;
 
         const bossHud = document.getElementById('boss-hud');
-        if (bossHud) bossHud.classList.remove('active');
+        if (bossHud) {
+            bossHud.classList.remove('active');
+            bossHud.style.display = 'none';
+        }
 
         const enemyCounter = document.getElementById('enemy-counter');
         if (enemyCounter) enemyCounter.style.display = 'block';
@@ -3165,7 +3438,7 @@ export class Game {
         // Update Enemy Count
         const enemyCountEl = document.getElementById('enemy-count');
         if (enemyCountEl) {
-            const remaining = (this.enemiesForLevel - this.enemiesSpawned) + this.enemies.length;
+            const remaining = (this.enemiesForLevel - this.enemiesDefeated);
             enemyCountEl.innerText = Math.max(0, remaining);
         }
 
@@ -3307,7 +3580,10 @@ export class Game {
 
         // Hide boss HUD on termination screen
         const bossHud = document.getElementById('boss-hud');
-        if (bossHud) bossHud.classList.remove('active');
+        if (bossHud) {
+            bossHud.classList.remove('active');
+            bossHud.style.display = 'none';
+        }
 
         if (this.gameOverScreen) this.gameOverScreen.classList.add('active');
         if (this.hud) this.hud.style.display = 'none';
@@ -3353,7 +3629,7 @@ export class Game {
 
         return {
             aiAggression: Math.max(0.6, 1.0 + (Math.log10(dpsRatio) * 0.25) * passiveThreat),
-            speedScale: Math.max(0.7, 1.0 + ((ship.speed - baseSpeed) / 600)),
+            speedScale: Math.min(1.0, Math.max(0.6, 1.0 + ((ship.speed - baseSpeed) / 800))),
             projectileDensity: Math.max(1, Math.floor(1 + Math.log2(dpsRatio) * 0.2)),
             damageMultiplier: Math.max(0.7, 1.0 + Math.sqrt(Math.max(0, hpRatio - 1)) * 0.6),
             hpMultiplier: Math.max(0.25, 1.0 + Math.pow(Math.max(0, dpsRatio - 1), 0.7) * 0.5 * passiveThreat),
@@ -3459,6 +3735,8 @@ export class Game {
         for (const [key, ship] of sortedShips) {
             const isPrestige = !!ship.prestige;
             const isAchievementUnlocked = isPrestige && this.achievementManager?.isShipUnlocked?.(key);
+            const previousShip = this.getPreviousShip(key);
+            const prerequisiteMet = !previousShip || this.ownedShips.includes(previousShip);
 
             const card = document.createElement('div');
             card.className = `ship-card ${this.ownedShips.includes(key) ? 'owned' : ''} ${this.selectedShip === key ? 'selected' : ''} ${isPrestige ? 'prestige' : ''}`;
@@ -3533,6 +3811,11 @@ export class Game {
             } else if (this.ownedShips.includes(key)) {
                 btn.innerText = 'EQUIP';
                 btn.onclick = () => this.selectShip(key);
+            } else if (!isPrestige && !prerequisiteMet) {
+                const prevName = SHIP_DATA[previousShip]?.name || previousShip || 'PREVIOUS SHIP';
+                btn.innerText = `🔒 UNLOCK ${prevName}`;
+                btn.disabled = true;
+                btn.title = `Own ${prevName} first`;
             } else if (isPrestige) {
                 // Prestige ships: show achievement requirement
                 if (isAchievementUnlocked) {
@@ -3564,6 +3847,16 @@ export class Game {
 
     buyShip(type) {
         const ship = SHIP_DATA[type];
+
+        if (!ship) return;
+        if (!ship.prestige) {
+            const previousShip = this.getPreviousShip(type);
+            if (previousShip && !this.ownedShips.includes(previousShip)) {
+                const prevName = SHIP_DATA[previousShip]?.name || previousShip;
+                alert(`Unlock ${prevName} first.`);
+                return;
+            }
+        }
 
 
         if (this.coins >= ship.price) {
@@ -3643,22 +3936,27 @@ export class Game {
     }
 
     async checkDataVersion() {
+        if (this.apiUnavailable) return;
+
         try {
             const response = await fetch('/api/version');
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success) {
-                    const serverVersion = data.version;
-                    const localVersion = parseInt(localStorage.getItem('midnight_data_version') || '1');
+            if (!response.ok) {
+                this.apiUnavailable = true;
+                return;
+            }
+            const data = await response.json();
+            if (data.success) {
+                const serverVersion = data.version;
+                const localVersion = parseInt(localStorage.getItem('midnight_data_version') || '1');
 
-                    if (serverVersion > localVersion) {
-                        console.log(`🚨 Data version mismatch! Server: ${serverVersion}, Local: ${localVersion}. Resetting progress...`);
-                        this.resetProgress();
-                        localStorage.setItem('midnight_data_version', serverVersion);
-                    }
+                if (serverVersion > localVersion) {
+                    console.log(`🚨 Data version mismatch! Server: ${serverVersion}, Local: ${localVersion}. Resetting progress...`);
+                    this.resetProgress();
+                    localStorage.setItem('midnight_data_version', serverVersion);
                 }
             }
         } catch (e) {
+            this.apiUnavailable = true;
             console.warn('Could not check data version:', e);
         }
     }

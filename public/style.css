@@ -98,6 +98,7 @@ canvas {
             rgba(0, 0, 0, 0.2) 50%,
             rgba(0, 0, 0, 0.2));
     background-size: 100% 4px;
+    opacity: 0.55;
     pointer-events: none;
 }
 
@@ -800,12 +801,12 @@ h1 {
     font-weight: bold;
     font-size: 1.4rem;
     cursor: pointer;
-    z-index: 3000;
+    z-index: 12000;
     display: none;
     /* Hidden until game starts */
     justify-content: center;
     align-items: center;
-    pointer-events: auto;
+    pointer-events: auto !important;
     border-radius: 8px;
     transition: all 0.3s ease;
     box-shadow: 0 0 15px rgba(0, 243, 255, 0.5), inset 0 0 15px rgba(0, 243, 255, 0.1);
@@ -858,12 +859,12 @@ h1 {
     font-weight: bold;
     font-size: 1.4rem;
     cursor: pointer;
-    z-index: 3000;
+    z-index: 12000;
     display: none;
     /* Hidden until game starts */
     justify-content: center;
     align-items: center;
-    pointer-events: auto;
+    pointer-events: auto !important;
     border-radius: 8px;
     transition: all 0.3s ease;
     box-shadow: 0 0 15px rgba(0, 243, 255, 0.5), inset 0 0 15px rgba(0, 243, 255, 0.1);
@@ -1018,13 +1019,13 @@ h1 {
     justify-content: center;
     align-items: center;
     padding: 0 10px;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0) 100%);
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.12) 100%);
     border-bottom: 1px solid rgba(0, 243, 255, 0.15);
     z-index: 2500;
     font-family: 'Orbitron', monospace;
     pointer-events: none;
-    -webkit-backdrop-filter: blur(4px);
-    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
     box-sizing: border-box;
     overflow: hidden;
 }

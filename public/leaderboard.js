@@ -4,18 +4,29 @@ export class LeaderboardManager {
     constructor() {
         this.apiUrl = `${window.location.origin}/api`;
         this.playerName = localStorage.getItem('midnight_player_name') || null;
+        this.playerNameLocked = localStorage.getItem('midnight_player_name_locked') === 'true';
         this.mode = 'solo'; // Default mode
     }
 
     // Set player name
     setPlayerName(name) {
+        if (this.playerNameLocked || this.playerName) {
+            return false;
+        }
         this.playerName = name;
         localStorage.setItem('midnight_player_name', name);
+        this.playerNameLocked = true;
+        localStorage.setItem('midnight_player_name_locked', 'true');
+        return true;
     }
 
     // Get player name
     getPlayerName() {
         return this.playerName;
+    }
+
+    isPlayerNameLocked() {
+        return this.playerNameLocked || !!this.playerName;
     }
 
     // Fetch leaderboard
@@ -93,18 +104,19 @@ export class LeaderboardManager {
         container.innerHTML = '<div class="leaderboard-empty">Loading...</div>';
 
         const leaderboard = await this.fetchLeaderboard(10);
+        const sortedLeaderboard = [...leaderboard].sort((a, b) => (b.score || 0) - (a.score || 0));
 
-        if (leaderboard.length === 0) {
+        if (sortedLeaderboard.length === 0) {
             container.innerHTML = '<div class="leaderboard-empty">No scores yet. Be the first!<br><small style="margin-top: 10px; display: block;">Make sure you enter the pilot name</small></div>';
             return;
         }
 
         container.innerHTML = '';
 
-        leaderboard.forEach((entry, index) => {
+        sortedLeaderboard.forEach((entry, index) => {
             // Competition Ranking Logic (1, 2, 2, 4)
             let rank;
-            if (index > 0 && entry.score === leaderboard[index - 1].score) {
+            if (index > 0 && entry.score === sortedLeaderboard[index - 1].score) {
                 rank = entry._rank; // Reuse previous rank for tie
             } else {
                 rank = index + 1;

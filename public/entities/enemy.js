@@ -1,5 +1,5 @@
-import { Projectile } from './projectile.js';
-import { Explosion } from './particle.js';
+import { Projectile } from './projectile.js?v=4';
+import { Explosion } from './particle.js?v=4';
 
 // ============================================================
 //  EnemyBrain — Advanced AI Module
@@ -21,11 +21,6 @@ class EnemyBrain {
         this.predictedPlayerY = 0;
         this.playerVelX = 0;
         this.playerVelY = 0;
-
-        // Dodge bias tracking
-        this.dodgeBias = 0; // -1 = left, +1 = right
-        this.dodgeBiasStrength = 0; // 0 to 1
-        this.playerSamplesShort = []; // last 5 samples for quick reaction
 
         // Behavior state
         this.behavior = 'aggro';        // 'aggro'|'flank'|'retreat'|'orbit'
@@ -49,7 +44,7 @@ class EnemyBrain {
 
     // Deterministic pseudo-random [0,1) — NO Math.random
     _prng(offset = 0) {
-        return Math.abs(Math.sin(this._seed + offset + this.game.gameTime * 0.0001));
+        return Math.abs(Math.sin(this._seed + offset + this.game.lastTime * 0.0001));
     }
 
     update(deltaTime) {
@@ -60,7 +55,7 @@ class EnemyBrain {
         this.sampleTimer += deltaTime;
         if (this.sampleTimer >= this.sampleInterval) {
             this.sampleTimer = 0;
-            this.playerSamples.push({ x: player.x, y: player.y, t: this.game.gameTime });
+            this.playerSamples.push({ x: player.x, y: player.y, t: this.game.lastTime });
             if (this.playerSamples.length > 20) this.playerSamples.shift();
         }
 
@@ -71,25 +66,6 @@ class EnemyBrain {
             const dt = Math.max((b.t - a.t) * 0.001, 0.001);
             this.playerVelX = (b.x - a.x) / dt;
             this.playerVelY = (b.y - a.y) / dt;
-
-            // ── Update Dodge Bias ──────────────────────────────
-            // We want to know if the player consistently moves perpendicular to the enemy
-            const dx = b.x - this.enemy.x;
-            const dy = b.y - this.enemy.y;
-            const dist = Math.hypot(dx, dy);
-            if (dist > 5) {
-                const angleToPlayer = Math.atan2(dy, dx);
-                const velAngle = Math.atan2(this.playerVelY, this.playerVelX);
-                const diffAngle = velAngle - angleToPlayer;
-
-                // Sin of diff angle: cross product magnitude
-                // If sin(diff) > 0, moving right relative to enemy, < 0 moving left
-                const perp = Math.sin(diffAngle);
-
-                // Smoothly update dodge bias
-                this.dodgeBias = this.dodgeBias * 0.95 + perp * 0.05;
-                this.dodgeBiasStrength = Math.abs(this.dodgeBias);
-            }
         }
 
         // ── Predicted player position (adaptive lead time) ──────────
@@ -98,18 +74,6 @@ class EnemyBrain {
         const leadTime = Math.max(0.18, 0.38 - level * 0.008);
         this.predictedPlayerX = player.x + this.playerVelX * leadTime;
         this.predictedPlayerY = player.y + this.playerVelY * leadTime;
-
-        // Apply Dodge Bias to prediction (counter-prediction)
-        // If the player has a strong bias, offset prediction even further in that direction
-        if (this.dodgeBiasStrength > 0.4) {
-            const aiAggression = (this.game.getPlayerScalingMetrics ? this.game.getPlayerScalingMetrics().aiAggression : 1);
-            const counterLead = 30 * this.dodgeBiasStrength * aiAggression;
-            const angleToPlayer = Math.atan2(player.y - this.enemy.y, player.x - this.enemy.x);
-            // Move prediction perpendicular to direction
-            this.predictedPlayerX += Math.cos(angleToPlayer + Math.PI / 2) * this.dodgeBias * counterLead;
-            this.predictedPlayerY += Math.sin(angleToPlayer + Math.PI / 2) * this.dodgeBias * counterLead;
-        }
-
         // Clamp to arena
         this.predictedPlayerX = Math.max(20, Math.min(this.game.width - 20, this.predictedPlayerX));
         this.predictedPlayerY = Math.max(20, Math.min(this.game.height - 20, this.predictedPlayerY));
@@ -217,18 +181,17 @@ export class Enemy {
             this.y = y;
         } else {
             if (rng() < 0.5) {
-                this.x = rng() < 0.5 ? -50 : this.game.logicalWidth + 50;
-                this.y = rng() * this.game.logicalHeight;
+                this.x = rng() < 0.5 ? -50 : this.game.width + 50;
+                this.y = rng() * this.game.height;
             } else {
-                this.x = rng() * this.game.logicalWidth;
-                this.y = rng() < 0.5 ? -50 : this.game.logicalHeight + 50;
+                this.x = rng() * this.game.width;
+                this.y = rng() < 0.5 ? -50 : this.game.height + 50;
             }
         }
 
         this.angle = 0;
         this.speed = 0;
-        const sf = this.game.scaleFactor || 1;
-        this.radius = 15 * sf;
+        this.radius = 15;
         this.color = '#ff0000';
         this.points = 100;
 
@@ -247,30 +210,41 @@ export class Enemy {
         // Dynamic Enemy Scaling based on Player's equipped ship stats
         const playerScale = this.game.getPlayerScalingMetrics
             ? this.game.getPlayerScalingMetrics()
-            : { aiAggression: 1, speedScale: 1, projectileDensity: 1, damageMultiplier: 1, hpMultiplier: 1 };
+            : { hpScale: 1, damageScale: 1, speedScale: 1 };
+
+        // Accept either scale format from game metrics (`hpScale`) or legacy (`hpMultiplier`).
+        playerScale.hpScale = Number.isFinite(playerScale.hpScale)
+            ? playerScale.hpScale
+            : (Number.isFinite(playerScale.hpMultiplier) ? playerScale.hpMultiplier : 1);
+        playerScale.damageScale = Number.isFinite(playerScale.damageScale)
+            ? playerScale.damageScale
+            : (Number.isFinite(playerScale.damageMultiplier) ? playerScale.damageMultiplier : 1);
+        playerScale.speedScale = Number.isFinite(playerScale.speedScale)
+            ? playerScale.speedScale
+            : 1;
 
         let baseDamage = 1;
 
         if (this.type === 'chaser') {
-            this.speed = (150 + (rng() * 50)) * diffSpeedMultiplier * playerScale.speedScale;
+            this.speed = (150 + Math.random() * 50) * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#ff3333'; // Neon Red
             this.radius = 12;
             this.points = 100;
-            this.health = Math.max(1, Math.floor((1 + hpBonus) * playerScale.hpMultiplier));
+            this.health = Math.max(1, Math.floor((1 + hpBonus) * playerScale.hpScale));
             baseDamage = 1;
         } else if (this.type === 'heavy') {
             this.speed = 80 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#ffaa00'; // Neon Orange
             this.radius = 25;
             this.points = 300;
-            this.health = Math.max(1, Math.floor((5 + hpBonus) * playerScale.hpMultiplier));
+            this.health = Math.max(1, Math.floor((5 + hpBonus) * playerScale.hpScale));
             baseDamage = 4;
         } else if (this.type === 'shooter') {
             this.speed = 100 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#ff00ff'; // Neon Pink
             this.radius = 15;
             this.points = 200;
-            this.health = Math.max(1, Math.floor((2 + hpBonus) * playerScale.hpMultiplier));
+            this.health = Math.max(1, Math.floor((2 + hpBonus) * playerScale.hpScale));
             this.shootTimer = 0;
             baseDamage = 2;
         } else if (this.type === 'swarm') {
@@ -278,24 +252,24 @@ export class Enemy {
             this.color = '#ff7a6b';
             this.radius = 9;
             this.points = 80;
-            this.health = Math.max(1, Math.floor(1 * playerScale.hpMultiplier));
+            this.health = Math.max(1, Math.floor(1 * playerScale.hpScale));
             baseDamage = 1;
         } else if (this.type === 'sniper') {
             this.speed = 120 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#6bd6ff';
             this.radius = 14;
             this.points = 250;
-            this.health = Math.max(1, Math.floor((2 + hpBonus) * playerScale.hpMultiplier));
+            this.health = Math.max(1, Math.floor((2 + hpBonus) * playerScale.hpScale));
             this.shootTimer = 0;
             // Snipers back off more as levels increase
-            this.preferredRange = (260 + Math.min((level - 1) * 8, 200));
+            this.preferredRange = 260 + Math.min((level - 1) * 8, 200);
             baseDamage = 2;
         } else if (this.type === 'splitter') {
             this.speed = 140 * diffSpeedMultiplier * playerScale.speedScale;
             this.color = '#a97bff';
             this.radius = 18;
             this.points = 220;
-            this.health = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpMultiplier));
+            this.health = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpScale));
             this.splitOnDeath = true;
             this.splitCount = 2;
             this.splitType = 'swarm';
@@ -305,7 +279,7 @@ export class Enemy {
             this.color = '#9966ff'; // Violet/Purple
             this.radius = 15;
             this.points = 150;
-            this.health = Math.max(1, Math.floor((2 + hpBonus) * playerScale.hpMultiplier));
+            this.health = Math.max(1, Math.floor((2 + hpBonus) * playerScale.hpScale));
             this.phaseTimer = 0;
             this.phaseCooldown = 3.0;
             baseDamage = 2;
@@ -315,7 +289,7 @@ export class Enemy {
             this.color = '#cc7722'; // Bronze
             this.radius = 28;
             this.points = 400;
-            this.health = Math.max(1, Math.floor((10 + hpBonus * 3) * playerScale.hpMultiplier));
+            this.health = Math.max(1, Math.floor((10 + hpBonus * 3) * playerScale.hpScale));
             this.armor = 2;
             baseDamage = 5;
         } else if (this.type === 'wraith') {
@@ -324,7 +298,7 @@ export class Enemy {
             this.color = '#bb66dd'; // Magenta-Purple
             this.radius = 16;
             this.points = 350;
-            this.health = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpMultiplier));
+            this.health = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpScale));
             this.teleportCooldown = 2.5;
             this.teleportTimer = 1.5;
             baseDamage = 3;
@@ -334,7 +308,7 @@ export class Enemy {
             this.color = '#6600cc'; // Deep Purple
             this.radius = 20;
             this.points = 500;
-            this.health = Math.max(1, Math.floor((12 + hpBonus * 4) * playerScale.hpMultiplier));
+            this.health = Math.max(1, Math.floor((12 + hpBonus * 4) * playerScale.hpScale));
             this.spinRate = 360; // degrees per second
             baseDamage = 5;
         } else if (this.type === 'bomber') {
@@ -343,7 +317,7 @@ export class Enemy {
             this.color = '#ff6600'; // Bright Orange
             this.radius = 28;
             this.points = 350;
-            this.health = Math.max(1, Math.floor((8 + hpBonus * 2) * playerScale.hpMultiplier));
+            this.health = Math.max(1, Math.floor((8 + hpBonus * 2) * playerScale.hpScale));
             this.explosionRadius = 80;
             this.explosionDamage = 2;
             baseDamage = 3;
@@ -353,7 +327,7 @@ export class Enemy {
             this.color = '#00ff88'; // Bright Green
             this.radius = 10;
             this.points = 110;
-            this.health = Math.max(1, Math.floor((1 + hpBonus) * playerScale.hpMultiplier));
+            this.health = Math.max(1, Math.floor((1 + hpBonus) * playerScale.hpScale));
             this.dashCooldown = 3.0;
             this.dashTimer = 2.0;
             baseDamage = 1;
@@ -373,7 +347,7 @@ export class Enemy {
             this.color = '#ff0099'; // Hot Pink
             this.radius = 20;
             this.points = 280;
-            this.health = Math.max(1, Math.floor((4 + hpBonus) * playerScale.hpMultiplier));
+            this.health = Math.max(1, Math.floor((4 + hpBonus) * playerScale.hpScale));
             this.shootTimer = 0;
             this.missileMode = true;
             baseDamage = 2;
@@ -383,8 +357,8 @@ export class Enemy {
             this.color = '#00ddff'; // Cyan
             this.radius = 19;
             this.points = 240;
-            this.health = Math.max(1, Math.floor((4 + hpBonus) * playerScale.hpMultiplier));
-            this.shieldHealth = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpMultiplier));
+            this.health = Math.max(1, Math.floor((4 + hpBonus) * playerScale.hpScale));
+            this.shieldHealth = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpScale));
             this.hasShield = true;
             baseDamage = 2;
         } else if (this.type === 'pulsar') {
@@ -393,7 +367,7 @@ export class Enemy {
             this.color = '#ff00ff'; // Magenta
             this.radius = 16;
             this.points = 200;
-            this.health = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpMultiplier));
+            this.health = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpScale));
             this.pulseTimer = 0;
             this.pulseCooldown = 2.5;
             this.pulseRadius = 60;
@@ -404,7 +378,7 @@ export class Enemy {
             this.color = '#ff1111'; // Bright Red
             this.radius = 13;
             this.points = 180;
-            this.health = Math.max(1, Math.floor((2 + hpBonus) * playerScale.hpMultiplier));
+            this.health = Math.max(1, Math.floor((2 + hpBonus) * playerScale.hpScale));
             this.slashCooldown = 1.5;
             this.slashTimer = 0;
             this.attackRange = 35;
@@ -415,7 +389,7 @@ export class Enemy {
             this.color = '#9900ff'; // Deep Purple
             this.radius = 24;
             this.points = 310;
-            this.health = Math.max(1, Math.floor((6 + hpBonus) * playerScale.hpMultiplier));
+            this.health = Math.max(1, Math.floor((6 + hpBonus) * playerScale.hpScale));
             this.tractorRange = 300;
             this.tractorPull = 50; // Force magnitude
             baseDamage = 2;
@@ -425,7 +399,7 @@ export class Enemy {
             this.color = '#ccccff'; // Silver/Blue
             this.radius = 17;
             this.points = 200;
-            this.health = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpMultiplier));
+            this.health = Math.max(1, Math.floor((3 + hpBonus) * playerScale.hpScale));
             this.reflectChance = 0.6; // 60% chance to reflect
             this.rotation = 0;
             baseDamage = 2;
@@ -435,16 +409,24 @@ export class Enemy {
             this.color = '#ffaa00'; // Gold/Orange
             this.radius = 10;
             this.points = 95;
-            this.health = Math.max(1, Math.floor((1 + hpBonus) * playerScale.hpMultiplier));
+            this.health = Math.max(1, Math.floor((1 + hpBonus) * playerScale.hpScale));
             this.swarming = true;
             baseDamage = 1;
         }
 
+        // Keep violet enemies close to current feel; tame others for controllable pacing.
+        const globalSpeedScale = 0.75;
+        const earlyLevelSpeedScale = level <= 5 ? 0.7 : (level <= 10 ? 0.82 : 0.94);
+        const baseTypeScale = 0.69; // Other enemies
+        const typeControlScale = {
+            decoy: 0.59,       // Yellow enemy
+            interceptor: 0.89  // Green enemy
+        };
+        this.speed *= globalSpeedScale * earlyLevelSpeedScale * (typeControlScale[this.type] ?? baseTypeScale);
+        this.speed = Math.max(150, this.speed);
+
         // Final calculated Collision Damage
-        this.damageMultiplier = playerScale.damageMultiplier || 1;
-        this.aiAggression = playerScale.aiAggression || 1;
-        this.projectileDensity = playerScale.projectileDensity || 1;
-        this.damage = Math.max(1, Math.floor(baseDamage * this.damageMultiplier));
+        this.damage = Math.max(1, Math.floor(baseDamage * playerScale.damageScale));
 
         // Wave Budget Weight
         const typeWeights = {
@@ -488,54 +470,6 @@ export class Enemy {
         if (typeof this.remoteId === 'number') return this.remoteId;
         const match = this.remoteId.match(/\d+$/);
         return match ? parseInt(match[0]) : 0;
-    }
-
-    // Server-Authoritative Hook: Evaluates visually dependent timings (flash, blink, lasers)
-    // but skips AI logic, collisions, movement, and spawning computations.
-    visualUpdate(deltaTime) {
-        if (this.game.isPaused) return;
-
-        // Visual spawning warping burst
-        if (this.isSpawning) {
-            this.spawnTimer -= deltaTime;
-            if (this.spawnTimer <= 0) {
-                this.isSpawning = false;
-                for (let i = 0; i < 10; i++) {
-                    this.game.particles.push(new Explosion(this.game, this.x, this.y, '#ffffff'));
-                }
-            }
-            return;
-        }
-
-        if (this.invulnTimer > 0) this.invulnTimer -= deltaTime;
-
-        // Phantom blink visually fading
-        if (this.isBlinking) {
-            this.blinkTimer = (this.blinkTimer || 0) + deltaTime;
-            if (this.blinkTimer > 0.3) {
-                this.isBlinking = false;
-                this.blinkTimer = 0;
-            }
-        }
-        
-        // Beam visual charging
-        if (this.beamAngle !== null) {
-            if (this.beamCharging) {
-                this.beamChargeTimer += deltaTime;
-                if (this.beamChargeTimer >= this.beamChargeTime) {
-                    this.beamCharging = false;
-                    this.beamActive = true;
-                    this.beamActiveTimer = 0;
-                    this.beamChargeTimer = 0;
-                }
-            } else if (this.beamActive) {
-                this.beamActiveTimer += deltaTime;
-                if (this.beamActiveTimer >= this.beamDuration) {
-                    this.beamActive = false;
-                    this.beamAngle = null;
-                }
-            }
-        }
     }
 
     update(deltaTime) {
@@ -646,10 +580,10 @@ export class Enemy {
                 ? Math.hypot(this.brain.playerVelX, this.brain.playerVelY)
                 : 0;
             // Dash if player is accelerating away
-            const pseudoRandom = Math.abs(Math.sin(this.getNumericId() + this.game.gameTime * 0.005));
+            const pseudoRandom = Math.abs(Math.sin(this.getNumericId() + this.game.lastTime * 0.005));
             if (this.dashTimer <= 0 && (pseudoRandom < 0.3 || playerSpeed > 220)) {
                 this.dashTimer = this.dashCooldown;
-                effectiveSpeed *= 2.5;
+                effectiveSpeed *= 1.5;
             }
             // Aim at predicted position
             const interceptAngle = this.brain ? this.brain.getLeadAngle() : directAngle;
@@ -659,7 +593,7 @@ export class Enemy {
 
         } else if (this.type === 'heavy') {
             // ★ Zigzag approach — harder to hit
-            const zigzag = Math.sin(this.game.gameTime * 0.002 + this.getNumericId()) * 0.6;
+            const zigzag = Math.sin(this.game.lastTime * 0.002 + this.getNumericId()) * 0.6;
             const moveAngle = directAngle + zigzag;
             this.x += (Math.cos(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
             this.y += (Math.sin(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
@@ -757,7 +691,7 @@ export class Enemy {
         // Shooter Logic (only shooter, sniper, launcher, and pulsar can attack)
         const level = this.game.currentLevel || 1;
         const singleMissileMode = level >= 11;
-        const fireRateMultiplier = level >= 24 ? 2.5 : (level >= 15 ? 1.7 : 1.0);
+        const fireRateMultiplier = level >= 24 ? 1.8 : (level >= 15 ? 1.3 : 0.8);
         const spreadMultiplier = level >= 24 ? 0.25 : (level >= 15 ? 0.6 : 1.0);
 
         if (this.type === 'shooter') {
@@ -770,38 +704,29 @@ export class Enemy {
                         const aimAngle = this.brain ? this.brain.getLeadAngle() : this.angle;
                         const orb = new Projectile(this.game, this.x, this.y, aimAngle, 'bullet', 'enemy');
                         orb.speed = 200; // Slow travel
-                        orb.damage = 2 * this.damageMultiplier;
+                        orb.damage = 2;
                         orb.radius = 12; // Large orb
                         orb.explosive = true;
                         orb.color = '#ff00ff'; // Purple/Magenta 
                         this.game.projectiles.push(orb);
-                        if (this.game.audio) this.game.audio.enemyShot();
                         this.hasFiredSingleMissile = true;
                     }
                 } else {
-                    const seed = this.getNumericId() + this.game.gameTime;
-                    // Accuracy improves at higher levels: clamp base error down
-                    const accuracyRange = Math.max(0.05, 0.3 - (level * 0.01));
-                    const accuracyError = (this.brain ? (this.brain._prng(99) - 0.5) * accuracyRange : 0);
+                    const seed = this.getNumericId() + this.game.lastTime;
+                    // Add slight inaccuracy to lead calculation (up to 0.15 radians error)
+                    const accuracyError = (this.brain ? (this.brain._prng(99) - 0.5) * 0.3 : 0);
                     const leadAngle = (this.brain ? this.brain.getLeadAngle() : this.angle) + accuracyError;
 
                     if (dist < 200) {
-                        // Close range: slightly more spread
+                        // Close range: slightly more spread (0.2 instead of 0.12)
                         const spread = 0.2 * spreadMultiplier;
-                        const densityBonus = Math.floor(this.projectileDensity - 1);
-                        for (let i = -(1 + densityBonus); i <= (1 + densityBonus); i += 2) {
-                            const p = new Projectile(this.game, this.x, this.y, leadAngle + spread * i, 'bullet', 'enemy');
-                            p.damage *= this.damageMultiplier;
-                            this.game.projectiles.push(p);
+                        for (let i = -1; i <= 1; i += 2) {
+                            this.game.projectiles.push(new Projectile(this.game, this.x, this.y, leadAngle + spread * i, 'bullet', 'enemy'));
                         }
-                        if (this.game.audio) this.game.audio.enemyShot();
                     } else {
                         // Long range: much more spread (0.8 instead of 0.5)
                         const spread = (Math.sin(seed * 1.5) * 0.8) * spreadMultiplier;
-                        const p = new Projectile(this.game, this.x, this.y, leadAngle + spread, 'bullet', 'enemy');
-                        p.damage *= this.damageMultiplier;
-                        this.game.projectiles.push(p);
-                        if (this.game.audio) this.game.audio.enemyShot();
+                        this.game.projectiles.push(new Projectile(this.game, this.x, this.y, leadAngle + spread, 'bullet', 'enemy'));
                     }
                 }
             }
@@ -817,24 +742,21 @@ export class Enemy {
                         missile.speed = 300;
                         missile.maxSpeed = 800;
                         missile.acceleration = 350;
-                        missile.damage = 2 * this.damageMultiplier;
+                        missile.damage = 2;
                         missile.color = '#6bd6ff';
                         this.game.projectiles.push(missile);
-                        if (this.game.audio) this.game.audio.enemyShot();
                         this.hasFiredSingleMissile = true;
                     }
                 } else {
-                    // Precision lead shot — accuracy improves heavily at higher levels
-                    const seed = this.getNumericId() + this.game.gameTime;
-                    const accuracyRange = Math.max(0.02, 0.15 - (level * 0.005));
-                    const accuracyError = (this.brain ? (this.brain._prng(88) - 0.5) * accuracyRange : 0);
+                    // Precision lead shot — slightly more spread for fairness
+                    const seed = this.getNumericId() + this.game.lastTime;
+                    const accuracyError = (this.brain ? (this.brain._prng(88) - 0.5) * 0.15 : 0);
                     const spread = (Math.sin(seed * 2.1) * 0.15) * spreadMultiplier;
                     const shot = new Projectile(this.game, this.x, this.y, leadAngle + spread + accuracyError, 'bullet', 'enemy');
                     shot.speed = 750; // slightly faster for lead-targeting accuracy
-                    shot.damage = 2 * this.damageMultiplier;
+                    shot.damage = 2;
                     shot.color = '#6bd6ff';
                     this.game.projectiles.push(shot);
-                    if (this.game.audio) this.game.audio.enemyShot();
                 }
             }
         } else if (this.type === 'launcher') {
@@ -848,10 +770,9 @@ export class Enemy {
                         missile.speed = 220;
                         missile.maxSpeed = 650;
                         missile.acceleration = 260;
-                        missile.damage = 2 * this.damageMultiplier;
+                        missile.damage = 2;
                         missile.color = '#ff0099';
                         this.game.projectiles.push(missile);
-                        if (this.game.audio) this.game.audio.enemyShot();
                         this.hasFiredSingleMissile = true;
                     }
                 } else {
@@ -859,10 +780,9 @@ export class Enemy {
                     const spread = (Math.sin(seed * 0.8) * 0.3) * spreadMultiplier;
                     const bullet = new Projectile(this.game, this.x, this.y, this.angle + spread, 'bullet', 'enemy');
                     bullet.speed = 350;
-                    bullet.damage = 2 * this.damageMultiplier;
+                    bullet.damage = 2;
                     bullet.color = '#ff0099';
                     this.game.projectiles.push(bullet);
-                    if (this.game.audio) this.game.audio.enemyShot();
                 }
             }
         } else if (this.type === 'pulsar') {
@@ -882,6 +802,12 @@ export class Enemy {
     }
 
     takeDamage(amount) {
+        if (!Number.isFinite(this.health)) {
+            this.health = this.maxStartingHealth || 1;
+        }
+        if (!Number.isFinite(amount)) {
+            amount = 1;
+        }
         this.health -= amount;
         if (this.health <= 0) {
             this.health = 0;

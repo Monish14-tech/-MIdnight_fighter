@@ -58,17 +58,45 @@
             originalLog.apply(console, arguments);
         };
     </script>
-    <link rel="stylesheet" href="style.css?v=25">
-    <link rel="stylesheet" href="ranks.css?v=25">
-    <script type="module" src="main.js?v=25"></script>
+    <link rel="stylesheet" href="style.css?v=56">
+    <link rel="stylesheet" href="ranks.css?v=56">
+    <script type="module" src="main.js?v=56"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
+            window.addEventListener('load', async () => {
+                const purgeKey = 'midnight_sw_cache_purged_v1';
+
+                // One-time hard cleanup for stale SW/caches so startup flow fixes always apply.
+                if (!localStorage.getItem(purgeKey)) {
+                    try {
+                        const regs = await navigator.serviceWorker.getRegistrations();
+                        await Promise.all(regs.map(reg => reg.unregister()));
+
+                        if ('caches' in window) {
+                            const keys = await caches.keys();
+                            await Promise.all(
+                                keys
+                                    .filter(key => key.startsWith('midnight-fighter-'))
+                                    .map(key => caches.delete(key))
+                            );
+                        }
+
+                        localStorage.setItem(purgeKey, 'true');
+                        window.location.reload();
+                        return;
+                    } catch (err) {
+                        console.warn('SW purge failed', err);
+                    }
+                }
+
                 navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('SW Registered'))
+                    .then(reg => {
+                        console.log('SW Registered');
+                        reg.update();
+                    })
                     .catch(err => console.log('SW Failed', err));
             });
         }
@@ -115,7 +143,7 @@
     <div id="game-container">
         <canvas id="gameCanvas" width="1280" height="720"></canvas>
         <div id="ui-layer">
-            <div id="hud">
+            <div id="hud" style="display:none;">
                 <div id="hud-left">
                     <div class="score-container">LEVEL: <span id="level-display">1</span></div>
                     <div class="dash-container">DASH: <div id="dash-bar">
@@ -195,7 +223,7 @@
                 </div>
             </div>
 
-            <div id="start-screen" class="screen">
+            <div id="start-screen" class="screen active">
                 <h1 class="title glitch" data-text="COSMIC STRIKE">COSMIC STRIKE</h1>
                 <p class="subtitle">NEON SURVIVAL</p>
 
