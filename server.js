@@ -6,8 +6,10 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
+import { ServerGame } from './server/ServerGame.js'; // <-- NEW
 
 console.log('🎮 MIDNIGHT FIGHTER - Starting server...');
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -494,10 +496,13 @@ app.post('/api/rooms/leave', async (req, res) => {
         if (live) {
             for (const [, client] of live.clients.entries()) {
                 try {
-                    client.ws.send(JSON.stringify({ type: 'room_closed', roomId }));
+                    client.ws && client.ws.send(JSON.stringify({ type: 'room_closed', roomId }));
                 } catch {
                     // ignore ws errors
                 }
+            }
+            if (live.game) {
+                live.game.stop();
             }
             liveRooms.delete(roomId);
         }
@@ -705,18 +710,23 @@ function setupRealtimeServer(httpServer) {
             }
 
             if (!liveRooms.has(roomId)) {
+                console.log(`[Socket.IO] Initializing New ServerGame for Room: ${roomId}`);
+                const game = new ServerGame(roomId, io);
+                
                 liveRooms.set(roomId, {
                     clients: new Map(),
-                    state: {
-                        players: {}
-                    }
+                    game: game,
+                    state: { players: {} } // Ensure state is initialized
                 });
             }
 
             const liveRoom = liveRooms.get(roomId);
+            liveRoom.game.addPlayer(role, playerName, shipType || 'default');
+            
             liveRoom.clients.set(role, {
                 socket,
                 playerName,
+                role, // Add role to client object
                 shipType: shipType || 'default',
                 lastSeen: Date.now()
             });
@@ -725,6 +735,16 @@ function setupRealtimeServer(httpServer) {
 
             // Join Socket.IO room for easier broadcasting
             socket.join(roomId);
+
+            // INPUT HANDLER
+            socket.on('input', (data) => {
+                if (context.roomId && context.role && liveRooms.has(context.roomId)) {
+                    const lRoom = liveRooms.get(context.roomId);
+                    if (lRoom.game && data.keys) {
+                        lRoom.game.applyInput(context.role, data.keys);
+                    }
+                }
+            });
 
             await roomsCollection.updateOne(
                 { roomId },
@@ -742,7 +762,7 @@ function setupRealtimeServer(httpServer) {
                 roomId,
                 hostName: room.hostName,
                 guestName: room.guestName,
-                players: liveRoom.state.players
+                players: liveRoom.state ? (liveRoom.state.players || {}) : {}
             });
 
             console.log(`[Socket.IO] Player "${playerName}" (${role}) joined room "${roomId}"`);
@@ -779,119 +799,7 @@ function setupRealtimeServer(httpServer) {
             );
         });
 
-        socket.on('state_update', async ({ state }) => {
-            if (!context.roomId || !context.role) return;
-
-            const liveRoom = liveRooms.get(context.roomId);
-            if (!liveRoom) return;
-            const client = liveRoom.clients.get(context.role);
-            if (!client) return;
-
-            client.lastSeen = Date.now();
-
-            liveRoom.state.players[context.role] = {
-                ...(state || {}),
-                playerName: context.playerName,
-                updatedAt: Date.now()
-            };
-
-            // Broadcast to other players in the room
-            for (const [peerRole, peer] of liveRoom.clients.entries()) {
-                if (peerRole !== context.role) {
-                    peer.socket.emit('peer_state', {
-                        from: context.role,
-                        state: liveRoom.state.players[context.role]
-                    });
-                }
-            }
-        });
-
-        socket.on('input_update', async ({ input }) => {
-            if (!context.roomId || !context.role) return;
-
-            const liveRoom = liveRooms.get(context.roomId);
-            if (!liveRoom) return;
-            const client = liveRoom.clients.get(context.role);
-            if (!client) return;
-
-            client.lastSeen = Date.now();
-
-            // Broadcast to other players in the room
-            for (const [peerRole, peer] of liveRoom.clients.entries()) {
-                if (peerRole !== context.role) {
-                    peer.socket.emit('peer_input', {
-                        from: context.role,
-                        input: input || {}
-                    });
-                }
-            }
-        });
-
-        // Mutual Optimistic Combat: Accept destruction events from ANY player and relay to peers
-        socket.on('destroy_enemy', (data) => {
-            if (!context.roomId) return;
-            const liveRoom = liveRooms.get(context.roomId);
-            if (!liveRoom) return;
-            for (const [peerRole, peer] of liveRoom.clients.entries()) {
-                if (peerRole !== context.role) {
-                    peer.socket.emit('destroy_enemy', data);
-                }
-            }
-        });
-
-        socket.on('destroy_boss', (data) => {
-            if (!context.roomId) return;
-            const liveRoom = liveRooms.get(context.roomId);
-            if (!liveRoom) return;
-            for (const [peerRole, peer] of liveRoom.clients.entries()) {
-                if (peerRole !== context.role) {
-                    peer.socket.emit('destroy_boss', data);
-                }
-            }
-        });
-
-        socket.on('destroy_powerup', (data) => {
-            if (!context.roomId) return;
-            const liveRoom = liveRooms.get(context.roomId);
-            if (!liveRoom) return;
-            for (const [peerRole, peer] of liveRoom.clients.entries()) {
-                if (peerRole !== context.role) {
-                    peer.socket.emit('destroy_powerup', data);
-                }
-            }
-        });
-
-        // Hit relay: GUEST sends hit → forward ONLY to HOST so HOST applies damage
-        socket.on('hit_enemy', (data) => {
-            if (!context.roomId) return;
-            const liveRoom = liveRooms.get(context.roomId);
-            if (!liveRoom) return;
-            const host = liveRoom.clients.get('host');
-            if (host && context.role !== 'host') {
-                host.socket.emit('hit_enemy', { ...data, from: context.role });
-            }
-        });
-
-        socket.on('hit_boss', (data) => {
-            if (!context.roomId) return;
-            const liveRoom = liveRooms.get(context.roomId);
-            if (!liveRoom) return;
-            const host = liveRoom.clients.get('host');
-            if (host && context.role !== 'host') {
-                host.socket.emit('hit_boss', { ...data, from: context.role });
-            }
-        });
-
-        // Sync: HOST sends game_snapshot → forward to GUEST only
-        socket.on('game_snapshot', (data) => {
-            if (!context.roomId || context.role !== 'host') return;
-            const liveRoom = liveRooms.get(context.roomId);
-            if (!liveRoom) return;
-            const guest = liveRoom.clients.get('guest');
-            if (guest) {
-                guest.socket.emit('game_snapshot', data);
-            }
-        });
+        // The entire P2P routing removed because the Server now runs the authoritative ServerGame loop!
 
 
         socket.on('player_died', async () => {

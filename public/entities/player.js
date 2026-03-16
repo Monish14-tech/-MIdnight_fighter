@@ -1,5 +1,5 @@
-import { AfterburnerTrail, PhoenixRebirth } from './particle.js?v=4';
-import { Projectile } from './projectile.js?v=4';
+import { AfterburnerTrail, PhoenixRebirth } from './particle.js';
+import { Projectile } from './projectile.js';
 
 export class Player {
     constructor(game, shipType = 'default', options = {}) {
@@ -402,6 +402,36 @@ export class Player {
             if (moveVec.x !== 0 || moveVec.y !== 0) {
                 this.spawnAfterburner();
             }
+        }
+    }
+
+    // Server-Authoritative Hook: Skips physics & logic, runs visual counters only.
+    visualUpdate(deltaTime) {
+        if (this.isEntering) {
+            this.enterTimer += deltaTime;
+            const t = Math.min(this.enterTimer / this.enterDuration, 1);
+            const eased = 1 - Math.pow(1 - t, 3);
+            const startY = (this.game.logicalHeight || this.game.height || 600) + 100;
+            const targetY = (this.game.logicalHeight || this.game.height || 600) / 2;
+            this.y = startY + (targetY - startY) * eased;
+            this.angle = -Math.PI / 2;
+            if (t >= 1) this.isEntering = false;
+        }
+
+        if (this.invulnerableTimer > 0) this.invulnerableTimer -= deltaTime;
+        if (this.damageFlashTimer > 0) this.damageFlashTimer -= deltaTime;
+
+        // Update Trail
+        for (let i = this.trail.length - 1; i >= 0; i--) {
+            this.trail[i].alpha -= deltaTime * 4;
+            if (this.trail[i].alpha <= 0) this.trail.splice(i, 1);
+        }
+
+        // Spawn afterburner trails
+        this.afterburnerTimer += deltaTime;
+        if (this.afterburnerTimer > 0.05) {
+            this.afterburnerTimer = 0;
+            this.spawnAfterburner();
         }
     }
 

@@ -8,7 +8,8 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="icon" href="data:,">
+    <link rel="icon" href="icon.png">
+    <link rel="manifest" href="manifest.json">
     <title>Midnight Fighter | Neon Survival</title>
     <script>
         // Visible Game Error Handler
@@ -57,15 +58,36 @@
             originalLog.apply(console, arguments);
         };
     </script>
-    <link rel="stylesheet" href="style.css?v=18">
-    <link rel="stylesheet" href="ranks.css?v=18">
-    <script type="module" src="main.js?v=21"></script>
+    <link rel="stylesheet" href="style.css?v=25">
+    <link rel="stylesheet" href="ranks.css?v=25">
+    <script type="module" src="main.js?v=25"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW Registered'))
+                    .catch(err => console.log('SW Failed', err));
+            });
+        }
+    </script>
 </head>
 
 <body>
+
+    <!-- Brand Splash Screen -->
+    <div id="brand-splash" class="brand-splash">
+        <div class="brand-content">
+            <div class="brand-logo">⚡</div>
+            <h1 class="brand-title glitch" data-text="MUNEZ STUDIOS">MUNEZ STUDIOS</h1>
+            <p class="brand-subtitle">PRESENTS</p>
+            <div class="brand-loader">
+                <div class="brand-loader-progress"></div>
+            </div>
+        </div>
+    </div>
 
     <div id="scanlines"></div>
     <div id="vignette"></div>
@@ -193,7 +215,7 @@
                         <span id="achievement-notification-dot" class="notification-dot hidden"></span>
                     </button>
                     <button id="leaderboard-btn" class="neon-btn">LEADERBOARD</button>
-                    <button id="collab-btn" class="neon-btn">COLLABORATE</button>
+                    <button id="collab-btn" class="neon-btn coming-soon" disabled>COLLABORATE (COMING SOON)</button>
                 </div>
                 <p id="total-coins-display">COINS: 0</p>
                 <p id="player-name-display" style="margin-top: 10px; font-size: 14px;">PILOT: <span

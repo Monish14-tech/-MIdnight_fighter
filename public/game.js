@@ -1,15 +1,16 @@
-import { InputHandler } from './input.js?v=16';
-import { Player } from './entities/player.js?v=16';
-import { Enemy } from './entities/enemy.js?v=16';
-import { Explosion, FloatingText } from './entities/particle.js?v=16';
-import { Projectile } from './entities/projectile.js?v=16';
-import { AudioController } from './audio.js?v=16';
-import { ScreenShake, Nebula, CosmicDust, Planet, Asteroid } from './utils.js?v=16';
-import { PowerUp } from './entities/powerup.js?v=16';
-import { LeaderboardManager } from './leaderboard.js?v=16';
-import { SocketIONetplay } from './socketio-netplay.js?v=16';
-import { AchievementManager, ACHIEVEMENT_DATA } from './achievements.js?v=16';
-import { RANK_DATA, getRankByGlobalPosition } from './ranks.js?v=16';
+import { InputHandler } from './input.js';
+import { Player } from './entities/player.js';
+import { Enemy } from './entities/enemy.js';
+import { Explosion, FloatingText } from './entities/particle.js';
+import { Projectile } from './entities/projectile.js';
+import { AudioController } from './audio.js';
+import { ScreenShake, Nebula, CosmicDust, Planet, Asteroid } from './utils.js';
+import { PowerUp } from './entities/powerup.js';
+import { LeaderboardManager } from './leaderboard.js';
+import { ServerAuthoritativeNetplay } from './server-authoritative-netplay.js'; // <-- NEW MULTIPLAYER
+import { AchievementManager, ACHIEVEMENT_DATA } from './achievements.js';
+import { RANK_DATA, getRankByGlobalPosition } from './ranks.js';
+import { NotificationManager } from './notifications.js';
 
 class AssetLoader {
     constructor() {
@@ -198,6 +199,7 @@ export class Game {
         // Achievements & Ranks
         this.achievementManager = new AchievementManager(this);
         this.leaderboard = new LeaderboardManager();
+        this.notifications = new NotificationManager(this);
 
         // Global Sync
         this.syncGlobalData();
@@ -315,7 +317,7 @@ export class Game {
         };
         this.remoteShipType = this.selectedShip;
         this.localShipType = this.selectedShip;
-        this.netplay = new SocketIONetplay();
+        this.netplay = new ServerAuthoritativeNetplay(this);
         this.netSyncTimer = 0;
         this.rankPerk = { coinBonus: 0, hpMercy: false, nameGlow: false, hudBorder: false };
         this.globalRank = Infinity; // Store competitive ranking position
@@ -583,211 +585,67 @@ export class Game {
             }
         });
 
-        this.netplay.on('peer_state', (message) => this.applyPeerState(message));
-        this.netplay.on('peer_input', (message) => this.applyPeerInput(message));
-        this.netplay.on('peer_joined', (message) => {
-            if (message?.shipType) {
-                this.remoteShipType = message.shipType;
-                this.updatePlayerHudInfo();
-            }
-        });
-        this.netplay.on('force_game_over', () => this.handleGameOver());
-        this.netplay.on('room_closed', () => {
-            this.leaveCollaborateRoom(true, true);
-        });
-        this.netplay.on('closed', () => {
-            if (this.onlineCoop) {
-                this.leaveCollaborateRoom(true, true);
-            }
-        });
+        // ── SERVER AUTHORITATIVE HOOKS ──
+        // (Listeners like 'spawn_enemy', 'level_up', etc. are now handled internally 
+        // by ServerAuthoritativeNetplay, which calls the spawnAuthoritative... methods below.)
+        this.authoritativeBullets = []; 
 
-        // Remote Spawn Listeners
-        this.netplay.on('spawn_enemy', (data) => {
-            if (this.onlineRole === 'guest') {
-                const enemy = new Enemy(this, data.type);
+
+        // ── AUTHORITATIVE CO-OP METHODS ── //
+        // These are called by `ServerAuthoritativeNetplay` when it receives specific events.
+        
+        this.spawnAuthoritativeEnemy = (data) => {
+            // Use the same dynamic import logic ensure ESM compatibility
+            import('./entities/enemy.js').then(m => {
+                const EnemyClass = m.default || m.Enemy;
+                if (!EnemyClass) return;
+                const enemy = new EnemyClass(this, data.type);
+                enemy.remoteId = data.id;
                 enemy.x = data.x;
                 enemy.y = data.y;
-                enemy.remoteId = data.id;
                 this.enemies.push(enemy);
+            }).catch(err => console.error('Error spawning authoritative enemy:', err));
+        };
+
+        this.spawnAuthoritativeBoss = (data) => {
+            import('./entities/boss.js').then(m => {
+                const BossClass = m.default || m.Boss;
+                if (!BossClass) return;
+                this.boss = new BossClass(this, data.level, 'top', 0);
+                this.boss.remoteId = data.id;
+                this.boss.x = data.x;
+                this.boss.y = data.y;
+                this.boss.health = this.boss.maxHealth;
+                const bossHud = document.getElementById('boss-hud');
+                if (bossHud) bossHud.classList.add('active');
+            }).catch(err => console.error('Error spawning authoritative boss:', err));
+        };
+
+        this.destroyAuthoritativeEnemy = (id) => {
+            const ix = this.enemies.findIndex(e => e.remoteId === id);
+            if (ix !== -1) {
+                const enemy = this.enemies[ix];
+                this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
+                this.addScore(enemy.points, true);
+                this.enemies.splice(ix, 1);
             }
-        });
+        };
 
-        this.netplay.on('destroy_enemy', (data) => {
-            if (this.onlineRole === 'guest') {
-                const index = this.enemies.findIndex(e => e.remoteId === data.id);
-                if (index !== -1) {
-                    const enemy = this.enemies[index];
-                    if (!enemy.markedForDeletion) {
-                        enemy.markedForDeletion = true;
-                        this.addScore(enemy.points, data.useCombo);
-                        this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
-                    }
-                }
-            }
-        });
+        this.destroyAuthoritativeBoss = () => {
+             this.handleBossDefeat(); 
+        };
 
-        this.netplay.on('spawn_boss', (data) => {
-            if (this.onlineRole === 'guest' && !this.boss) {
-                this.spawnBoss(data.type);
-                if (this.boss) {
-                    this.boss.remoteId = data.id;
-                    this.boss.x = data.x;
-                    this.boss.y = data.y;
-                }
-            }
-        });
+        this.authoritativeLevelUp = (data) => {
+            this.currentLevel = data.level;
+            this.enemiesForLevel = data.enemiesForLevel;
+            this.enemiesSpawned = 0;
+            this.score = data.score;
+            this.difficultyMultiplier = data.difficultyMultiplier;
+            this.enemyInterval = data.enemyInterval || this.enemyInterval;
 
-        this.netplay.on('destroy_boss', (data) => {
-            if (this.onlineRole === 'guest' && this.boss && this.boss.remoteId === data.id) {
-                this.handleBossDefeat();
-            }
-        });
-
-        this.netplay.on('spawn_powerup', (data) => {
-            if (this.onlineRole === 'guest') {
-                const pu = new PowerUp(this, data.type, data.x, data.y);
-                pu.remoteId = data.id;
-                this.powerups.push(pu);
-            }
-        });
-
-        this.netplay.on('destroy_powerup', (data) => {
-            const index = this.powerups.findIndex(p => p.remoteId === data.id);
-            if (index !== -1) {
-                this.powerups[index].markedForDeletion = true;
-            }
-        });
-
-        // HOST: apply damage from GUEST's hit
-        this.netplay.on('hit_enemy', (data) => {
-            if (this.onlineRole !== 'host') return;
-            const enemy = this.enemies.find(e => e.remoteId === data.id);
-            if (enemy && !enemy.markedForDeletion) {
-                const dead = enemy.takeDamage(data.damage);
-                if (dead) {
-                    this.handleEnemyDefeat(enemy, true, data.missile);
-                }
-            }
-        });
-
-        this.netplay.on('hit_boss', (data) => {
-            if (this.onlineRole !== 'host') return;
-            if (this.boss && !this.boss.markedForDeletion) {
-                const dead = this.boss.takeDamage(data.damage);
-                if (dead) {
-                    this.handleBossDefeat();
-                    this.netplay.emit('destroy_boss', { id: this.boss?.remoteId });
-                }
-            }
-        });
-
-        // GUEST: apply incoming snapshot from HOST — mirror enemy/boss positions
-        this.netplay.on('game_snapshot', (snapshot) => {
-            if (this.onlineRole !== 'guest' || !snapshot) return;
-
-            // Sync level state
-            if (snapshot.level !== undefined) this.currentLevel = snapshot.level;
-            if (snapshot.score !== undefined) this.score = snapshot.score;
-            if (snapshot.enemiesSpawned !== undefined) this.enemiesSpawned = snapshot.enemiesSpawned;
-            if (snapshot.enemiesForLevel !== undefined) this.enemiesForLevel = snapshot.enemiesForLevel;
-
-            // Mirror enemy positions (lerp smoothly)
-            const snapshotIds = new Set();
-            if (snapshot.enemies) {
-                for (const se of snapshot.enemies) {
-                    snapshotIds.add(se.id);
-                    let local = this.enemies.find(e => e.remoteId === se.id);
-                    if (!local) {
-                        // Spawn new enemy if it doesn't exist locally
-                        import('./entities/enemy.js?v=4').then(m => {
-                            const EnemyClass = m.default || m.Enemy;
-                            const e = new EnemyClass(this, se.type || 'chaser');
-                            e.x = se.x; e.y = se.y;
-                            e.remoteId = se.id;
-                            e.hp = se.hp; e.maxHp = se.maxHp || se.hp;
-                            this.enemies.push(e);
-                        });
-                    } else {
-                        // Lerp to host position (smooth interpolation)
-                        local.x += (se.x - local.x) * 0.35;
-                        local.y += (se.y - local.y) * 0.35;
-                        local.hp = se.hp;
-                        local.angle = se.angle || local.angle;
-                    }
-                }
-                // Remove enemies that are gone on host
-                this.enemies = this.enemies.filter(e => !e.remoteId || snapshotIds.has(e.remoteId));
-            }
-
-            // Mirror boss
-            if (snapshot.boss && this.boss) {
-                this.boss.x += (snapshot.boss.x - this.boss.x) * 0.35;
-                this.boss.y += (snapshot.boss.y - this.boss.y) * 0.35;
-                this.boss.hp = snapshot.boss.hp;
-                this.boss.angle = snapshot.boss.angle || this.boss.angle;
-                // Update boss HUD
-                const bossFill = document.getElementById('boss-health-fill');
-                if (bossFill && this.boss.maxHp) {
-                    bossFill.style.width = `${(this.boss.hp / this.boss.maxHp) * 100}%`;
-                }
-            } else if (snapshot.boss && !this.boss) {
-                import('./entities/boss.js?v=4').then(m => {
-                    const BossClass = m.default || m.Boss;
-                    if (!this.boss) {
-                        this.boss = new BossClass(this, snapshot.boss.level || this.currentLevel, snapshot.boss.side || 'top', snapshot.boss.modelIndex || 0);
-                        this.boss.x = snapshot.boss.x;
-                        this.boss.y = snapshot.boss.y;
-                        this.boss.hp = snapshot.boss.hp;
-                        this.boss.remoteId = snapshot.boss.id;
-                        const bossHud = document.getElementById('boss-hud');
-                        if (bossHud) bossHud.classList.add('active');
-                        const bossName = document.getElementById('boss-name');
-                        if (bossName) bossName.innerText = snapshot.boss.name || 'UNIDENTIFIED THREAT';
-                    }
-                });
-            } else if (!snapshot.boss && this.boss) {
-                // Boss was defeated on host
-                this.handleBossDefeat();
-            }
-        });
-
-        this.netplay.on('level_up', (data) => {
-            if (this.onlineRole === 'guest') {
-                this.currentLevel = data.level;
-                this.enemiesForLevel = data.enemiesForLevel;
-                this.enemiesSpawned = 0;
-                this.score = data.score;
-                this.difficultyMultiplier = data.difficultyMultiplier;
-                this.enemyInterval = data.enemyInterval;
-
-                this.showLevelUpText(this.currentLevel);
-                if (this.audio) this.audio.dash();
-            }
-        });
-
-        this.netplay.on('spawn_boss', (data) => {
-            if (this.onlineRole === 'guest' && !this.boss) {
-                import('./entities/boss.js?v=4').then(m => {
-                    const BossClass = m.default || m.Boss;
-                    if (BossClass) {
-                        this.boss = new BossClass(this, data.level, data.side, data.modelIndex);
-                        this.boss.remoteId = data.id;
-                        const bossHud = document.getElementById('boss-hud');
-                        if (bossHud) bossHud.classList.add('active');
-                        const bossName = document.getElementById('boss-name');
-                        if (bossName) bossName.innerText = data.name || "UNIDENTIFIED THREAT";
-                    }
-                });
-            }
-        });
-
-        this.netplay.on('spawn_powerup', (data) => {
-            if (this.onlineRole === 'guest') {
-                const pu = new PowerUp(this, data.type, data.x, data.y);
-                pu.remoteId = data.id;
-                this.powerups.push(pu);
-            }
-        });
+            this.showLevelUpText(this.currentLevel);
+            if (this.audio) this.audio.play('levelUp');
+        };
     }
 
     initRandom(seedStr) {
@@ -809,6 +667,29 @@ export class Game {
     init() {
         this.resize();
         this.drawBackground();
+
+        // BRAND SPLASH TRANSITION
+        const splash = document.getElementById('brand-splash');
+        if (splash) {
+            setTimeout(() => {
+                splash.classList.add('fade-out');
+                // Ensure audio context is ready on first interaction with start screen
+                this.startScreen.addEventListener('mousedown', () => {
+                   if (this.audio && this.audio.ctx && this.audio.ctx.state === 'suspended') {
+                       this.audio.ctx.resume();
+                   }
+                }, { once: true });
+                
+                // APP NOTIFICATIONS DEMO
+                setTimeout(() => {
+                    this.notifications.notify('System Online', 'Welcome back, Pilot. All engines ready at 100%.');
+                }, 1000);
+                setTimeout(() => {
+                    this.notifications.notify('Daily Bonus', 'You received +25 Coins for your loyalty.');
+                    this.addCoins(25);
+                }, 5000);
+            }, 2500);
+        }
 
         this.entityCounter = 0;
 
@@ -2065,80 +1946,43 @@ export class Game {
         }
 
         if (!this.gameOver) {
-            const players = this.getPlayers();
-            if (players.length > 0) {
-                if (this.onlineCoop && this.coopMode) {
-                    if (this.player) this.player.update(dt, this.input);
-                    if (this.playerTwo) this.playerTwo.update(dt, this.remoteInputState);
-                } else {
+            
+            // ── CO-OP SERVER AUTHORITATIVE FAST-PATH ──
+            if (this.onlineCoop) {
+                // In Server Authoritative mode, we DO NOT run local update logic.
+                // The ServerAuthoritativeNetplay handles pushing our input to the server at 60Hz.
+                // It also receives the physics delta and overwrites our x, y, hp.
+                
+                // We ONLY do visual updates for Player/Enemies/Boss here (animations, shield flares, etc.)
+                if (this.player && typeof this.player.visualUpdate === 'function') this.player.visualUpdate(dt);
+                if (this.playerTwo && typeof this.playerTwo.visualUpdate === 'function') this.playerTwo.visualUpdate(dt);
+                
+                this.enemies.forEach(e => { if (typeof e.visualUpdate === 'function') e.visualUpdate(dt); });
+                if (this.boss && typeof this.boss.visualUpdate === 'function') this.boss.visualUpdate(dt);
+                
+                this.powerups.forEach(p => p.update(dt)); // Visual bounding box / flashing
+                
+                if (this.boss) this.updateBossUI();
+                
+            } else {
+                // ── SINGLE PLAYER LOCAL PHYSICS ──
+                const players = this.getPlayers();
+                if (players.length > 0) {
                     players.forEach((player, index) => {
                         const input = index === 0 ? this.input : this.inputTwo;
                         player.update(dt, input);
                     });
                 }
-            }
-
-            if (this.onlineCoop) {
-                this.netSyncTimer += dt;
-                this.netplay.emit('input_update', { input: { ...this.input.keys } });
-
-                if (this.netSyncTimer >= (1 / 60) && this.player) {
-                    this.netSyncTimer = 0;
-                    this.netplay.emit('state_update', {
-                        state: {
-                            x: this.player.x,
-                            y: this.player.y,
-                            angle: this.player.angle,
-                            health: this.player.currentHealth,
-                            maxHealth: this.player.maxHealth,
-                            shipType: this.player.shipType,
-                            isDashing: this.player.isDashing,
-                            score: this.score,
-                            level: this.currentLevel
-                        }
-                    });
-                }
-
-                if (this.playerTwo && this.remotePlayerState) {
-                    const s = this.remotePlayerState;
-                    const lerpFactor = 0.3;
-                    this.playerTwo.x += (s.x - this.playerTwo.x) * lerpFactor;
-                    this.playerTwo.y += (s.y - this.playerTwo.y) * lerpFactor;
-                    this.playerTwo.angle = s.angle;
-                    this.playerTwo.currentHealth = s.health;
-                    this.playerTwo.maxHealth = s.maxHealth;
-                    this.playerTwo.isDashing = s.isDashing;
-
-                    if (this.onlineRole === 'guest') {
-                        if (s.score !== undefined) this.score = s.score;
-                        if (s.level !== undefined) this.currentLevel = s.level;
-                    }
-
-                    if (s.shipType && this.playerTwo.shipType !== s.shipType) {
-                        this.playerTwo.shipType = s.shipType;
-                        this.remoteShipType = s.shipType;
-                        this.updatePlayerHudInfo();
-                    }
-                }
-            }
-
-            // Spawning logic - Only the host handles spawning
-            const isHost = !this.onlineCoop || this.onlineRole === 'host';
-            if (isHost) {
+                
                 this.enemyTimer += dt;
-
-                // Burst Spawn Logic: If screen is too empty, spawn faster
                 const maxOnScreen = this.getMaxEnemiesOnScreen();
                 const currentCount = this.enemies.length;
                 const burstThreshold = Math.ceil(maxOnScreen * 0.4);
 
                 if (this.enemyTimer > this.enemyInterval && !this.boss) {
-                    // Decide how many to spawn: 2 if screen is empty, 1 otherwise
                     let spawnCount = (currentCount < burstThreshold) ? 2 : 1;
-
                     for (let i = 0; i < spawnCount; i++) {
-                        if (this.enemies.length < maxOnScreen &&
-                            this.enemiesSpawned < this.enemiesForLevel) {
+                        if (this.enemies.length < maxOnScreen && this.enemiesSpawned < this.enemiesForLevel) {
                             const enemy = this.spawnEnemy();
                             this.enemiesSpawned += (enemy ? enemy.weight : 1);
                         }
@@ -2147,40 +1991,36 @@ export class Game {
                 }
 
                 this.powerupTimer += dt;
-                // During boss fights, spawn power-ups more frequently (every 8s)
                 const powerupCooldown = this.boss ? 8.0 : this.powerupInterval;
                 if (this.powerupTimer > powerupCooldown && this.powerups.length < (this.boss ? 5 : 3)) {
                     if (this.boss) {
-                        // Guaranteed mercy drop during boss fight
-                        this.spawnPowerUpAt(
-                            this.random() * this.width * 0.8 + this.width * 0.1,
-                            this.random() * this.height * 0.8 + this.height * 0.1
-                        );
+                        this.spawnPowerUpAt(this.random() * this.width * 0.8 + this.width * 0.1, this.random() * this.height * 0.8 + this.height * 0.1);
                     } else {
                         this.spawnPowerUp();
                     }
                     this.powerupTimer = 0;
                 }
-            }
 
-            // Entity Updates
-            if (this.empTimer > 0) {
-                this.empTimer -= dt;
-                // Draw only: enemies and boss logic skipped while frozen
-            } else {
-                this.enemies.forEach(e => e.update(dt));
-                if (this.boss) {
-                    this.boss.update(dt);
+                if (this.empTimer > 0) {
+                    this.empTimer -= dt;
+                } else {
+                    this.enemies.forEach(e => e.update(dt));
+                    if (this.boss) this.boss.update(dt);
                 }
+
+                this.projectiles.forEach(p => p.update(dt));
+                this.powerups.forEach(p => p.update(dt));
+
+                if (this.boss) this.updateBossUI();
+
+                // Local Collisions
+                this.checkCollisions();
+                this.checkProjectileCollisions();
+                this.checkPowerUpCollisions();
+                this.checkLevelUp();
             }
-
-            this.projectiles.forEach(p => p.update(dt));
-            this.powerups.forEach(p => p.update(dt));
-
-            if (this.boss) {
-                this.updateBossUI();
-            }
-
+            
+            // Universal Effects
             this.afterburners.forEach(a => {
                 if (a.update) a.update(dt);
                 else {
@@ -2188,14 +2028,13 @@ export class Game {
                     if (a.life <= 0) a.markedForDeletion = true;
                 }
             });
-
-            // Collisions
-            this.checkCollisions();
-            this.checkProjectileCollisions();
-            this.checkPowerUpCollisions();
-            this.checkLevelUp();
+            
         } else {
-            this.enemies.forEach(e => e.update(dt));
+            // GAME OVER STATE LOCAL UPDATES
+            this.enemies.forEach(e => {
+                 if (this.onlineCoop && typeof e.visualUpdate === 'function') e.visualUpdate(dt);
+                 else if (!this.onlineCoop) e.update(dt);
+            });
             this.projectiles.forEach(p => p.update(dt));
             this.afterburners.forEach(a => {
                 if (a.update) a.update(dt);
@@ -2224,9 +2063,6 @@ export class Game {
         }
 
         this.updateUI();
-
-        // Co-op network sync (HOST broadcasts snapshot, all players send position)
-        if (this.onlineCoop) this.updateNetworkSync(dt);
     }
 
     updateBossUI() {
@@ -2273,8 +2109,18 @@ export class Game {
         if (this.boss) this.boss.draw(this.ctx);
 
         // Draw Entities
+        if (this.onlineCoop && this.authoritativeBullets) {
+            this.authoritativeBullets.forEach(p => {
+                this.ctx.fillStyle = p.c || '#ffffff';
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, p.r || 4, 0, Math.PI * 2);
+                this.ctx.fill();
+            });
+        } else {
+            this.projectiles.forEach(p => p.draw(this.ctx));
+        }
+
         this.enemies.forEach(e => e.draw(this.ctx));
-        this.projectiles.forEach(p => p.draw(this.ctx));
         this.afterburners.forEach(a => {
             if (a.draw) a.draw(this.ctx);
         });
@@ -3595,135 +3441,24 @@ export class Game {
         }
     }
 
-    async createCollaborateRoom() {
-        if (!this.playerName) {
-            const name = prompt("Enter your pilot name:");
-            if (!name) return;
-            this.playerName = name;
-            localStorage.setItem('midnight_playerName', name);
-            this.updatePlayerNameDisplay();
-        }
-
-        const statusEl = document.getElementById('collab-status');
-        statusEl.innerText = "Creating secure room...";
-        statusEl.style.color = "#00f3ff";
-
+    async checkDataVersion() {
         try {
-            const response = await fetch('/api/rooms/create', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ hostName: this.playerName })
-            });
-            const data = await response.json();
+            const response = await fetch('/api/version');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    const serverVersion = data.version;
+                    const localVersion = parseInt(localStorage.getItem('midnight_data_version') || '1');
 
-            if (data.success) {
-                const roomId = data.roomId;
-                this.collabRoomId = roomId;
-                this.initRandom(roomId); // Initialize deterministic PRNG
-
-                await this.netplay.connect({
-                    roomId,
-                    playerName: this.playerName,
-                    shipType: this.selectedShip
-                });
-
-                this.netplay.on('peer_joined', (peerData) => {
-                    statusEl.innerText = `${peerData.playerName} joined! Starting mission...`;
-                    this.collabTeamMembers = [this.playerName, peerData.playerName];
-                    this.remoteShipType = peerData.shipType || 'default';
-                    this.spawnRemotePlayer(peerData.playerName, this.remoteShipType);
-
-                    setTimeout(() => {
-                        this.closeCollaborate();
-                        this.startGame();
-                    }, 1000);
-                });
-
-                document.getElementById('collab-room-id').innerText = roomId;
-                document.getElementById('collab-room-display').classList.remove('hidden');
-                document.getElementById('collab-waiting').classList.remove('hidden');
-                document.getElementById('collab-leave-btn').classList.remove('hidden');
-                document.getElementById('collab-create-btn').classList.add('hidden');
-                document.getElementById('collab-join-btn').disabled = true;
-
-                statusEl.innerText = "Room created. Waiting for partner...";
-                this.isRunning = true;
-                this.onlineRole = 'host';
-                this.onlineCoop = true;
-                this.coopMode = true;
-                this.collabTeamMembers = [this.playerName];
-
-            } else {
-                statusEl.innerText = "Failed to create room: " + (data.error || "Unknown error");
-                statusEl.style.color = "#ff0000";
+                    if (serverVersion > localVersion) {
+                        console.log(`🚨 Data version mismatch! Server: ${serverVersion}, Local: ${localVersion}. Resetting progress...`);
+                        this.resetProgress();
+                        localStorage.setItem('midnight_data_version', serverVersion);
+                    }
+                }
             }
-        } catch (error) {
-            statusEl.innerText = "Connection error. Please check internet.";
-            statusEl.style.color = "#ff0000";
-        }
-    }
-
-    async joinCollaborateRoom() {
-        const roomIdInput = document.getElementById('collab-room-input');
-        const roomId = roomIdInput.value.trim();
-
-        if (!roomId) {
-            alert("Please enter a Room ID");
-            return;
-        }
-
-        if (!this.playerName) {
-            const name = prompt("Enter your pilot name:");
-            if (!name) return;
-            this.playerName = name;
-            localStorage.setItem('midnight_playerName', name);
-            this.updatePlayerNameDisplay();
-        }
-
-        const statusEl = document.getElementById('collab-status');
-        statusEl.innerText = "Connecting to room " + roomId + "...";
-        statusEl.style.color = "#00f3ff";
-
-        try {
-            const response = await fetch('/api/rooms/join', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ roomId, playerName: this.playerName })
-            });
-            const data = await response.json();
-
-            if (data.success) {
-                this.collabRoomId = roomId;
-                this.initRandom(roomId); // Initialize deterministic PRNG
-
-                await this.netplay.connect({
-                    roomId,
-                    playerName: this.playerName,
-                    shipType: this.selectedShip
-                });
-
-                statusEl.innerText = "Connected to room: " + roomId;
-                this.isRunning = true;
-                this.onlineRole = 'guest';
-                this.onlineCoop = true;
-                this.coopMode = true;
-                this.collabTeamMembers = [data.room.hostName, this.playerName];
-                this.remoteShipType = data.room.hostShipType || 'default';
-
-                this.spawnRemotePlayer(data.room.hostName, this.remoteShipType);
-
-                setTimeout(() => {
-                    this.closeCollaborate();
-                    this.startGame();
-                }, 1000);
-
-            } else {
-                statusEl.innerText = "Error: " + (data.error || "Could not join room");
-                statusEl.style.color = "#ff0000";
-            }
-        } catch (error) {
-            statusEl.innerText = "Connection error. Please check internet.";
-            statusEl.style.color = "#ff0000";
+        } catch (e) {
+            console.warn('Could not check data version:', e);
         }
     }
 
@@ -3737,69 +3472,5 @@ export class Game {
         this.playerTwo = new Player(this, shipType || 'default', { playerId: remotePlayerId });
         this.playerTwo.playerName = name;
         this.updatePlayerHudInfo();
-    }
-
-    leaveCollaborateRoom(stopGame = false, silent = false) {
-        if (this.onlineCoop) {
-            this.netplay.disconnect();
-            this.onlineCoop = false;
-            this.onlineRole = null;
-        }
-
-        this.coopMode = false;
-        this.playerTwo = null;
-        this.collabRoomId = null;
-
-        document.getElementById('collab-room-display').classList.add('hidden');
-        document.getElementById('collab-waiting').classList.add('hidden');
-        document.getElementById('collab-leave-btn').classList.add('hidden');
-        document.getElementById('collab-create-btn').classList.remove('hidden');
-        document.getElementById('collab-join-btn').disabled = false;
-        document.getElementById('collab-status').innerText = silent ? "" : "You left the session.";
-
-        if (stopGame && this.isRunning) {
-            this.goToMainMenu();
-        }
-
-        this.updatePlayerHudInfo();
-    }
-
-
-    async checkDataVersion() {
-        try {
-            const response = await fetch('/api/version');
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success) {
-                    const serverVersion = data.version;
-                    const localVersion = parseInt(localStorage.getItem('midnight_data_version') || '1');
-
-                    if (serverVersion > localVersion) {
-                        console.log(`🚨 Data version mismatch! Server: ${serverVersion}, Local: ${localVersion}. Resetting progress...`);
-                        this.resetLocalProgress();
-                        localStorage.setItem('midnight_data_version', serverVersion);
-                    }
-                }
-            }
-        } catch (e) {
-            console.warn('Could not check data version:', e);
-        }
-    }
-
-    resetLocalProgress() {
-        // Clear gameplay progress from localStorage
-        localStorage.removeItem('midnight_coins');
-        localStorage.removeItem('midnight_owned_ships');
-        localStorage.removeItem('midnight_high_score');
-        localStorage.removeItem('midnight_lifetime_coins');
-        localStorage.removeItem('midnight_play_count');
-        localStorage.removeItem('midnight_achievements');
-
-        console.log('✅ Local progress data cleared.');
-
-        // Force reload to apply changes if already on main menu
-        if (!this.isRunning) {
-            window.location.reload();
-        }
     }
 }

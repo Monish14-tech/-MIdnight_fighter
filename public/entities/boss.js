@@ -1,5 +1,5 @@
-import { Projectile } from './projectile.js?v=4';
-import { Explosion } from './particle.js?v=4';
+import { Projectile } from './projectile.js';
+import { Explosion } from './particle.js';
 
 // ============================================================
 //  BossAI — Smart Strategy Module
@@ -550,6 +550,44 @@ export class Boss {
     _getPersonality() {
         const map = { 0: 'Phantom', 1: 'Titan', 2: 'Berserker', 3: 'Tactician', 4: 'Swarmlord' };
         return map[this.modelIndex] || 'Berserker';
+    }
+
+    // Server-Authoritative Hook: Evaluates purely visual elements (flashes, beam charge, shield spin) 
+    // without running AI logic, movement simulation, or phase transitions
+    visualUpdate(deltaTime) {
+        if (this.game.isPaused) return;
+
+        // Visual flash fading
+        if (this.damageFlashTimer > 0) {
+            this.damageFlashTimer -= deltaTime;
+        }
+
+        // Beam visual charging
+        if (this.beamCharging && this.beamChargeTime > 0) {
+            this.beamTimer += deltaTime;
+            if (this.beamTimer >= this.beamChargeTime) {
+                this.beamCharging = false;
+                this.beamTimer = 0;
+            }
+        }
+
+        // Force Field visual fading
+        if (this.forceFieldActive) {
+            this.forceFieldTimer += deltaTime;
+            if (this.forceFieldTimer >= this.forceFieldDuration) {
+                this.forceFieldActive = false;
+                this.forceFieldTimer = 0;
+            }
+        }
+
+        // Phantom Blink visual fading
+        if (this.isBlinking) {
+            this.blinkTimer = (this.blinkTimer || 0) + deltaTime;
+            if (this.blinkTimer >= 0.25) { 
+                this.isBlinking = false;
+                this.blinkTimer = 0;
+            }
+        }
     }
 
     update(deltaTime) {
