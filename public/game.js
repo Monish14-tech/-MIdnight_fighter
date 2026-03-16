@@ -830,36 +830,29 @@ export class Game {
         this.resize();
         this.drawBackground();
 
-        // BRAND SPLASH TRANSITION
-        const splash = document.getElementById('brand-splash');
-        if (splash) {
-            setTimeout(() => {
-                splash.classList.add('fade-out');
-                
-                // SHOW HOME SCREEN ONLY AFTER SPLASH
-                setTimeout(() => {
-                    if (this.startScreen) this.startScreen.classList.add('active');
-                }, 1000); // Match CSS transition duration
+        // ── Splash screen: CSS handles animation & fade automatically ──
+        // We just reveal the start screen after the splash duration (3.5 s).
+        const SPLASH_DURATION = 3500; // ms — keep in sync with CSS animation total
+        setTimeout(() => {
+            // Hide splash completely (CSS may not reach pointer-events:none in all browsers)
+            const splash = document.getElementById('brand-splash');
+            if (splash) splash.classList.add('hidden');
 
-                // Ensure audio context is ready on first interaction with start screen
-                this.startScreen.addEventListener('mousedown', () => {
-                   if (this.audio && this.audio.ctx && this.audio.ctx.state === 'suspended') {
-                       this.audio.ctx.resume();
-                   }
-                }, { once: true });
-                
-                // APP NOTIFICATIONS DEMO
-                setTimeout(() => {
-                    this.notifications.notify('System Online', 'Welcome back, Pilot. All engines ready at 100%.');
-                }, 2000);
-                setTimeout(() => {
+            // Show the main menu
+            if (this.startScreen) this.startScreen.classList.add('active');
+
+            // Welcome notification
+            setTimeout(() => {
+                try { this.notifications.notify('System Online', 'Welcome back, Pilot. All engines ready.'); } catch(e) {}
+            }, 800);
+            setTimeout(() => {
+                try {
                     this.notifications.notify('Daily Bonus', 'You received +25 Coins for your loyalty.');
                     this.addCoins(25);
-                }, 6000);
-            }, 2000);
-        }
+                } catch(e) {}
+            }, 4000);
+        }, SPLASH_DURATION);
 
-        this.entityCounter = 0;
 
         // Update coin display on start screen
         const coinEl = document.getElementById('total-coins-display');

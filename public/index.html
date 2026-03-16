@@ -77,14 +77,23 @@
 
 <body>
 
-    <!-- Brand Splash Screen -->
+    <!-- Brand Splash Screen - Pure CSS auto-fade, no JS dependency -->
     <div id="brand-splash" class="brand-splash">
-        <div class="brand-content">
-            <div class="brand-logo">⚡</div>
-            <h1 class="brand-title glitch" data-text="MUNEZ STUDIOS">MUNEZ STUDIOS</h1>
-            <p class="brand-subtitle">PRESENTS</p>
-            <div class="brand-loader">
-                <div class="brand-loader-progress"></div>
+        <!-- Particle rings -->
+        <div class="splash-ring splash-ring-1"></div>
+        <div class="splash-ring splash-ring-2"></div>
+        <div class="splash-ring splash-ring-3"></div>
+
+        <!-- Scan lines -->
+        <div class="splash-scanlines"></div>
+
+        <!-- Center content -->
+        <div class="splash-core">
+            <div class="splash-lightning">⚡</div>
+            <h1 class="splash-studio-name" data-text="MUNEZ STUDIOS">MUNEZ STUDIOS</h1>
+            <p class="splash-presents">P R E S E N T S</p>
+            <div class="splash-bar-track">
+                <div class="splash-bar-fill"></div>
             </div>
         </div>
     </div>
