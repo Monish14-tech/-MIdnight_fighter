@@ -6,7 +6,7 @@ export class Player {
         this.game = game;
         this.x = game.width / 2;
         this.y = game.height / 2;
-        this.radius = 15;
+        this.radius = 15 * (this.game.renderScale || 1);
         this.playerId = options.playerId || 'player';
 
         // Get Stats from Game or define them here if circular dependency is an issue
@@ -56,7 +56,7 @@ export class Player {
         this.prestige = Boolean(stats.prestige);
         this.specialAbility = stats.specialAbility || null;
         this.angle = 0;
-        this.radius = 15;
+        this.radius = 15 * (this.game.renderScale || 1);
         this.trail = [];
         this.afterburnerTimer = 0;
 
