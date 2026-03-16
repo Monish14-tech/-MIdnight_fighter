@@ -2726,9 +2726,7 @@ body {
 .tab-btn.active {
     background: #00f3ff;
     color: #000;
-    box-shadow: 0 0 15px #00f3ff, 0 0 30px #00f3ff;
-}
-/* -- Entry Animation Overlay ------------------------------------------------ */
+    box-shadow: 0 0 15px #00f3ff, 0 0/* -- Entry Animation Overlay ------------------------------------------------ */
 #entry-overlay {
     position: fixed;
     inset: 0;
@@ -2842,6 +2840,119 @@ body {
 @keyframes entryBarLoad {
     from { width: 0%; }
     to   { width: 100%; }
+}
+
+.neon-btn.coming-soon {
+    border-color: #444 !important;
+    color: #444 !important;
+    box-shadow: 0 0 5px #222, inset 0 0 5px #222 !important;
+    cursor: not-allowed;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.neon-btn.coming-soon:hover {
+    background: transparent !important;
+    color: #444 !important;
+    transform: none !important;
+}
+
+/* BRAND SPLASH */
+.brand-splash {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #050510;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 5000;
+    transition: opacity 1s, visibility 1s;
+}
+
+.brand-splash.fade-out {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.brand-content {
+    text-align: center;
+    animation: brandEnter 1s ease-out forwards;
+}
+
+@keyframes brandEnter {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+        filter: blur(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+        filter: blur(0);
+    }
+}
+
+.brand-logo {
+    font-size: 5rem;
+    color: var(--neon-blue);
+    margin-bottom: 0.5rem;
+    text-shadow: 0 0 20px var(--neon-blue);
+    animation: logoPulse 2s infinite alternate;
+}
+
+@keyframes logoPulse {
+    from {
+        transform: scale(1);
+        text-shadow: 0 0 20px var(--neon-blue);
+    }
+
+    to {
+        transform: scale(1.1);
+        text-shadow: 0 0 40px var(--neon-blue), 0 0 60px var(--neon-pink);
+    }
+}
+
+.brand-title {
+    font-size: 3rem !important;
+    margin-bottom: 0px !important;
+}
+
+.brand-subtitle {
+    font-family: 'Orbitron', sans-serif;
+    color: var(--neon-pink);
+    letter-spacing: 12px;
+    font-size: 0.8rem;
+    margin-top: -5px;
+    margin-bottom: 2rem;
+    opacity: 0.8;
+}
+
+.brand-loader {
+    width: 200px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 0 auto;
+    overflow: hidden;
+}
+
+.brand-loader-progress {
+    width: 0%;
+    height: 100%;
+    background: var(--neon-blue);
+    box-shadow: 0 0 10px var(--neon-blue);
+    animation: loaderFill 2s ease-in-out forwards;
+}
+
+@keyframes loaderFill {
+    to {
+        width: 100%;
+    }
+}
+{ width: 100%; }
 }
 
  . n e o n - b t n . c o m i n g - s o o n   { 
