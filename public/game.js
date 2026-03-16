@@ -856,13 +856,10 @@ export class Game {
                     this.notifications.notify('Daily Bonus', 'You received +25 Coins for your loyalty.');
                     this.addCoins(25);
                 }, 6000);
-            }, 2500);
+            }, 2000);
         }
 
         this.entityCounter = 0;
-
-        // Initialize cosmic atmosphere
-        this.initializeCosmicAtmosphere();
 
         // Update coin display on start screen
         const coinEl = document.getElementById('total-coins-display');
