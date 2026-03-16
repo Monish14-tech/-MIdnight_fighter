@@ -2726,7 +2726,7 @@ body {
 .tab-btn.active {
     background: #00f3ff;
     color: #000;
-    box-shadow: 0 0 15px #00f3ff, 0 0/* -- Entry Animation Overlay ------------------------------------------------ */
+    box-shadow: 0 0 15px #00f3ff, 0 0 30px #00f3ff; }/* -- Entry Animation Overlay ------------------------------------------------ */
 #entry-overlay {
     position: fixed;
     inset: 0;
@@ -2968,7 +2968,8 @@ body {
          b a c k g r o u n d :   t r a n s p a r e n t   ! i m p o r t a n t ; 
          c o l o r :   # 4 4 4   ! i m p o r t a n t ; 
          t r a n s f o r m :   n o n e   ! i m p o r t a n t ; 
- }  
+ } 
+ 
  
  / *    % %  B R A N D   S P L A S H    % %  * / 
  . b r a n d - s p l a s h   { 
@@ -3047,5 +3048,6 @@ body {
  @ k e y f r a m e s   l o a d e r F i l l   { 
          t o   {   w i d t h :   1 0 0 % ;   } 
  } 
-  
+ 
+ 
  
