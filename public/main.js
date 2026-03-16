@@ -35,14 +35,6 @@ window.addEventListener('DOMContentLoaded', () => {
             case 'back-from-leaderboard-btn':
                 g.closeLeaderboard();
                 break;
-            case 'pause-btn':
-            case 'resume-btn':
-                g.togglePause();
-                break;
-            case 'settings-btn':
-            case 'close-settings-btn':
-                g.toggleSettingsMenu();
-                break;
             default:
                 break;
         }

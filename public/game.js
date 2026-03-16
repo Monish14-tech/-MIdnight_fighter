@@ -119,7 +119,22 @@ export const SHIP_DATA = {
         prestige: true
     },
 };
-// Prices are set directly above — no auto-computation override needed.
+
+// Armory price ladder: start at 10,000 and increase by 8,000 per plane.
+const ARMORY_PRICE_START = 10000;
+const ARMORY_PRICE_STEP = 8000;
+const ARMORY_PRICE_ORDER = [
+    'scout', 'phantom', 'rapid', 'fighter', 'pulse', 'quantum', 'void', 'solar',
+    'bomber', 'tank', 'laser_drone', 'wraith', 'vanguard', 'eclipse', 'shadowblade',
+    'guardian', 'obliterator', 'inferno', 'juggernaut', 'tempest', 'reaper',
+    'crimson_emperor', 'phoenix', 'starborn', 'leviathan', 'sentinel', 'nova'
+];
+
+ARMORY_PRICE_ORDER.forEach((shipKey, index) => {
+    if (SHIP_DATA[shipKey]) {
+        SHIP_DATA[shipKey].price = ARMORY_PRICE_START + (index * ARMORY_PRICE_STEP);
+    }
+});
 
 
 export class Game {
@@ -294,7 +309,7 @@ export class Game {
         this.powerupInterval = 12.0;
         this.enemiesSpawned = 0;
         this.enemiesDefeated = 0;
-        this.enemiesForLevel = 12 + (this.currentLevel * 4); // Level 1 = 16, L2 = 20, L5 = 32 ...
+        this.enemiesForLevel = 10 + (this.currentLevel * 6); // Level 1 = 16, +6 enemies each level
         this.entityCounter = 0;
         this.comboMultiplier = 1;
         this.comboTimer = 0;
@@ -388,6 +403,31 @@ export class Game {
     addEventListeners() {
         window.addEventListener('resize', this.resize);
 
+        const bindPress = (element, handler) => {
+            if (!element || typeof handler !== 'function') return;
+            let lastTouchTime = 0;
+            const trigger = (e) => {
+                if (e && e.cancelable) e.preventDefault();
+                if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+                handler();
+            };
+
+            if (window.PointerEvent) {
+                // Use a single event path to avoid open-close double toggles.
+                element.addEventListener('pointerdown', trigger, { passive: false });
+            } else {
+                element.addEventListener('touchstart', (e) => {
+                    lastTouchTime = Date.now();
+                    trigger(e);
+                }, { passive: false });
+                element.addEventListener('click', (e) => {
+                    // Ignore synthetic click fired shortly after touchstart.
+                    if (Date.now() - lastTouchTime < 500) return;
+                    trigger(e);
+                }, { passive: false });
+            }
+        };
+
         const handleStart = (e) => {
             if (e.type === 'touchstart') e.preventDefault();
             // Unlock audio on direct user gesture (required by many browsers)
@@ -420,30 +460,18 @@ export class Game {
 
         // Pause & Menu Buttons
         const pauseBtn = document.getElementById('pause-btn');
-        if (pauseBtn) {
-            pauseBtn.addEventListener('click', () => this.togglePause());
-            pauseBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.togglePause(); }, { passive: false });
-        }
+        bindPress(pauseBtn, () => this.togglePause());
 
         const resumeBtn = document.getElementById('resume-btn');
-        if (resumeBtn) {
-            resumeBtn.addEventListener('click', () => this.togglePause());
-            resumeBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.togglePause(); }, { passive: false });
-        }
+        bindPress(resumeBtn, () => this.togglePause());
 
 
         // Settings Button
         const settingsBtn = document.getElementById('settings-btn');
-        if (settingsBtn) {
-            settingsBtn.addEventListener('click', () => this.toggleSettingsMenu());
-            settingsBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.toggleSettingsMenu(); }, { passive: false });
-        }
+        bindPress(settingsBtn, () => this.toggleSettingsMenu());
 
         const closeSettingsBtn = document.getElementById('close-settings-btn');
-        if (closeSettingsBtn) {
-            closeSettingsBtn.addEventListener('click', () => this.toggleSettingsMenu());
-            closeSettingsBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.toggleSettingsMenu(); }, { passive: false });
-        }
+        bindPress(closeSettingsBtn, () => this.toggleSettingsMenu());
 
         // Settings Checkboxes
         const musicToggle = document.getElementById('music-toggle');
@@ -1646,12 +1674,8 @@ export class Game {
 
             this.currentLevel++;
 
-            // New Level Setup — balanced wave progression
-            if (this.currentLevel >= 24) {
-                this.enemiesForLevel = 80 + ((this.currentLevel - 24) * 15);
-            } else {
-                this.enemiesForLevel = 10 + (this.currentLevel * 3);
-            }
+            // New Level Setup — +6 enemies every level
+            this.enemiesForLevel = 10 + (this.currentLevel * 6);
             this.enemiesSpawned = 0;
             this.enemiesDefeated = 0;
 
@@ -1881,7 +1905,7 @@ export class Game {
         // Always reset spawn counters so the spawn condition never starts as undefined
         this.enemiesSpawned = 0;
         this.enemiesDefeated = 0;
-        this.enemiesForLevel = 12 + (this.currentLevel * 4);
+        this.enemiesForLevel = 10 + (this.currentLevel * 6);
         this.entityCounter = 0;
 
         this.enemyTimer = 0;

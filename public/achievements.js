@@ -323,6 +323,8 @@ export const ACHIEVEMENT_DATA = [
     },  // Unlocks THE ABSOLUTE (final ship)
 ];
 
+const ACHIEVEMENT_REWARD_CAP = 5000;
+
 // ═══════════════════════════════════════════════════════════════════
 //  AchievementManager
 // ═══════════════════════════════════════════════════════════════════
@@ -533,8 +535,10 @@ export class AchievementManager {
         const ach = ACHIEVEMENT_DATA.find(a => a.id === achId);
         if (!ach) return;
 
-        this.game.coins += ach.reward;
-        this.stats['total_coins'] = (this.stats['total_coins'] || 0) + ach.reward;
+        const reward = Math.min(ACHIEVEMENT_REWARD_CAP, ach.reward || 0);
+
+        this.game.coins += reward;
+        this.stats['total_coins'] = (this.stats['total_coins'] || 0) + reward;
         localStorage.setItem('midnight_coins', this.game.coins);
 
         this.completedButUnclaimed = this.completedButUnclaimed.filter(id => id !== achId);
@@ -597,7 +601,8 @@ export class AchievementManager {
             if (isClaimed) {
                 buttonHtml = `<div class="ach-claimed-label">✓ CLAIMED</div>`;
             } else if (isCompleted) {
-                buttonHtml = `<button class="claim-btn" data-id="${ach.id}">CLAIM ${ach.reward.toLocaleString()} ⬡</button>`;
+                const reward = Math.min(ACHIEVEMENT_REWARD_CAP, ach.reward || 0);
+                buttonHtml = `<button class="claim-btn" data-id="${ach.id}">CLAIM ${reward.toLocaleString()} ⬡</button>`;
             } else {
                 buttonHtml = `<div class="ach-locked-label">LOCKED</div>`;
             }
