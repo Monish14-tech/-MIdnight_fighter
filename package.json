@@ -10,7 +10,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "vercel dev",
-    "test": "node public/test/game.test.js"
+    "test": "node public/test/game.test.js",
+    "app": "electron electron-main.js"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",
@@ -23,5 +24,8 @@
     "puppeteer": "^24.38.0",
     "socket.io": "^4.8.3",
     "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "electron": "^41.0.2"
   }
 }
