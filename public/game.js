@@ -835,6 +835,12 @@ export class Game {
         if (splash) {
             setTimeout(() => {
                 splash.classList.add('fade-out');
+                
+                // SHOW HOME SCREEN ONLY AFTER SPLASH
+                setTimeout(() => {
+                    if (this.startScreen) this.startScreen.classList.add('active');
+                }, 1000); // Match CSS transition duration
+
                 // Ensure audio context is ready on first interaction with start screen
                 this.startScreen.addEventListener('mousedown', () => {
                    if (this.audio && this.audio.ctx && this.audio.ctx.state === 'suspended') {
@@ -845,11 +851,11 @@ export class Game {
                 // APP NOTIFICATIONS DEMO
                 setTimeout(() => {
                     this.notifications.notify('System Online', 'Welcome back, Pilot. All engines ready at 100%.');
-                }, 1000);
+                }, 2000);
                 setTimeout(() => {
                     this.notifications.notify('Daily Bonus', 'You received +25 Coins for your loyalty.');
                     this.addCoins(25);
-                }, 5000);
+                }, 6000);
             }, 2500);
         }
 
