@@ -834,14 +834,24 @@ export class Game {
         // We just reveal the start screen after the splash duration (3.5 s).
         const SPLASH_DURATION = 3500; // ms — keep in sync with CSS animation total
         setTimeout(() => {
-            // Hide splash completely (CSS may not reach pointer-events:none in all browsers)
+            // 1. Hide splash completely
             const splash = document.getElementById('brand-splash');
             if (splash) splash.classList.add('hidden');
 
-            // Show the main menu
+            // 2. Ensure HUD and game overlays are hidden
+            if (this.hud) this.hud.style.display = 'none';
+            const mobileCtrl = document.getElementById('mobile-controls');
+            if (mobileCtrl) mobileCtrl.classList.remove('active');
+            const bossHud = document.getElementById('boss-hud');
+            if (bossHud) bossHud.style.display = 'none';
+
+            // 3. Remove 'active' from any other screens that might have been set
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+
+            // 4. Show the main menu
             if (this.startScreen) this.startScreen.classList.add('active');
 
-            // Welcome notification
+            // 5. Welcome notifications (safe, wrapped)
             setTimeout(() => {
                 try { this.notifications.notify('System Online', 'Welcome back, Pilot. All engines ready.'); } catch(e) {}
             }, 800);
@@ -853,18 +863,22 @@ export class Game {
             }, 4000);
         }, SPLASH_DURATION);
 
+        this.entityCounter = 0;
 
         // Update coin display on start screen
         const coinEl = document.getElementById('total-coins-display');
         if (coinEl) coinEl.innerText = `COINS: ${this.coins}`;
 
-        // Refresh rank badge and UI theming
-        this.refreshRankDisplay();
-
-        this.updatePlayerHudInfo();
+        // Refresh rank badge and UI theming (wrapped to prevent crashes blocking the timeout)
+        try { this.refreshRankDisplay(); } catch(e) { console.warn('refreshRankDisplay failed:', e); }
+        try { this.updatePlayerHudInfo(); } catch(e) { console.warn('updatePlayerHudInfo failed:', e); }
 
         // Hide pause menu initially
-        document.getElementById('pause-menu').classList.remove('active');
+        const pauseMenu = document.getElementById('pause-menu');
+        if (pauseMenu) pauseMenu.classList.remove('active');
+
+        // Ensure HUD is hidden on initial load (may be re-shown by updatePlayerHudInfo)
+        if (this.hud) this.hud.style.display = 'none';
 
         // Fullscreen Button
         const fsBtn = document.getElementById('fullscreen-btn');
