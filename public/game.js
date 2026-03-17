@@ -1448,19 +1448,19 @@ export class Game {
         const stats = await this.leaderboard.getPlayerStats(playerName);
 
         if (stats && stats.score !== undefined) {
-            // console.log(`[Sync] Found global score: ${stats.score}. Local: ${this.highScore}`);
             if (stats.score > this.highScore) {
                 this.highScore = stats.score;
                 localStorage.setItem('midnight_highscore', this.highScore);
-                // console.log(`[Sync] Local high score updated to match global.`);
+            } else if (this.highScore > stats.score) {
+                // If local high score is higher, push it to the leaderboard
+                console.log(`[Sync] Local score (${this.highScore}) is higher than global (${stats.score}). Pushing...`);
+                this.leaderboard.submitScore(this.highScore, this.currentLevel, this.selectedShip);
             }
             if (stats.globalRank !== undefined) {
                 this.globalRank = stats.globalRank;
-                // Sync to achievements
                 if (this.achievementManager) {
                     this.achievementManager.updateGlobalRank(this.globalRank);
                 }
-                // console.log(`[Sync] Player is ranked #${this.globalRank} globally.`);
             }
         }
 
