@@ -44,6 +44,7 @@ export class Player {
         this.fireRate = stats.fireRate;
         this.fireTimer = 0;
         this.missileCooldown = stats.missileCooldown || 5.0;
+        this.baseMissileCooldown = this.missileCooldown;
         this.missileTimer = 0;
         this.bulletDamage = stats.damage;
         this.baseBulletDamage = this.bulletDamage;
@@ -111,11 +112,6 @@ export class Player {
         // Speedy ships: shorter dash cooldown
         if (['scout', 'phantom', 'wraith', 'reaper'].includes(shipType)) {
             this.dashCooldown = 3.0;
-        }
-        // Firepower ships: slight extra fire rate bonus
-        if (['rapid', 'pulse', 'laser_drone'].includes(shipType)) {
-            this.fireRate = Math.max(0.03, this.fireRate * 0.85);
-            this.baseFireRate = this.fireRate;
         }
         // Shadowblade: 30% longer dash (increase dashDuration)
         if (shipType === 'shadowblade') {
@@ -190,6 +186,20 @@ export class Player {
             }
         }
 
+        // Nova: keep the x2 damage, but restore the intended health drain downside.
+        if (this.shipType === 'nova') {
+            this._novaDrainTimer += deltaTime;
+            if (this._novaDrainTimer >= 15.0) {
+                this._novaDrainTimer = 0;
+                if (this.currentHealth > 1) {
+                    this.currentHealth -= 1;
+                    if (this.game.floatingTexts) {
+                        this.game.floatingTexts.push({ x: this.x, y: this.y - 24, text: 'SUPERNOVA DRAIN', color: '#ffeeaa', life: 1.0 });
+                    }
+                }
+            }
+        }
+
         // ── Starborn Titan: Celestial Pull (Item Vacuum) ──
         if (this.shipType === 'starborn' || this.shipType === 'absolute') {
             if (this.game.powerups) {
@@ -213,7 +223,7 @@ export class Player {
             if (this.currentHealth <= this.maxHealth * 0.4) {
                 if (!this._adrenalineActive) {
                     this._adrenalineActive = true;
-                    this.fireRate = this.baseFireRate * 0.7;
+                    this.fireRate = this.baseFireRate / 1.3;
                     if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 30, text: 'ADRENALINE!', color: '#ff9900', life: 1.0 });
                 }
             } else if (this._adrenalineActive) {
@@ -448,6 +458,12 @@ export class Player {
     }
 
     shoot(type) {
+        const tagProjectile = (projectile) => {
+            projectile.ownerShipType = this.shipType;
+            projectile.ownerPlayerId = this.playerId;
+            return projectile;
+        };
+
         if (type === 'bullet') {
             const noseX = this.x + Math.cos(this.angle) * 20;
             const noseY = this.y + Math.sin(this.angle) * 20;
@@ -481,24 +497,40 @@ export class Player {
                 const count = (this.shipType === 'bomber' || isAbsolute) ? 5 : 3; // Triple volley / wide spread? Actually bomber is for missiles.
                 // Tempest Lord: Lightning God (spread bullets +20% speed)
                 const speedMult = (this.shipType === 'tempest' || isAbsolute) ? 1.2 : 1.0;
-                for (let i = 0; i < 3; i++) {
-                    const offset = (i - 1) * 0.22;
-                    const p = new Projectile(this.game, noseX, noseY, shootAngle + offset, 'bullet', this.playerId);
+                for (let i = 0; i < count; i++) {
+                    const offset = (i - (count - 1) / 2) * 0.22;
+                    const p = tagProjectile(new Projectile(this.game, noseX, noseY, shootAngle + offset, 'bullet', this.playerId));
                     p.damage = this.bulletDamage || 1;
                     p.speed = p.speed * speedMult;
                     this.game.projectiles.push(p);
                 }
             } else if (this.bulletType === 'railgun') {
                 // Single high-speed high-damage piercing shot
-                const p = new Projectile(this.game, noseX, noseY, shootAngle, 'bullet', this.playerId);
+                const p = tagProjectile(new Projectile(this.game, noseX, noseY, shootAngle, 'bullet', this.playerId));
                 p.speed = 2600;
                 p.damage = this.bulletDamage || 5;
                 p.radius = 7;
                 p.piercing = true;
                 p.color = '#ffffff';
+                if (this.shipType === 'quantum' || isAbsolute) {
+                    p.splitAfter = 0.12;
+                    p.splitCount = 2;
+                    p.splitSpread = 0.22;
+                    p.childSpeedScale = 0.95;
+                    p.childDamageScale = 0.55;
+                    p.childRadiusScale = 0.7;
+                    p.childColor = '#ccfff4';
+                    p.childLifetime = 0.18;
+                    p.childPiercing = true;
+                }
+                if (this.shipType === 'sentinel' || isAbsolute) {
+                    p.isHoming = true;
+                    p.homingRange = 520;
+                    p.turnRate = 3.2;
+                }
                 this.game.projectiles.push(p);
             } else if (this.bulletType === 'explosive') {
-                const p = new Projectile(this.game, noseX, noseY, shootAngle, 'bullet', this.playerId);
+                const p = tagProjectile(new Projectile(this.game, noseX, noseY, shootAngle, 'bullet', this.playerId));
                 p.damage = this.bulletDamage || 2;
                 p.explosive = true;
                 p.color = '#ffcc00';
@@ -517,7 +549,7 @@ export class Player {
 
                 this.game.projectiles.push(p);
             } else if (this.bulletType === 'piercing') {
-                const p = new Projectile(this.game, noseX, noseY, shootAngle, 'bullet', this.playerId);
+                const p = tagProjectile(new Projectile(this.game, noseX, noseY, shootAngle, 'bullet', this.playerId));
                 p.damage = this.bulletDamage || 1;
                 p.piercing = true;
                 p.color = '#00ff88';
@@ -526,7 +558,7 @@ export class Player {
                 this.game.projectiles.push(p);
             } else if (this.bulletType === 'laser') {
                 // Rapid-fire laser pulses: thin, fast, piercing, short-lived
-                const p = new Projectile(this.game, noseX, noseY, shootAngle, 'bullet', this.playerId);
+                const p = tagProjectile(new Projectile(this.game, noseX, noseY, shootAngle, 'bullet', this.playerId));
                 p.speed = 2200;
                 p.damage = this.bulletDamage || 2;
                 p.radius = 3;
@@ -537,7 +569,7 @@ export class Player {
             } else {
                 // Normal shot with tiny spread
                 const spread = (Math.random() - 0.5) * 0.08;
-                const p = new Projectile(this.game, noseX, noseY, shootAngle + spread, 'bullet', this.playerId);
+                const p = tagProjectile(new Projectile(this.game, noseX, noseY, shootAngle + spread, 'bullet', this.playerId));
                 p.damage = this.bulletDamage || 1;
                 this.game.projectiles.push(p);
             }
@@ -547,8 +579,8 @@ export class Player {
                 this._rapidShotCount = (this._rapidShotCount || 0) + 1;
                 if (this._rapidShotCount % 5 === 0) {
                     // Fire 2 extra bullets immediately slightly offset
-                    const p1 = new Projectile(this.game, noseX, noseY, shootAngle - 0.15, 'bullet', this.playerId);
-                    const p2 = new Projectile(this.game, noseX, noseY, shootAngle + 0.15, 'bullet', this.playerId);
+                    const p1 = tagProjectile(new Projectile(this.game, noseX, noseY, shootAngle - 0.15, 'bullet', this.playerId));
+                    const p2 = tagProjectile(new Projectile(this.game, noseX, noseY, shootAngle + 0.15, 'bullet', this.playerId));
                     p1.damage = this.bulletDamage || 1; p2.damage = this.bulletDamage || 1;
                     this.game.projectiles.push(p1, p2);
                 }
@@ -572,7 +604,7 @@ export class Player {
 
             for (let i = 0; i < count; i++) {
                 const angleOffset = count > 1 ? (-spread / 2 + (spread / (count - 1)) * i) : 0;
-                const p = new Projectile(this.game, this.x, this.y, this.angle + angleOffset, 'missile', this.playerId, missileDmg);
+                const p = tagProjectile(new Projectile(this.game, this.x, this.y, this.angle + angleOffset, 'missile', this.playerId, missileDmg));
 
                 // ── Celestial Striker / Absolute: Missiles auto-split ──
                 if (this.shipType === 'celestial' || isAbsolute) {
@@ -2251,19 +2283,10 @@ export class Player {
             return false;
         }
 
-        // ── V.G. Titan: Reactive Plating (Reflect bullets during dash) ──
+        // ── V.G. Titan: Reactive Plating (invulnerable while dashing) ──
         if ((this.shipType === 'tank' || this.shipType === 'absolute') && this.isDashing) {
-            // This is handled in Enemy.update() or Collision detection normally
-            // But if we're here, it means takeDamage was called (likely by a projectile or contact)
-            // If it's a projectile contact, we can mark the projectile for reflection in the game loop.
-            // For now, let's just make the player invulnerable during Reactive Plating if they are dashing
-            if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 20, text: 'REFLECTED!', color: '#00ff44', life: 0.8 });
+            if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 20, text: 'ARMORED!', color: '#00ff44', life: 0.8 });
             return false;
-        }
-
-        // ── Guardian: Fortress Protocol ── (damage capped at 1 per hit)
-        if (this.shipType === 'guardian') {
-            amount = Math.min(amount, 1);
         }
 
         // ── Juggernaut: Unstoppable ── (50% reduction when below 30% HP)
@@ -2424,7 +2447,7 @@ export class Player {
         if (this.shipType === 'crimson_emperor') {
             this._bossKillCount = (this._bossKillCount || 0) + 1;
             const reductionFactor = Math.max(0.5, 1.0 - this._bossKillCount * 0.10);
-            this.missileCooldown = this.missileCooldown * reductionFactor;
+            this.missileCooldown = this.baseMissileCooldown * reductionFactor;
             if (this.game.floatingTexts) this.game.floatingTexts.push({ x: this.x, y: this.y - 30, text: 'MISSILE CD -10%!', color: '#dc143c', life: 1.5 });
         }
     }

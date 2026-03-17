@@ -1,4 +1,4 @@
-import { getLeaderboardCollection } from './_db.js';
+import { CURRENT_DATA_VERSION, getLeaderboardCollection } from './_db.js';
 
 function setCors(res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -21,7 +21,7 @@ export default async function handler(req, res) {
         const limit = parseInt(req.query.limit, 10) || 10;
         const collection = await getLeaderboardCollection();
         const leaderboard = await collection
-            .find({})
+            .find({ dataVersion: CURRENT_DATA_VERSION })
             .sort({ score: -1 })
             .limit(limit)
             .toArray();

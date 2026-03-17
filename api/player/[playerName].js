@@ -1,4 +1,4 @@
-import { getLeaderboardCollection } from '../_db.js';
+import { CURRENT_DATA_VERSION, getLeaderboardCollection } from '../_db.js';
 
 function setCors(res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -24,13 +24,16 @@ export default async function handler(req, res) {
         }
 
         const collection = await getLeaderboardCollection();
-        const player = await collection.findOne({ playerName });
+        const player = await collection.findOne({ playerName, dataVersion: CURRENT_DATA_VERSION });
 
         if (!player) {
             return res.status(404).json({ success: false, error: 'Player not found' });
         }
 
-        const rank = await collection.countDocuments({ score: { $gt: player.score } }) + 1;
+        const rank = await collection.countDocuments({
+            dataVersion: CURRENT_DATA_VERSION,
+            score: { $gt: player.score }
+        }) + 1;
 
         return res.status(200).json({
             success: true,

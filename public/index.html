@@ -3,12 +3,12 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="icon" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
     <link rel="manifest" href="manifest.json">
     <title>Midnight Fighter | Neon Survival</title>
     <script>
@@ -58,9 +58,9 @@
             originalLog.apply(console, arguments);
         };
     </script>
-    <link rel="stylesheet" href="style.css?v=56">
-    <link rel="stylesheet" href="ranks.css?v=56">
-    <script type="module" src="main.js?v=56"></script>
+    <link rel="stylesheet" href="style.css?v=57">
+    <link rel="stylesheet" href="ranks.css?v=57">
+    <script type="module" src="main.js?v=57"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
@@ -143,9 +143,10 @@
     <div id="game-container">
         <canvas id="gameCanvas" width="1280" height="720"></canvas>
         <div id="ui-layer">
-            <div id="hud" style="display:none;">
+            <div id="hud" class="hidden">
                 <div id="hud-left">
-                    <div class="score-container">LEVEL: <span id="level-display">1</span></div>
+                    <div class="score-container"><span id="level-label">LEVEL</span>: <span id="level-display">1</span></div>
+                    <div id="challenge-wave-display" class="wave-chip hidden">WAVE: <span id="wave-display">1</span></div>
                     <div class="dash-container">DASH: <div id="dash-bar">
                             <div id="dash-fill"></div>
                         </div>
@@ -163,8 +164,8 @@
                             <div id="health-fill-p2"></div>
                         </div>
                     </div>
-                    <div class="score-container" id="p2-hud-name" style="display:none;">P2: UNKNOWN</div>
-                    <div class="score-container" id="p2-hud-ship" style="display:none;">SHIP: DEFAULT</div>
+                    <div class="score-container hidden" id="p2-hud-name">P2: UNKNOWN</div>
+                    <div class="score-container hidden" id="p2-hud-ship">SHIP: DEFAULT</div>
                     <div class="missile-container">MISSILE: <div id="missile-bar">
                             <div id="missile-fill"></div>
                         </div>
@@ -207,9 +208,9 @@
                     <div class="entry-title">SYSTEMS ONLINE</div>
                     <div class="entry-subtitle">ALL UNITS DEPLOYED</div>
                     <div class="entry-bars">
-                        <div class="entry-bar-item"><span>WEAPONS</span><div class="entry-bar-track"><div class="entry-bar-fill" style="animation-delay:0s"></div></div></div>
-                        <div class="entry-bar-item"><span>SHIELDS</span><div class="entry-bar-track"><div class="entry-bar-fill" style="animation-delay:0.2s"></div></div></div>
-                        <div class="entry-bar-item"><span>ENGINES</span><div class="entry-bar-track"><div class="entry-bar-fill" style="animation-delay:0.4s"></div></div></div>
+                        <div class="entry-bar-item"><span>WEAPONS</span><div class="entry-bar-track"><div class="entry-bar-fill entry-delay-0"></div></div></div>
+                        <div class="entry-bar-item"><span>SHIELDS</span><div class="entry-bar-track"><div class="entry-bar-fill entry-delay-1"></div></div></div>
+                        <div class="entry-bar-item"><span>ENGINES</span><div class="entry-bar-track"><div class="entry-bar-fill entry-delay-2"></div></div></div>
                     </div>
                 </div>
             </div>
@@ -246,6 +247,7 @@
 
                 <div class="menu-buttons">
                     <button id="start-btn" class="neon-btn">INITIATE SEQUENCE</button>
+                    <button id="challenge-btn" class="neon-btn challenge-btn">CHALLENGE SEQUENCE</button>
                     <button id="store-btn" class="neon-btn">ARMORY</button>
                     <button id="achievements-menu-btn" class="neon-btn">
                         ACHIEVEMENTS
@@ -255,7 +257,7 @@
                     <button id="collab-btn" class="neon-btn coming-soon" disabled>COLLABORATE (COMING SOON)</button>
                 </div>
                 <p id="total-coins-display">COINS: 0</p>
-                <p id="player-name-display" style="margin-top: 10px; font-size: 14px;">PILOT: <span
+                <p id="player-name-display" class="player-name-display">PILOT: <span
                         id="current-player-name">UNKNOWN</span></p>
 
                 <!-- Game Instructions (Desktop Only) -->
@@ -292,7 +294,7 @@
                 <h2>PAUSED</h2>
                 <div class="menu-buttons-vertical">
                     <button id="resume-btn" class="neon-btn">RESUME</button>
-                    <button id="leave-room-btn" class="neon-btn" style="display:none;">LEAVE ROOM</button>
+                    <button id="leave-room-btn" class="neon-btn hidden">LEAVE ROOM</button>
                     <button id="main-menu-btn" class="neon-btn">MAIN MENU</button>
                 </div>
             </div>
@@ -305,8 +307,16 @@
                         <span class="setting-label">MUSIC</span>
                     </label>
                     <label class="setting-item">
+                        <input type="checkbox" id="sfx-toggle" checked>
+                        <span class="setting-label">SFX</span>
+                    </label>
+                    <label class="setting-item">
                         <input type="checkbox" id="autotarget-toggle" checked>
                         <span class="setting-label">AUTO-TARGET ENEMIES</span>
+                    </label>
+                    <label class="setting-item">
+                        <input type="checkbox" id="screen-shake-toggle" checked>
+                        <span class="setting-label">SCREEN SHAKE</span>
                     </label>
                 </div>
                 <div class="menu-buttons-vertical">
@@ -335,10 +345,9 @@
                     <button class="tab-btn active" data-mode="solo">SOLO</button>
                     <button class="tab-btn" data-mode="coop">CO-OP</button>
                 </div>
-                <div id="player-name-section" style="margin-bottom: 20px; margin-top: 15px;">
-                    <input type="text" id="player-name-input" placeholder="Enter your pilot name" maxlength="20" style="padding: 10px; background: rgba(0,0,0,0.7); border: 2px solid #00f3ff; color: #00f3ff; 
-                        font-family: 'Orbitron', sans-serif; font-size: 16px; text-align: center; width: 300px;">
-                    <button id="set-name-btn" class="neon-btn" style="margin-left: 10px; padding: 10px 20px;">SET
+                <div id="player-name-section" class="leaderboard-name-section">
+                    <input type="text" id="player-name-input" class="leaderboard-name-input" placeholder="Enter your pilot name" maxlength="20">
+                    <button id="set-name-btn" class="neon-btn leaderboard-name-btn">SET
                         NAME</button>
                 </div>
                 <div id="leaderboard-container">
@@ -351,8 +360,8 @@
                         <!-- Leaderboard entries will be injected here -->
                     </div>
                 </div>
-                <button id="refresh-leaderboard-btn" class="neon-btn" style="margin-top: 15px;">REFRESH</button>
-                <button id="back-from-leaderboard-btn" class="neon-btn" style="margin-top: 10px;">BACK</button>
+                <button id="refresh-leaderboard-btn" class="neon-btn btn-top-15">REFRESH</button>
+                <button id="back-from-leaderboard-btn" class="neon-btn btn-top-10">BACK</button>
             </div>
 
             <div id="ranks-screen" class="screen">
@@ -362,7 +371,7 @@
                         <!-- Rank info injected here -->
                     </div>
                 </div>
-                <button id="back-from-ranks-btn" class="neon-btn" style="margin-top: 20px;">BACK</button>
+                <button id="back-from-ranks-btn" class="neon-btn btn-top-20">BACK</button>
             </div>
 
             <div id="collab-screen" class="screen">
@@ -402,14 +411,6 @@
         </div>
     </div>
 
-    <!-- Import map: resolves bare 'three' specifier so stale cached files don't crash -->
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "./three.js?v=14"
-        }
-    }
-    </script>
     <!-- Socket.IO Client Library -->
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js" crossorigin="anonymous"></script>
 

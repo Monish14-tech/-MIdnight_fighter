@@ -418,6 +418,13 @@ export class Enemy {
         const globalSpeedScale = 0.75;
         const earlyLevelSpeedScale = level <= 5 ? 0.7 : (level <= 10 ? 0.82 : 0.94);
         const baseTypeScale = 0.69; // Other enemies
+
+        if (this.game.getWaveEnemyDurabilityHealth) {
+            this.health = this.game.getWaveEnemyDurabilityHealth(this.type, this.health);
+            if (this.shieldHealth !== undefined) {
+                this.shieldHealth = Math.max(this.shieldHealth, Math.ceil(this.health * 0.5));
+            }
+        }
         const typeControlScale = {
             decoy: 0.59,       // Yellow enemy
             interceptor: 0.89  // Green enemy
@@ -470,6 +477,67 @@ export class Enemy {
         if (typeof this.remoteId === 'number') return this.remoteId;
         const match = this.remoteId.match(/\d+$/);
         return match ? parseInt(match[0]) : 0;
+    }
+
+    getAdaptiveFireProfile() {
+        const level = this.game.currentLevel || 1;
+        const scale = this.game.getPlayerScalingMetrics
+            ? this.game.getPlayerScalingMetrics()
+            : { aiAggression: 1, projectileDensity: 1, damageMultiplier: 1 };
+
+        return {
+            level,
+            scale,
+            patternTier: level >= 20 ? 3 : (level >= 14 ? 2 : (level >= 8 ? 1 : 0)),
+            fireRateMultiplier: Math.max(0.85, (level >= 24 ? 1.45 : (level >= 15 ? 1.18 : 1.0)) * (scale.aiAggression || 1)),
+            spreadScale: Math.max(0.72, 1.02 - Math.max(0, (scale.projectileDensity || 1) - 1) * 0.18),
+            projectileDensity: Math.max(1, Math.min(1.75, scale.projectileDensity || 1)),
+            damageMultiplier: Math.max(0.9, Math.min(1.35, scale.damageMultiplier || 1))
+        };
+    }
+
+    seededNoise(salt = 1) {
+        const time = this.game.lastTime || 0;
+        const seed = (this.getNumericId() + 1) * 12.9898 + salt * 78.233 + time * 0.001;
+        const value = Math.sin(seed) * 43758.5453;
+        return value - Math.floor(value);
+    }
+
+    spawnEnemyProjectile(angle, options = {}) {
+        const projectileType = options.type || 'bullet';
+        const projectile = new Projectile(this.game, this.x, this.y, angle, projectileType, 'enemy');
+        projectile.owner = 'enemy';
+        projectile.source = options.source || 'enemy';
+        projectile.speed = options.speed ?? projectile.speed;
+        if (options.maxSpeed !== undefined) projectile.maxSpeed = options.maxSpeed;
+        if (options.acceleration !== undefined) projectile.acceleration = options.acceleration;
+        projectile.damage = options.damage ?? projectile.damage;
+        projectile.radius = options.radius ?? projectile.radius;
+        projectile.color = options.color || projectile.color;
+        projectile.lifetime = options.lifetime;
+        projectile.explosive = !!options.explosive;
+        projectile.piercing = !!options.piercing;
+        projectile.isHoming = options.isHoming ?? projectile.isHoming;
+        projectile.wobbleAmount = options.wobbleAmount || 0;
+        projectile.wobbleFrequency = options.wobbleFrequency || 0;
+        projectile.wobblePhase = options.wobblePhase || 0;
+        projectile.splitAfter = options.splitAfter;
+        projectile.splitCount = options.splitCount;
+        projectile.splitSpread = options.splitSpread;
+        projectile.fullCircleSplit = options.fullCircleSplit;
+        projectile.splitProjectileType = options.splitProjectileType;
+        projectile.childSpeed = options.childSpeed;
+        projectile.childSpeedScale = options.childSpeedScale;
+        projectile.childDamageScale = options.childDamageScale;
+        projectile.childRadiusScale = options.childRadiusScale;
+        projectile.childColor = options.childColor;
+        projectile.childLifetime = options.childLifetime;
+        projectile.childPiercing = options.childPiercing;
+        projectile.childExplosive = options.childExplosive;
+        projectile.childWobbleAmount = options.childWobbleAmount;
+        projectile.childWobbleFrequency = options.childWobbleFrequency;
+        this.game.projectiles.push(projectile);
+        return projectile;
     }
 
     update(deltaTime) {
@@ -679,6 +747,17 @@ export class Enemy {
             this.y += (Math.sin(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
         }
 
+        if (this.game.challengeMode) {
+            // In challenge mode, all enemy jets try to maintain standoff pressure instead of hard-collapsing.
+            const challengeLevel = this.game.currentLevel || this.spawnLevel || 1;
+            const standoffRange = 220 + Math.min(challengeLevel * 5, 130);
+            if (dist < standoffRange && dist > 1) {
+                const repelStrength = ((standoffRange - dist) / standoffRange) * Math.min(180, effectiveSpeed * 0.95);
+                this.x -= (dx / dist) * repelStrength * deltaTime;
+                this.y -= (dy / dist) * repelStrength * deltaTime;
+            }
+        }
+
         // Soft clamp: keep enemies on screen once they enter
         const m = this.radius;
         if (this.x > -m && this.x < this.game.width + m) {
@@ -689,108 +768,215 @@ export class Enemy {
         }
 
         // Shooter Logic (only shooter, sniper, launcher, and pulsar can attack)
-        const level = this.game.currentLevel || 1;
-        const singleMissileMode = level >= 11;
-        const fireRateMultiplier = level >= 24 ? 1.8 : (level >= 15 ? 1.3 : 0.8);
-        const spreadMultiplier = level >= 24 ? 0.25 : (level >= 15 ? 0.6 : 1.0);
+        const fireProfile = this.getAdaptiveFireProfile();
+        const level = fireProfile.level;
+        const fireRateMultiplier = fireProfile.fireRateMultiplier;
+        const spreadMultiplier = fireProfile.spreadScale;
+        const densityBonus = fireProfile.projectileDensity;
+        const enemyDamageScale = fireProfile.damageMultiplier;
 
         if (this.type === 'shooter') {
             this.shootTimer += deltaTime;
             if (this.shootTimer > (2.0 / fireRateMultiplier)) {
                 this.shootTimer = 0;
-                if (singleMissileMode) {
-                    if (!this.hasFiredSingleMissile) {
-                        // Replaced homing missiles with slow explosive plasma orbs
-                        const aimAngle = this.brain ? this.brain.getLeadAngle() : this.angle;
-                        const orb = new Projectile(this.game, this.x, this.y, aimAngle, 'bullet', 'enemy');
-                        orb.speed = 200; // Slow travel
-                        orb.damage = 2;
-                        orb.radius = 12; // Large orb
-                        orb.explosive = true;
-                        orb.color = '#ff00ff'; // Purple/Magenta 
-                        this.game.projectiles.push(orb);
-                        this.hasFiredSingleMissile = true;
+                const accuracyError = (this.brain ? (this.brain._prng(99) - 0.5) * 0.24 : 0);
+                const leadAngle = (this.brain ? this.brain.getLeadAngle() : this.angle) + accuracyError;
+
+                if (fireProfile.patternTier >= 3 && this.seededNoise(31) > 0.52) {
+                    this.spawnEnemyProjectile(leadAngle, {
+                        speed: 235,
+                        damage: 1.9 * enemyDamageScale,
+                        radius: 11,
+                        color: '#ff4fd8',
+                        explosive: true,
+                        splitAfter: 0.55,
+                        splitCount: 4,
+                        splitSpread: 0.3,
+                        childSpeedScale: 1.35,
+                        childDamageScale: 0.55,
+                        childRadiusScale: 0.55,
+                        childColor: '#ffc7ff',
+                        childLifetime: 0.7,
+                        childWobbleAmount: 0.18,
+                        childWobbleFrequency: 14
+                    });
+                } else if (fireProfile.patternTier >= 2 && this.seededNoise(19) > 0.42) {
+                    for (let index = -1; index <= 1; index++) {
+                        this.spawnEnemyProjectile(leadAngle + index * 0.16 * spreadMultiplier, {
+                            speed: 420,
+                            damage: 1.25 * enemyDamageScale,
+                            radius: 5,
+                            lifetime: 1.2,
+                            color: '#ff7cf2',
+                            wobbleAmount: 0.24,
+                            wobbleFrequency: 13,
+                            wobblePhase: index
+                        });
+                    }
+                } else if (fireProfile.patternTier >= 1) {
+                    const shotCount = densityBonus >= 1.35 ? 3 : 2;
+                    const spread = (dist < 220 ? 0.18 : 0.28) * spreadMultiplier;
+                    const startAngle = leadAngle - (spread * (shotCount - 1)) / 2;
+                    for (let index = 0; index < shotCount; index++) {
+                        this.spawnEnemyProjectile(startAngle + spread * index, {
+                            speed: 360,
+                            damage: 1.15 * enemyDamageScale,
+                            radius: 4,
+                            lifetime: 1.25,
+                            color: '#ff66dd'
+                        });
                     }
                 } else {
-                    const seed = this.getNumericId() + this.game.lastTime;
-                    // Add slight inaccuracy to lead calculation (up to 0.15 radians error)
-                    const accuracyError = (this.brain ? (this.brain._prng(99) - 0.5) * 0.3 : 0);
-                    const leadAngle = (this.brain ? this.brain.getLeadAngle() : this.angle) + accuracyError;
-
-                    if (dist < 200) {
-                        // Close range: slightly more spread (0.2 instead of 0.12)
-                        const spread = 0.2 * spreadMultiplier;
-                        for (let i = -1; i <= 1; i += 2) {
-                            this.game.projectiles.push(new Projectile(this.game, this.x, this.y, leadAngle + spread * i, 'bullet', 'enemy'));
-                        }
-                    } else {
-                        // Long range: much more spread (0.8 instead of 0.5)
-                        const spread = (Math.sin(seed * 1.5) * 0.8) * spreadMultiplier;
-                        this.game.projectiles.push(new Projectile(this.game, this.x, this.y, leadAngle + spread, 'bullet', 'enemy'));
-                    }
+                    const spread = (dist < 200 ? 0.18 : 0.45) * spreadMultiplier;
+                    this.spawnEnemyProjectile(leadAngle + ((this.seededNoise(7) - 0.5) * spread), {
+                        speed: 335,
+                        damage: 1.0 * enemyDamageScale,
+                        radius: 4,
+                        lifetime: 1.3,
+                        color: '#ff55ee'
+                    });
                 }
             }
         } else if (this.type === 'sniper') {
             this.shootTimer += deltaTime;
             if (this.shootTimer > (2.8 / fireRateMultiplier)) {
                 this.shootTimer = 0;
-                // Sniper always lead-targets
                 const leadAngle = this.brain ? this.brain.getLeadAngle() : this.angle;
-                if (singleMissileMode) {
-                    if (!this.hasFiredSingleMissile) {
-                        const missile = new Projectile(this.game, this.x, this.y, leadAngle, 'missile', 'enemy');
-                        missile.speed = 300;
-                        missile.maxSpeed = 800;
-                        missile.acceleration = 350;
-                        missile.damage = 2;
-                        missile.color = '#6bd6ff';
-                        this.game.projectiles.push(missile);
-                        this.hasFiredSingleMissile = true;
-                    }
+                const accuracyError = (this.brain ? (this.brain._prng(88) - 0.5) * 0.1 : 0);
+                if (fireProfile.patternTier >= 3 && this.seededNoise(47) > 0.45) {
+                    this.spawnEnemyProjectile(leadAngle + accuracyError - 0.035, {
+                        speed: 860,
+                        damage: 1.6 * enemyDamageScale,
+                        radius: 3,
+                        lifetime: 1.0,
+                        color: '#7fe3ff',
+                        piercing: true
+                    });
+                    this.spawnEnemyProjectile(leadAngle + accuracyError + 0.035, {
+                        speed: 860,
+                        damage: 1.6 * enemyDamageScale,
+                        radius: 3,
+                        lifetime: 1.0,
+                        color: '#7fe3ff',
+                        piercing: true
+                    });
+                } else if (fireProfile.patternTier >= 2) {
+                    this.spawnEnemyProjectile(leadAngle + accuracyError, {
+                        speed: 760,
+                        damage: 1.8 * enemyDamageScale,
+                        radius: 4,
+                        lifetime: 1.1,
+                        color: '#6bd6ff',
+                        piercing: true,
+                        splitAfter: 0.38,
+                        splitCount: 2,
+                        splitSpread: 0.22,
+                        childSpeedScale: 0.92,
+                        childDamageScale: 0.65,
+                        childRadiusScale: 0.75,
+                        childColor: '#c8f7ff',
+                        childLifetime: 0.55
+                    });
+                } else if (fireProfile.patternTier >= 1) {
+                    this.spawnEnemyProjectile(leadAngle + accuracyError, {
+                        speed: 720,
+                        damage: 1.5 * enemyDamageScale,
+                        radius: 3,
+                        lifetime: 1.0,
+                        color: '#6bd6ff',
+                        piercing: true
+                    });
                 } else {
-                    // Precision lead shot — slightly more spread for fairness
-                    const seed = this.getNumericId() + this.game.lastTime;
-                    const accuracyError = (this.brain ? (this.brain._prng(88) - 0.5) * 0.15 : 0);
-                    const spread = (Math.sin(seed * 2.1) * 0.15) * spreadMultiplier;
-                    const shot = new Projectile(this.game, this.x, this.y, leadAngle + spread + accuracyError, 'bullet', 'enemy');
-                    shot.speed = 750; // slightly faster for lead-targeting accuracy
-                    shot.damage = 2;
-                    shot.color = '#6bd6ff';
-                    this.game.projectiles.push(shot);
+                    this.spawnEnemyProjectile(leadAngle + accuracyError, {
+                        speed: 680,
+                        damage: 1.25 * enemyDamageScale,
+                        radius: 3,
+                        lifetime: 1.0,
+                        color: '#7adfff'
+                    });
                 }
             }
         } else if (this.type === 'launcher') {
-            // Launches one missile only from level 11+, otherwise bullets
             this.shootTimer += deltaTime;
             if (this.shootTimer > (3.0 / fireRateMultiplier)) {
                 this.shootTimer = 0;
-                if (singleMissileMode) {
-                    if (!this.hasFiredSingleMissile) {
-                        const missile = new Projectile(this.game, this.x, this.y, this.angle, 'missile', 'enemy');
-                        missile.speed = 220;
-                        missile.maxSpeed = 650;
-                        missile.acceleration = 260;
-                        missile.damage = 2;
-                        missile.color = '#ff0099';
-                        this.game.projectiles.push(missile);
-                        this.hasFiredSingleMissile = true;
+                const leadAngle = this.brain ? this.brain.getLeadAngle() : this.angle;
+                if (fireProfile.patternTier >= 3 && this.seededNoise(61) > 0.45) {
+                    for (let index = -1; index <= 1; index++) {
+                        this.spawnEnemyProjectile(leadAngle + index * 0.12 * spreadMultiplier, {
+                            type: 'missile',
+                            speed: 210,
+                            maxSpeed: 520,
+                            acceleration: 210,
+                            damage: 1.55 * enemyDamageScale,
+                            radius: 8,
+                            color: '#ff4d9e',
+                            lifetime: 3.5,
+                            isHoming: false,
+                            splitAfter: 0.65,
+                            splitCount: 3,
+                            splitSpread: 0.3,
+                            childSpeed: 320,
+                            childDamageScale: 0.45,
+                            childRadiusScale: 0.65,
+                            childColor: '#ffb7d9',
+                            childLifetime: 0.75
+                        });
                     }
+                } else if (fireProfile.patternTier >= 2) {
+                    for (let index = -1; index <= 1; index += 2) {
+                        this.spawnEnemyProjectile(leadAngle + index * 0.08 * spreadMultiplier, {
+                            type: 'missile',
+                            speed: 230,
+                            maxSpeed: 600,
+                            acceleration: 240,
+                            damage: 1.35 * enemyDamageScale,
+                            radius: 8,
+                            color: '#ff1199',
+                            lifetime: 3.6,
+                            isHoming: false
+                        });
+                    }
+                } else if (fireProfile.patternTier >= 1) {
+                    this.spawnEnemyProjectile(leadAngle, {
+                        type: 'missile',
+                        speed: 240,
+                        maxSpeed: 620,
+                        acceleration: 250,
+                        damage: 1.25 * enemyDamageScale,
+                        radius: 8,
+                        color: '#ff0099',
+                        lifetime: 3.6,
+                        isHoming: false
+                    });
                 } else {
-                    const seed = this.getNumericId() + this.game.lastTime;
-                    const spread = (Math.sin(seed * 0.8) * 0.3) * spreadMultiplier;
-                    const bullet = new Projectile(this.game, this.x, this.y, this.angle + spread, 'bullet', 'enemy');
-                    bullet.speed = 350;
-                    bullet.damage = 2;
-                    bullet.color = '#ff0099';
-                    this.game.projectiles.push(bullet);
+                    this.spawnEnemyProjectile(leadAngle, {
+                        speed: 320,
+                        damage: 1.1 * enemyDamageScale,
+                        radius: 5,
+                        lifetime: 1.25,
+                        color: '#ff66aa'
+                    });
                 }
             }
         } else if (this.type === 'pulsar') {
-            // Create damaging pulse waves
             if (this.pulseTimer <= 0) {
                 this.pulseTimer = this.pulseCooldown;
-                // Create expanding pulse effect
                 this.game.particles.push(new Explosion(this.game, this.x, this.y, '#ff00ff'));
+                if (fireProfile.patternTier >= 1) {
+                    const pulseShots = fireProfile.patternTier >= 3 ? 8 : (fireProfile.patternTier >= 2 ? 6 : 4);
+                    for (let index = 0; index < pulseShots; index++) {
+                        this.spawnEnemyProjectile((Math.PI * 2 * index) / pulseShots, {
+                            speed: fireProfile.patternTier >= 2 ? 260 : 220,
+                            damage: (0.85 + fireProfile.patternTier * 0.18) * enemyDamageScale,
+                            radius: fireProfile.patternTier >= 2 ? 6 : 5,
+                            lifetime: 1.0,
+                            color: '#ff44ff',
+                            wobbleAmount: fireProfile.patternTier >= 2 ? 0.12 : 0,
+                            wobbleFrequency: 9
+                        });
+                    }
+                }
             }
         }
 

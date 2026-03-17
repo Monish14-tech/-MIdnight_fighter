@@ -1,4 +1,4 @@
-import { getLeaderboardCollection } from './_db.js';
+import { CURRENT_DATA_VERSION, getLeaderboardCollection } from './_db.js';
 
 function setCors(res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -35,13 +35,15 @@ export default async function handler(req, res) {
 
         const collection = await getLeaderboardCollection();
         const existingPlayer = teamKey
-            ? await collection.findOne({ teamKey })
-            : await collection.findOne({ playerName: displayName });
+            ? await collection.findOne({ teamKey, dataVersion: CURRENT_DATA_VERSION })
+            : await collection.findOne({ playerName: displayName, dataVersion: CURRENT_DATA_VERSION });
 
         if (existingPlayer) {
             if (score > existingPlayer.score) {
                 await collection.updateOne(
-                    teamKey ? { teamKey } : { playerName: displayName },
+                    teamKey
+                        ? { teamKey, dataVersion: CURRENT_DATA_VERSION }
+                        : { playerName: displayName, dataVersion: CURRENT_DATA_VERSION },
                     {
                         $set: {
                             score,
@@ -49,12 +51,16 @@ export default async function handler(req, res) {
                             shipType: shipType || existingPlayer.shipType,
                             teamMembers: normalizedTeam || existingPlayer.teamMembers,
                             playerName: displayName,
+                            dataVersion: CURRENT_DATA_VERSION,
                             updatedAt: new Date()
                         }
                     }
                 );
 
-                const rank = await collection.countDocuments({ score: { $gt: score } }) + 1;
+                const rank = await collection.countDocuments({
+                    dataVersion: CURRENT_DATA_VERSION,
+                    score: { $gt: score }
+                }) + 1;
                 return res.status(200).json({
                     success: true,
                     message: 'New high score!',
@@ -63,7 +69,10 @@ export default async function handler(req, res) {
                 });
             }
 
-            const rank = await collection.countDocuments({ score: { $gt: existingPlayer.score } }) + 1;
+            const rank = await collection.countDocuments({
+                dataVersion: CURRENT_DATA_VERSION,
+                score: { $gt: existingPlayer.score }
+            }) + 1;
             return res.status(200).json({
                 success: true,
                 message: 'Score submitted',
@@ -76,6 +85,7 @@ export default async function handler(req, res) {
             playerName: displayName,
             teamKey,
             teamMembers: normalizedTeam,
+            dataVersion: CURRENT_DATA_VERSION,
             score,
             level,
             shipType,
@@ -83,7 +93,10 @@ export default async function handler(req, res) {
             updatedAt: new Date()
         });
 
-        const rank = await collection.countDocuments({ score: { $gt: score } }) + 1;
+        const rank = await collection.countDocuments({
+            dataVersion: CURRENT_DATA_VERSION,
+            score: { $gt: score }
+        }) + 1;
         return res.status(200).json({
             success: true,
             message: 'Score submitted successfully!',

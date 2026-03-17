@@ -47,17 +47,17 @@ export const SHIP_DATA = {
     // ── Tier 0: Starter ──────────────────────────────────────────────────────
     'default': { name: 'INTERCEPTOR', price: 0, hp: 5, speed: 450, damage: 3, fireRate: 0.12, missileCooldown: 4.0, missileCount: 2, color: '#00f3ff', bulletType: 'normal', desc: 'Standard issue. Reliable & fast.', passive: 'None' },
     // ── Tier 1: Early ──────────────────────────────────────
-    'scout': { name: 'RAZORBACK', price: 500, hp: 5, speed: 600, damage: 3, fireRate: 0.10, missileCooldown: 4.0, missileCount: 2, color: '#ffff00', bulletType: 'spread', desc: 'Blazing speed. Fan spread.', passive: 'Speed Demon: Dash CD = 3s. +10% speed at full HP.' },
-    'phantom': { name: 'PHANTOM', price: 1500, hp: 6, speed: 550, damage: 3, fireRate: 0.08, missileCooldown: 4.0, missileCount: 2, color: '#9900ff', bulletType: 'spread', desc: 'Nimble spread fighter.', passive: 'Ghost Protocol: 15% chance to ignore incoming damage.' },
+    'scout': { name: 'RAZORBACK', price: 500, hp: 6, speed: 600, damage: 4, fireRate: 0.095, missileCooldown: 4.0, missileCount: 2, color: '#ffff00', bulletType: 'spread', desc: 'Blazing speed. Fan spread.', passive: 'Speed Demon: Dash CD = 3s. +10% speed at full HP.' },
+    'phantom': { name: 'PHANTOM', price: 1500, hp: 6, speed: 550, damage: 4, fireRate: 0.075, missileCooldown: 4.0, missileCount: 2, color: '#9900ff', bulletType: 'spread', desc: 'Nimble spread fighter.', passive: 'Ghost Protocol: 15% chance to ignore incoming damage.' },
     'rapid': { name: 'STORM BRINGER', price: 3000, hp: 6, speed: 450, damage: 3, fireRate: 0.06, missileCooldown: 4.0, missileCount: 3, color: '#aa00ff', bulletType: 'normal', desc: 'Hyper fire rate. Dual missiles.', passive: 'Rapid Suppression: Every 5th shot fires a burst of 3.' },
     'fighter': { name: 'CRIMSON FURY', price: 5000, hp: 8, speed: 460, damage: 5, fireRate: 0.12, missileCooldown: 4.0, missileCount: 3, color: '#ff0055', bulletType: 'normal', desc: 'High damage. Extra HP.', passive: 'Blood Rush: +5% damage per kill (stacks ×5, resets on hit).' },
     'pulse': { name: 'NEON PULSE', price: 7500, hp: 8, speed: 500, damage: 5, fireRate: 0.04, missileCooldown: 4.0, missileCount: 3, color: '#00ffff', bulletType: 'normal', desc: 'Extreme fire rate. Neon core.', passive: 'Overcharge: Each kill reduces missile CD by 0.1s.' },
     // ── Tier 2: Mid ──────────────────────────────────────
-    'quantum': { name: 'QUANTUM GHOST', price: 12000, hp: 10, speed: 650, damage: 16, fireRate: 0.05, missileCooldown: 4.0, missileCount: 4, color: '#39ff14', bulletType: 'railgun', desc: 'Quantum entity. Hyper velocity.', passive: 'Quantum Tunnel: Railgun pierces asteroids.' },
+    'quantum': { name: 'QUANTUM GHOST', price: 12000, hp: 10, speed: 650, damage: 14, fireRate: 0.055, missileCooldown: 4.0, missileCount: 4, color: '#39ff14', bulletType: 'railgun', desc: 'Quantum entity. Hyper velocity.', passive: 'Quantum Tunnel: Railgun rounds split into twin shards mid-flight.' },
     'void': { name: 'VOID STALKER', price: 20000, hp: 10, speed: 500, damage: 12, fireRate: 0.20, missileCooldown: 4.0, missileCount: 4, color: '#4400ff', bulletType: 'railgun', desc: 'Experimental railgun. Shadow walk.', passive: 'Shadow Step: Dash leaves a damage zone (75px, 1 dmg).' },
     'solar': { name: 'SOLAR FLARE', price: 30000, hp: 10, speed: 460, damage: 8, fireRate: 0.12, missileCooldown: 4.0, missileCount: 4, color: '#ffcc00', bulletType: 'explosive', desc: 'Explosive solar rounds.', passive: 'Solar Burn: Explosions leave fire DOT patch (0.8s).' },
     'bomber': { name: 'DOOMSDAY', price: 45000, hp: 10, speed: 420, damage: 8, fireRate: 0.10, missileCooldown: 4.0, missileCount: 5, color: '#ff6600', bulletType: 'explosive', desc: 'Triple missile barrage.', passive: 'Triple Volley: Missiles fire in a triple spread.' },
-    'tank': { name: 'V.G. TITAN', price: 60000, hp: 7, speed: 400, damage: 8, fireRate: 0.12, missileCooldown: 4.0, missileCount: 4, color: '#00ff44', bulletType: 'piercing', desc: 'Heavy armor. Piercing shots.', passive: 'Reactive Plating: Reflect bullets during dash.' },
+    'tank': { name: 'V.G. TITAN', price: 60000, hp: 9, speed: 410, damage: 8, fireRate: 0.11, missileCooldown: 4.0, missileCount: 5, color: '#00ff44', bulletType: 'piercing', desc: 'Heavy armor. Piercing shots.', passive: 'Reactive Plating: Become invulnerable while dashing.' },
     'laser_drone': { name: 'LASER DRONE', price: 80000, hp: 10, speed: 480, damage: 6, fireRate: 0.03, missileCooldown: 4.0, missileCount: 4, color: '#ff00cc', bulletType: 'laser', desc: 'Sustained laser pulses. High DPS.', passive: 'Amplifier: 3s sustained fire gives +20% damage.' },
     // ── Tier 3: Upper-Mid ────────────────────────────────
     'wraith': { name: 'COSMIC WRAITH', price: 110000, hp: 6, speed: 600, damage: 20, fireRate: 0.05, missileCooldown: 4.0, missileCount: 5, color: '#cc44ff', bulletType: 'railgun', desc: 'Void phantom. Reality breaker.', passive: 'Reality Shatter: 10% chance each kill spawns a coin burst (+10c).' },
@@ -75,8 +75,8 @@ export const SHIP_DATA = {
     'phoenix': { name: 'CELESTIAL PHOENIX', price: 1800000, hp: 11, speed: 530, damage: 26, fireRate: 0.07, missileCooldown: 4.0, missileCount: 10, color: '#ffa500', bulletType: 'explosive', desc: 'Mythic firebird. Solar rebirth.', passive: 'Solar Rebirth: Once per run, revive at 3 HP with solar nova.' },
     'starborn': { name: 'STARBORN TITAN', price: 2200000, hp: 11, speed: 480, damage: 18, fireRate: 0.04, missileCooldown: 4.0, missileCount: 9, color: '#99ffcc', bulletType: 'railgun', desc: 'Mythic relic. Celestial pull.', passive: 'Celestial Pull: Passive vacuum for all items & powerups.' },
     'leviathan': { name: 'LEVIATHAN ROX', price: 2600000, hp: 13, speed: 460, damage: 24, fireRate: 0.08, missileCooldown: 4.0, missileCount: 10, color: '#003d82', bulletType: 'explosive', desc: 'Deep sea titan. Unstoppable.', passive: 'Tsunami Force: Explosions knock back nearby enemies.' },
-    'sentinel': { name: 'ETERNAL SENTINEL', price: 3200000, hp: 15, speed: 500, damage: 32, fireRate: 0.06, missileCooldown: 4.0, missileCount: 14, color: '#e8e8e8', bulletType: 'railgun', desc: 'Ultimate guardian. Infinite power.', passive: 'Infinite Power: Railgun shots slightly home toward nearest enemy.' },
-    'nova': { name: 'NOVA ASCENDANT', price: 4000000, hp: 12, speed: 580, damage: 36, fireRate: 0.04, missileCooldown: 4.0, missileCount: 16, color: '#ffeeaa', bulletType: 'railgun', desc: 'Supernova core. Reality-shattering.', passive: 'Supernova: All shots deal ×2 damage but drain 1 HP every 15s.' },
+    'sentinel': { name: 'ETERNAL SENTINEL', price: 3200000, hp: 14, speed: 500, damage: 30, fireRate: 0.065, missileCooldown: 4.0, missileCount: 12, color: '#e8e8e8', bulletType: 'railgun', desc: 'Ultimate guardian. Infinite power.', passive: 'Infinite Power: Railgun shots slightly home toward nearest enemy.' },
+    'nova': { name: 'NOVA ASCENDANT', price: 4000000, hp: 12, speed: 560, damage: 30, fireRate: 0.045, missileCooldown: 4.0, missileCount: 12, color: '#ffeeaa', bulletType: 'railgun', desc: 'Supernova core. Reality-shattering.', passive: 'Supernova: All shots deal ×2 damage but drain 1 HP every 15s.' },
     // ── PRESTIGE TIER: Achievement-locked only — cannot be purchased (hidden from armory) ──────────
     'nemesis': {
         name: 'NEMESIS PRIME', price: 0,
@@ -156,13 +156,6 @@ export class Game {
 
         this.lastTime = 0;
         this.score = 0;
-
-        // One-time hard reset to clear all player data as requested
-        if (!localStorage.getItem('midnight_hard_reset_v3')) {
-            localStorage.clear();
-            localStorage.setItem('midnight_hard_reset_v3', 'true');
-            console.log('Game Hard Reset Executed');
-        }
 
         if (!localStorage.getItem('midnight_plane_progression_v1')) {
             localStorage.setItem('midnight_owned_ships', JSON.stringify(['default']));
@@ -268,7 +261,9 @@ export class Game {
 
         // Initialize audio settings (music toggle should not mute gameplay SFX)
         const musicEnabled = localStorage.getItem('midnight_music_enabled') !== 'false';
+        const sfxEnabled = localStorage.getItem('midnight_sfx_enabled') !== 'false';
         this.audio.toggleMusic(musicEnabled);
+        this.audio.toggleSfx(sfxEnabled);
 
         // Arrays
         this.enemies = [];
@@ -309,7 +304,7 @@ export class Game {
         this.powerupInterval = 12.0;
         this.enemiesSpawned = 0;
         this.enemiesDefeated = 0;
-        this.enemiesForLevel = 10 + (this.currentLevel * 6); // Level 1 = 16, +6 enemies each level
+        this.enemiesForLevel = this.getEnemiesRequiredForLevel(this.currentLevel);
         this.entityCounter = 0;
         this.comboMultiplier = 1;
         this.comboTimer = 0;
@@ -324,6 +319,8 @@ export class Game {
 
         // Settings
         this.autoTargetEnabled = localStorage.getItem('midnight_autotarget_enabled') !== 'false';
+        this.screenShakeEnabled = localStorage.getItem('midnight_screen_shake_enabled') !== 'false';
+        this.challengeMode = false;
 
         // Leaderboard
         this.leaderboard = new LeaderboardManager();
@@ -397,7 +394,11 @@ export class Game {
             overlay.style.opacity = flashIntense;
             setTimeout(() => { if (overlay) overlay.style.opacity = 0; }, 50);
         }
-        this.screenShake.trigger(15, 0.1);
+        if (this.screenShakeEnabled !== false && this.screenShake) {
+            const intensity = Math.max(14, Math.min(65, 10 + (flashIntense * 45)));
+            const duration = Math.max(0.1, Math.min(0.55, 0.08 + (freezeTime * 0.9)));
+            this.screenShake.trigger(intensity, duration);
+        }
     }
 
     addEventListeners() {
@@ -428,22 +429,49 @@ export class Game {
             }
         };
 
+        const requestStart = (mode) => {
+            this.challengeMode = mode === 'challenge';
+            this.startRequested = true;
+            this.lastStartIntent = Date.now();
+            this.startGame();
+        };
+
         const handleStart = (e) => {
             if (e.type === 'touchstart') e.preventDefault();
             // Unlock audio on direct user gesture (required by many browsers)
             if (this.audio && this.audio.ctx && this.audio.ctx.state === 'suspended') {
                 this.audio.ctx.resume().catch(() => { });
             }
-            this.startRequested = true;
-            this.lastStartIntent = Date.now();
-            this.startGame();
+            requestStart('normal');
+        };
+
+        const handleChallengeStart = (e) => {
+            if (e.type === 'touchstart') e.preventDefault();
+            if (this.audio && this.audio.ctx && this.audio.ctx.state === 'suspended') {
+                this.audio.ctx.resume().catch(() => { });
+            }
+            requestStart('challenge');
         };
 
         this.startBtn.addEventListener('click', handleStart);
         this.startBtn.addEventListener('touchstart', handleStart, { passive: false });
 
-        this.restartBtn.addEventListener('click', handleStart);
-        this.restartBtn.addEventListener('touchstart', handleStart, { passive: false });
+        const handleRestart = (e) => {
+            if (e.type === 'touchstart') e.preventDefault();
+            if (this.audio && this.audio.ctx && this.audio.ctx.state === 'suspended') {
+                this.audio.ctx.resume().catch(() => { });
+            }
+            requestStart(this.challengeMode ? 'challenge' : 'normal');
+        };
+
+        this.restartBtn.addEventListener('click', handleRestart);
+        this.restartBtn.addEventListener('touchstart', handleRestart, { passive: false });
+
+        const challengeBtn = document.getElementById('challenge-btn');
+        if (challengeBtn) {
+            challengeBtn.addEventListener('click', handleChallengeStart);
+            challengeBtn.addEventListener('touchstart', handleChallengeStart, { passive: false });
+        }
 
         // Store Buttons
         const storeBtn = document.getElementById('store-btn');
@@ -483,12 +511,34 @@ export class Game {
             });
         }
 
+        const sfxToggle = document.getElementById('sfx-toggle');
+        if (sfxToggle) {
+            sfxToggle.checked = localStorage.getItem('midnight_sfx_enabled') !== 'false';
+            sfxToggle.addEventListener('change', (e) => {
+                localStorage.setItem('midnight_sfx_enabled', e.target.checked);
+                this.audio.toggleSfx(e.target.checked);
+            });
+        }
+
         const autoTargetToggle = document.getElementById('autotarget-toggle');
         if (autoTargetToggle) {
             autoTargetToggle.checked = localStorage.getItem('midnight_autotarget_enabled') !== 'false';
             autoTargetToggle.addEventListener('change', (e) => {
                 localStorage.setItem('midnight_autotarget_enabled', e.target.checked);
                 this.autoTargetEnabled = e.target.checked;
+            });
+        }
+
+        const screenShakeToggle = document.getElementById('screen-shake-toggle');
+        if (screenShakeToggle) {
+            screenShakeToggle.checked = localStorage.getItem('midnight_screen_shake_enabled') !== 'false';
+            screenShakeToggle.addEventListener('change', (e) => {
+                localStorage.setItem('midnight_screen_shake_enabled', e.target.checked);
+                this.screenShakeEnabled = e.target.checked;
+                if (!this.screenShakeEnabled && this.screenShake) {
+                    this.screenShake.offsetX = 0;
+                    this.screenShake.offsetY = 0;
+                }
             });
         }
 
@@ -920,12 +970,14 @@ export class Game {
             }
         };
 
-        // ── Splash screen: CSS handles animation & fade automatically ──
-        // We just reveal the start screen after the splash duration (3.5 s).
+        // ── Splash screen: play MUNEZ STUDIOS intro only once per browser session ──
         const SPLASH_DURATION = 3500; // ms — keep in sync with CSS animation total
-        setTimeout(() => {
+        const SPLASH_SEEN_KEY = 'midnight_brand_splash_seen';
+        const splash = document.getElementById('brand-splash');
+        const hasSeenSplash = sessionStorage.getItem(SPLASH_SEEN_KEY) === '1';
+
+        const finalizeStartupMenu = () => {
             // 1. Hide splash completely
-            const splash = document.getElementById('brand-splash');
             if (splash) splash.classList.add('hidden');
 
             // Safety reset: ensure startup always lands on front page even if a stale flag started gameplay.
@@ -951,17 +1003,15 @@ export class Game {
             if (this.startScreen) this.startScreen.classList.add('active');
             ensureMenuVisible();
 
-            // 5. Welcome notifications (safe, wrapped)
-            setTimeout(() => {
-                try { this.notifications.notify('System Online', 'Welcome back, Pilot. All engines ready.'); } catch(e) {}
-            }, 800);
-            setTimeout(() => {
-                try {
-                    this.notifications.notify('Daily Bonus', 'You received +25 Coins for your loyalty.');
-                    this.addCoins(25);
-                } catch(e) {}
-            }, 4000);
-        }, SPLASH_DURATION);
+            // Startup notifications removed by request.
+        };
+
+        if (hasSeenSplash) {
+            finalizeStartupMenu();
+        } else {
+            sessionStorage.setItem(SPLASH_SEEN_KEY, '1');
+            setTimeout(finalizeStartupMenu, SPLASH_DURATION);
+        }
 
         if (this.uiWatchdog) clearInterval(this.uiWatchdog);
         this.uiWatchdog = setInterval(ensureMenuVisible, 500);
@@ -1256,72 +1306,82 @@ export class Game {
         return SHIP_DATA[type] || SHIP_DATA['default'];
     }
 
-    getPlayerScalingMetrics() {
+    isMetaProgressionEnabled() {
+        return !this.challengeMode;
+    }
+
+    getEnemiesRequiredForLevel(level) {
+        // Wave system: L1=3 enemies, then +3 enemies each level.
+        return 3 + ((Math.max(1, level) - 1) * 3);
+    }
+
+    getWaveDurabilityHits(level = this.currentLevel || 1) {
+        // Durability starts at 3 hits and scales upward.
+        // Challenge mode scales to 10 hits; normal modes cap at 5.
+        const cap = this.challengeMode ? 10 : 5;
+        return Math.min(cap, 2 + Math.max(1, level));
+    }
+
+    getWaveEnemyDurabilityHealth(type, baseHealth = 1) {
         const ship = this.getShipStats(this.selectedShip);
-        const baseShip = SHIP_DATA['default'];
+        const playerShotDamage = Math.max(1, this.player?.bulletDamage || ship.damage || 1);
+        const durabilityHits = this.getWaveDurabilityHits();
+        const durabilityHealth = Math.ceil(durabilityHits * playerShotDamage);
+        return Math.max(Math.ceil(baseHealth), durabilityHealth);
+    }
 
-        // 1. Primary Gun DPS
-        const getBulletMult = (type) => {
-            if (type === 'spread') return 2.2; // 3 bullets but harder to land all
-            if (type === 'explosive') return 1.5; // Area damage
-            if (type === 'piercing') return 1.3; // Multi-hit potential
-            if (type === 'railgun') return 1.0; // Raw damage is already high
-            return 1.0;
+    getChallengeEnemyDurability(type, baseHealth = 1) {
+        if (!this.challengeMode) return Math.max(1, Math.ceil(baseHealth));
+
+        const scaling = this.getPlayerScalingMetrics ? this.getPlayerScalingMetrics() : null;
+        const shipPower = scaling?.shipPowerScore || 1;
+        const planeBoost = Math.max(0, Math.min(1.6, shipPower - 1));
+        const level = this.currentLevel || 1;
+
+        // Base rule: enemies should take ~5 hits minimum in challenge mode.
+        const requiredShots = Math.max(5, Math.min(10, Math.round(5 + (planeBoost * 2) + Math.min((level - 1) * 0.22, 2))));
+
+        const ship = this.getShipStats(this.selectedShip);
+        const playerShotDamage = Math.max(1, this.player?.bulletDamage || ship.damage || 1);
+
+        const typeMultiplier = {
+            swarm: 0.85,
+            swarmer: 0.9,
+            chaser: 1.0,
+            interceptor: 1.05,
+            shooter: 1.1,
+            sniper: 1.15,
+            splitter: 1.2,
+            launcher: 1.25,
+            heavy: 1.35,
+            titan: 1.6,
+            vortex: 1.7,
+            shielder: 1.3,
+            tractor: 1.35,
+            bomber: 1.4
         };
 
-        const baseGunDps = (baseShip.damage * getBulletMult(baseShip.bulletType)) / baseShip.fireRate;
-        const playerGunDps = (ship.damage * getBulletMult(ship.bulletType)) / ship.fireRate;
-
-        // 2. Missile DPS (Base damage is 5)
-        const baseMissileDps = (baseShip.missileCount * 5) / baseShip.missileCooldown;
-        const playerMissileDps = (ship.missileCount * 5) / ship.missileCooldown;
-
-        // 3. Passive Ability Weight
-        let passiveWeight = 1.0;
-        if (ship.specialAbility === 'kill_heal') passiveWeight += 0.2;
-        if (ship.specialAbility === 'phase_dodge') passiveWeight += 0.3;
-        if (ship.specialAbility === 'score_triple') passiveWeight += 0.1;
-        if (ship.specialAbility === 'all_passives') passiveWeight += 1.0;
-        if (ship.invincible) passiveWeight += 0.5;
-
-        // 4. Combined Scaling — more aggressive so high-tier jets don't trivialize content
-        const totalBasePower = baseGunDps + baseMissileDps;
-        const totalPlayerPower = (playerGunDps + playerMissileDps) * passiveWeight;
-
-        // Exponent 0.90 (near-linear) ensures boss HP/damage keeps pace with player DPS
-        const powerMultiplier = Math.pow(totalPlayerPower / totalBasePower, 0.90);
-        const speedMultiplier = Math.pow(ship.speed / baseShip.speed, 0.80);
-        const survivabilityMultiplier = Math.pow(ship.hp / baseShip.hp, 0.85);
-
-        return {
-            hpScale: Math.max(1, powerMultiplier),           // Boss HP scales with player DPS
-            // Damage scales with both player HP (survivability) AND player DPS — big DPS = tougher boss attacks
-            damageScale: Math.max(1, Math.max(survivabilityMultiplier, powerMultiplier * 0.6)),
-            speedScale: Math.max(1, speedMultiplier)         // Boss speed scales with player speed
-        };
+        const hpFromShots = Math.ceil(requiredShots * playerShotDamage * (typeMultiplier[type] || 1));
+        return Math.max(Math.ceil(baseHealth), hpFromShots);
     }
 
     getMaxEnemiesOnScreen() {
-        const level = this.currentLevel || 1;
-        // Balanced concurrent caps for challenge without frustration (Max 35)
-        if (level >= 24) return 35;
-        if (level >= 20) return 30;
-        if (level >= 15) return 25;
-        if (level >= 10) return 18;
-        if (level >= 5) return 12;
-        return 7 + level; // L1=8, L2=9, L3=10, L4=11
+        // Universal cap requested: only 5 enemies can appear at once.
+        return 5;
     }
 
     getEnemyContactDamage() {
-        if (this.currentLevel >= 24) return 2;
-        if (this.currentLevel >= 15) return 1.5;
-        return 2;
+        const scaling = this.getPlayerScalingMetrics ? this.getPlayerScalingMetrics() : null;
+        const damageScale = scaling?.damageMultiplier || 1;
+        const levelPressure = this.currentLevel >= 24 ? 1.12 : (this.currentLevel >= 15 ? 1.05 : 1.0);
+        return Math.max(1, Number((2 * damageScale * levelPressure).toFixed(2)));
     }
 
     getEnemyProjectileDamage(baseDamage = 1) {
-        if (this.currentLevel >= 24) return Math.max(2, baseDamage + 1);
-        if (this.currentLevel >= 15) return Math.max(1.5, baseDamage * 1.25);
-        return baseDamage;
+        const scaling = this.getPlayerScalingMetrics ? this.getPlayerScalingMetrics() : null;
+        const damageScale = scaling?.damageMultiplier || 1;
+        const levelPressure = this.currentLevel >= 24 ? 1.18 : (this.currentLevel >= 15 ? 1.08 : 1.0);
+        return Math.max(1, Number((baseDamage * damageScale * levelPressure).toFixed(2)));
     }
 
     canRunAuthoritativeOnline() {
@@ -1345,10 +1405,10 @@ export class Game {
         if (this.spawnDirector.openingDone || this.boss) return;
 
         const maxOnScreen = this.getMaxEnemiesOnScreen();
-        const openingCount = Math.min(maxOnScreen, 3);
+        const remaining = Math.max(0, this.enemiesForLevel - this.enemiesDefeated);
+        const openingCount = Math.min(maxOnScreen, remaining);
 
         for (let i = 0; i < openingCount; i++) {
-            if (this.enemiesSpawned >= this.enemiesForLevel) break;
             const enemy = this.spawnCombatEnemy();
             this.enemiesSpawned += this.getSpawnBudgetCost(enemy);
         }
@@ -1359,47 +1419,22 @@ export class Game {
     updateEnemySpawnDirector(dt) {
         if (this.boss) return;
 
-        this.enemyTimer += dt;
-        this.spawnFailSafeTimer += dt;
-        this.minActiveSpawnTimer += dt;
+        // Batch-spawn rule: keep up to 5 enemies on-screen, and only spawn the next batch
+        // when the current on-screen batch is fully destroyed.
+        if (this.enemies.length > 0) return;
 
-        const maxOnScreen = this.getMaxEnemiesOnScreen();
-        const canSpawnMore = () => this.enemies.length < maxOnScreen && (this.enemiesDefeated + this.enemies.length) < this.enemiesForLevel;
+        const remaining = Math.max(0, this.enemiesForLevel - this.enemiesDefeated);
+        if (remaining <= 0) return;
 
-        if (this.minActiveSpawnTimer >= 0.5) {
-            const minActive = Math.min(maxOnScreen, Math.max(2, 2 + Math.floor(this.currentLevel / 4)));
-            const deficit = Math.max(0, minActive - this.enemies.length);
-            const instantSpawn = Math.min(deficit, 1);
-
-            for (let i = 0; i < instantSpawn; i++) {
-                if (!canSpawnMore()) break;
-                const enemy = this.spawnCombatEnemy();
-                this.enemiesSpawned += this.getSpawnBudgetCost(enemy);
-            }
-
-            this.minActiveSpawnTimer = 0;
+        const spawnCount = Math.min(this.getMaxEnemiesOnScreen(), remaining);
+        for (let i = 0; i < spawnCount; i++) {
+            const enemy = this.spawnCombatEnemy();
+            this.enemiesSpawned += this.getSpawnBudgetCost(enemy);
         }
 
-        if (this.enemyTimer >= this.enemyInterval) {
-            const burstThreshold = Math.ceil(maxOnScreen * 0.45);
-            const spawnCount = (this.currentLevel <= 2) ? 1 : (this.enemies.length < burstThreshold ? 2 : 1);
-
-            for (let i = 0; i < spawnCount; i++) {
-                if (!canSpawnMore()) break;
-                const enemy = this.spawnCombatEnemy();
-                this.enemiesSpawned += this.getSpawnBudgetCost(enemy);
-            }
-
-            this.enemyTimer = 0;
-        }
-
-        if (this.spawnFailSafeTimer >= 1.5) {
-            if (this.enemies.length <= 1 && canSpawnMore()) {
-                const enemy = this.spawnCombatEnemy();
-                this.enemiesSpawned += this.getSpawnBudgetCost(enemy);
-            }
-            this.spawnFailSafeTimer = 0;
-        }
+        this.enemyTimer = 0;
+        this.spawnFailSafeTimer = 0;
+        this.minActiveSpawnTimer = 0;
     }
 
     generateLevelThresholds() {
@@ -1424,12 +1459,13 @@ export class Game {
             const versionData = await versionRes.json();
             if (versionData.success) {
                 const serverVersion = versionData.version;
-                const localVersion = parseInt(localStorage.getItem('midnight_game_version')) || 1;
+                const localVersion = parseInt(localStorage.getItem('midnight_game_version')) || 0;
 
                 if (serverVersion > localVersion) {
                     console.log(`🚨 GAME DATA RESET DETECTED (Server: ${serverVersion}, Local: ${localVersion})`);
                     this.resetProgress();
                     localStorage.setItem('midnight_game_version', serverVersion);
+                    localStorage.setItem('midnight_data_version', serverVersion);
                     // Refresh page to ensure total state reset
                     window.location.reload();
                     return;
@@ -1526,19 +1562,21 @@ export class Game {
 
     resetProgress() {
         console.warn('🗑️  Clearing all local progress data...');
-        const keysToClear = [
-            'midnight_highscore',
-            'midnight_coins',
-            'midnight_owned_ships',
-            'midnight_selected_ship',
-            'midnight_stats',
-            'midnight_claimed_achievements',
-            'midnight_unclaimed_achievements',
-            'midnight_player_name',
-            'midnight_playerName',
-            'midnight_armory_sanitized'
-        ];
-        keysToClear.forEach(key => localStorage.removeItem(key));
+        const localKeys = Object.keys(localStorage).filter((key) => key.startsWith('midnight_'));
+        localKeys.forEach((key) => localStorage.removeItem(key));
+
+        const sessionKeys = Object.keys(sessionStorage).filter((key) => key.startsWith('midnight_'));
+        sessionKeys.forEach((key) => sessionStorage.removeItem(key));
+
+        if ('caches' in window) {
+            caches.keys()
+                .then((keys) => Promise.all(
+                    keys
+                        .filter((key) => key.startsWith('midnight-fighter-'))
+                        .map((key) => caches.delete(key))
+                ))
+                .catch((error) => console.warn('Failed to clear Midnight Fighter caches:', error));
+        }
     }
 
     getPlayerRank() {
@@ -1668,25 +1706,30 @@ export class Game {
     checkLevelUp() {
         // Wave Completion Logic - Symmetric (Both clients independently calculate)
 
-        if (this.enemiesDefeated >= this.enemiesForLevel &&
-            this.enemies.length === 0 &&
-            !this.boss) {
+        const levelReady = (this.enemiesDefeated >= this.enemiesForLevel && this.enemies.length === 0 && !this.boss);
+
+        if (levelReady) {
 
             this.currentLevel++;
 
             // New Level Setup — +6 enemies every level
-            this.enemiesForLevel = 10 + (this.currentLevel * 6);
+            this.enemiesForLevel = this.getEnemiesRequiredForLevel(this.currentLevel);
             this.enemiesSpawned = 0;
             this.enemiesDefeated = 0;
 
-            this.difficultyMultiplier = Math.min(5.0, 1 + (this.currentLevel - 1) * 0.15);
-            // Spawn interval baseline adjusted (1.2s) to increase gaps between spawning
-            this.enemyInterval = Math.max(0.4, 1.2 / this.difficultyMultiplier);
+            if (this.challengeMode) {
+                this.difficultyMultiplier = Math.min(6.5, 1 + (this.currentLevel - 1) * 0.22);
+                this.enemyInterval = Math.max(0.25, 0.95 / this.difficultyMultiplier);
+            } else {
+                this.difficultyMultiplier = Math.min(5.0, 1 + (this.currentLevel - 1) * 0.15);
+                // Spawn interval baseline adjusted (1.2s) to increase gaps between spawning
+                this.enemyInterval = Math.max(0.4, 1.2 / this.difficultyMultiplier);
+            }
 
             // Removing 'level_up' netplay event because progression is strictly symmetric
 
             // Trigger Boss Warp every 5 levels
-            if (this.currentLevel % 5 === 0) {
+            if (!this.challengeMode && this.currentLevel % 5 === 0) {
                 this.triggerWarp();
             } else {
                 this.levelScore = this.score; // Keep for records
@@ -1716,7 +1759,8 @@ export class Game {
         const hud = document.getElementById('hud');
         if (hud) {
             const levelText = document.createElement('div');
-            levelText.innerText = `LEVEL ${level}`;
+            const label = this.challengeMode ? 'WAVE' : 'LEVEL';
+            levelText.innerText = `${label} ${level}`;
             levelText.style.position = 'absolute';
             levelText.style.top = '40%';
             levelText.style.left = '50%';
@@ -1769,6 +1813,8 @@ export class Game {
     }
 
     spawnBoss() {
+        if (this.challengeMode) return;
+
         if (!this.firstBossAppeared) {
             this.firstBossAppeared = true;
         }
@@ -1905,21 +1951,22 @@ export class Game {
         // Always reset spawn counters so the spawn condition never starts as undefined
         this.enemiesSpawned = 0;
         this.enemiesDefeated = 0;
-        this.enemiesForLevel = 10 + (this.currentLevel * 6);
+        this.enemiesForLevel = this.getEnemiesRequiredForLevel(this.currentLevel);
         this.entityCounter = 0;
 
         this.enemyTimer = 0;
-        this.enemyInterval = 0.8;
+        this.enemyInterval = this.challengeMode ? 0.62 : 0.8;
         this.spawnFailSafeTimer = 0;
         this.minActiveSpawnTimer = 0;
         this.spawnSideIndex = 0;
         this.spawnDirector.openingDone = false;
         this.powerupTimer = 0;
-        this.powerupInterval = 12.0;
+        this.powerupInterval = this.challengeMode ? 14.0 : 12.0;
 
         this.startScreen.classList.remove('active');
         this.gameOverScreen.classList.remove('active');
         if (this.hud) this.hud.style.display = 'flex';
+        if (this.hud) this.hud.classList.toggle('challenge-only', !!this.challengeMode);
 
         // Fullscreen is optional and user-controlled; avoid forced calls.
 
@@ -1966,7 +2013,7 @@ export class Game {
         this.updatePlayerHudInfo();
 
         // Update games played achievement
-        if (this.achievementManager) {
+        if (this.achievementManager && this.isMetaProgressionEnabled()) {
             this.achievementManager.addStat('games', 1);
         }
 
@@ -2061,12 +2108,40 @@ export class Game {
     goToMainMenu() {
         if (this.onlineCoop) {
             this.leaveCollaborateRoom(true, true);
-            return;
+            // Continue local UI reset below without forcing a page reload.
         }
 
-        // Auto-refresh to ensure leaderboard/starting ui is updated
+        this.challengeMode = false;
+        if (this.hud) this.hud.classList.remove('challenge-only');
+
+        // Return to menu without reload so brand splash does not replay.
+        this.isRunning = false;
+        this.gameOver = false;
+        this.isPaused = false;
+        this.startRequested = false;
+        this.player = null;
+        this.playerTwo = null;
+
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        if (this.startScreen) this.startScreen.classList.add('active');
+
+        const pauseMenu = document.getElementById('pause-menu');
+        if (pauseMenu) pauseMenu.classList.remove('active');
+        if (this.gameOverScreen) this.gameOverScreen.classList.remove('active');
+
+        const bossHud = document.getElementById('boss-hud');
+        if (bossHud) {
+            bossHud.classList.remove('active');
+            bossHud.style.display = 'none';
+        }
+
         this.hideGameControls();
-        window.location.reload();
+        if (this.hud) this.hud.style.display = 'none';
+
+        // Keep menu HUD data fresh without a hard refresh.
+        this.updateUI();
+        this.refreshRankDisplay();
+        this.syncGlobalData().catch(() => {});
     }
 
     goToStoreFromGameOver() {
@@ -2078,6 +2153,10 @@ export class Game {
 
     // Leaderboard Methods
     openLeaderboard() {
+        if (this.challengeMode) {
+            this.notifications?.notify?.('Challenge Mode', 'Leaderboard is disabled in Challenge Mode.');
+            return;
+        }
         this.startScreen.classList.remove('active');
         document.getElementById('leaderboard-screen').classList.add('active');
 
@@ -2109,6 +2188,10 @@ export class Game {
     }
 
     openLeaderboardFromGameOver() {
+        if (this.challengeMode) {
+            this.notifications?.notify?.('Challenge Mode', 'Leaderboard is disabled in Challenge Mode.');
+            return;
+        }
         this.gameOverScreen.classList.remove('active');
         document.getElementById('leaderboard-screen').classList.add('active');
 
@@ -2384,7 +2467,12 @@ export class Game {
         // Safety cap for deltaTime
         const dt = Math.min(deltaTime, 0.1);
 
-        this.screenShake.update(dt);
+        if (this.screenShakeEnabled) {
+            this.screenShake.update(dt);
+        } else {
+            this.screenShake.offsetX = 0;
+            this.screenShake.offsetY = 0;
+        }
 
         if (this.comboTimer > 0) {
             this.comboTimer -= dt;
@@ -2434,15 +2522,17 @@ export class Game {
                 
                 this.updateEnemySpawnDirector(dt);
 
-                this.powerupTimer += dt;
-                const powerupCooldown = this.boss ? 8.0 : this.powerupInterval;
-                if (this.powerupTimer > powerupCooldown && this.powerups.length < (this.boss ? 5 : 3)) {
-                    if (this.boss) {
-                        this.spawnPowerUpAt(this.random() * this.width * 0.8 + this.width * 0.1, this.random() * this.height * 0.8 + this.height * 0.1);
-                    } else {
-                        this.spawnPowerUp();
+                if (!this.challengeMode) {
+                    this.powerupTimer += dt;
+                    const powerupCooldown = this.boss ? 8.0 : this.powerupInterval;
+                    if (this.powerupTimer > powerupCooldown && this.powerups.length < (this.boss ? 5 : 3)) {
+                        if (this.boss) {
+                            this.spawnPowerUpAt(this.random() * this.width * 0.8 + this.width * 0.1, this.random() * this.height * 0.8 + this.height * 0.1);
+                        } else {
+                            this.spawnPowerUp();
+                        }
+                        this.powerupTimer = 0;
                     }
-                    this.powerupTimer = 0;
                 }
 
                 if (this.empTimer > 0) {
@@ -2678,10 +2768,10 @@ export class Game {
         enemy.markedForDeletion = true;
         this.enemiesDefeated += 1;
         this.addScore(enemy.points, useCombo);
-        if (this.achievementManager) this.achievementManager.addStat('kills', 1);
+        if (this.achievementManager && this.isMetaProgressionEnabled()) this.achievementManager.addStat('kills', 1);
         // Track kill streak
         this.currentKillStreak++;
-        if (this.achievementManager) this.achievementManager.updateMaxKillstreak(this.currentKillStreak);
+        if (this.achievementManager && this.isMetaProgressionEnabled()) this.achievementManager.updateMaxKillstreak(this.currentKillStreak);
         this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
         if (this.audio) this.audio.explosion();
 
@@ -2703,7 +2793,7 @@ export class Game {
             }
         }
 
-        if (this.powerups.length < 3 && this.random() < this.enemyDropChance) {
+        if (!this.challengeMode && this.powerups.length < 3 && this.random() < this.enemyDropChance) {
             this.spawnPowerUpAt(enemy.x, enemy.y);
         }
     }
@@ -2952,6 +3042,8 @@ export class Game {
     }
 
     spawnPowerUp() {
+        if (this.challengeMode) return;
+
         const types = [
             'speed', 'slowmo', 'invulnerability',
             'health_recover', 'health_boost',
@@ -2968,6 +3060,8 @@ export class Game {
     }
 
     spawnPowerUpAt(x, y) {
+        if (this.challengeMode) return;
+
         let type = 'speed';
 
         // ── Context-Aware Power-up Drops (Mercy System) ──
@@ -3164,7 +3258,19 @@ export class Game {
                                 // Relay hit to HOST
                                 this.netplay.emit('hit_enemy', { id: enemy.remoteId, damage: proj.damage, missile: proj.type === 'missile' });
                             } else {
-                                const dead = enemy.takeDamage(proj.damage);
+                                let damage = proj.damage;
+                                const reaperOwner = this.getPlayers().find((player) => player && player.playerId === (proj.ownerPlayerId || proj.side));
+                                if (reaperOwner && (reaperOwner.shipType === 'reaper' || reaperOwner.shipType === 'absolute')) {
+                                    const markKey = enemy.remoteId || enemy;
+                                    if (!reaperOwner._deathMarkSet.has(markKey)) {
+                                        reaperOwner._deathMarkSet.add(markKey);
+                                        damage *= 2;
+                                        if (this.floatingTexts) {
+                                            this.floatingTexts.push({ x: enemy.x, y: enemy.y - 20, text: 'DEATH MARK', color: '#ff3355', life: 0.9 });
+                                        }
+                                    }
+                                }
+                                const dead = enemy.takeDamage(damage);
                                 if (dead) {
                                     this.handleEnemyDefeat(enemy, true, proj.type === 'missile');
                                 }
@@ -3334,13 +3440,15 @@ export class Game {
             this.netplay.emit('destroy_boss', { id: this.boss.remoteId });
         }
 
-        const loot = this.boss.coinReward || 50;
+        const loot = this.isMetaProgressionEnabled() ? (this.boss.coinReward || 50) : 0;
         this.score += this.boss.points;
         this.coins += loot;
-        if (this.achievementManager) this.achievementManager.addStat('bosses', 1);
+        if (this.achievementManager && this.isMetaProgressionEnabled()) this.achievementManager.addStat('bosses', 1);
 
         // Save coins
-        localStorage.setItem('midnight_coins', this.coins);
+        if (this.isMetaProgressionEnabled()) {
+            localStorage.setItem('midnight_coins', this.coins);
+        }
 
         // ── Post-Boss Stat Upgrade ──
         // Grant permanent stat boosts per boss kill (capped)
@@ -3431,7 +3539,7 @@ export class Game {
                     }
 
                     p.markedForDeletion = true;
-                    if (this.achievementManager) this.achievementManager.addStat('powerups', 1);
+                    if (this.achievementManager && this.isMetaProgressionEnabled()) this.achievementManager.addStat('powerups', 1);
                     this.screenShake.trigger(10, 0.1);
                     if (this.audio) this.audio.dash();
                     break;
@@ -3443,13 +3551,14 @@ export class Game {
     updateUI() {
         const scoreEl = document.getElementById('score-display');
         const levelEl = document.getElementById('level-display');
+        const levelLabelEl = document.getElementById('level-label');
         const healthFill = document.getElementById('health-fill');
         const healthFillP2 = document.getElementById('health-fill-p2');
 
         if (scoreEl) scoreEl.innerText = this.score;
 
         // Update High Score logic
-        if (this.score > this.highScore) {
+        if (!this.challengeMode && this.score > this.highScore) {
             this.highScore = this.score;
             localStorage.setItem('midnight_highscore', this.highScore);
         }
@@ -3457,7 +3566,10 @@ export class Game {
         const highScoreEl = document.getElementById('high-score-display');
         if (highScoreEl) highScoreEl.innerText = this.highScore;
 
+        if (levelLabelEl) levelLabelEl.innerText = this.challengeMode ? 'WAVE' : 'LEVEL';
         if (levelEl) levelEl.innerText = this.currentLevel;
+        const waveEl = document.getElementById('wave-display');
+        if (waveEl) waveEl.innerText = this.currentLevel;
 
         // Update Enemy Count
         const enemyCountEl = document.getElementById('enemy-count');
@@ -3532,7 +3644,7 @@ export class Game {
         localStorage.setItem('midnight_play_count', this.playCount);
 
         // Stats for achievements
-        if (this.achievementManager) {
+        if (this.achievementManager && this.isMetaProgressionEnabled()) {
             this.achievementManager.addStat('games', 1);
             this.achievementManager.addStat('deaths', 1);
             // Best score and max level (only update if exceeded)
@@ -3555,13 +3667,19 @@ export class Game {
             earnedCoins += bonus;
         }
 
+        if (!this.isMetaProgressionEnabled()) {
+            earnedCoins = 0;
+        }
+
         this.coins += earnedCoins;
 
         // Track coins etc. 
-        localStorage.setItem('midnight_coins', this.coins);
+        if (this.isMetaProgressionEnabled()) {
+            localStorage.setItem('midnight_coins', this.coins);
+        }
 
         // Track total coins for coin achievements
-        if (this.achievementManager) {
+        if (this.achievementManager && this.isMetaProgressionEnabled()) {
             this.achievementManager.addStat('total_coins', earnedCoins);
         }
 
@@ -3589,7 +3707,16 @@ export class Game {
 
         // Show coins earned
         const coinsEarnedEl = document.getElementById('coins-earned-display');
-        if (coinsEarnedEl) coinsEarnedEl.innerText = `+${earnedCoins} COINS`;
+        if (coinsEarnedEl) {
+            coinsEarnedEl.innerText = this.challengeMode
+                ? 'CHALLENGE MODE: COIN REWARDS DISABLED'
+                : `+${earnedCoins} COINS`;
+        }
+
+        const gameOverLeaderboardBtn = document.getElementById('go-to-leaderboard-btn');
+        if (gameOverLeaderboardBtn) {
+            gameOverLeaderboardBtn.style.display = this.challengeMode ? 'none' : 'inline-block';
+        }
 
         const finalRankEl = document.getElementById('final-rank');
         if (finalRankEl) finalRankEl.innerText = this.getPlayerRank(this.highScore);
@@ -3597,7 +3724,7 @@ export class Game {
         // Submit score to leaderboard
         // In collaborative mode, only the host submits to prevent duplicate entries
         const shouldSubmit = !this.onlineCoop || this.onlineRole === 'host';
-        if (shouldSubmit) {
+        if (shouldSubmit && this.isMetaProgressionEnabled()) {
             const teamMembers = this.coopMode ? this.collabTeamMembers : null;
             await this.leaderboard.submitScore(this.score, this.currentLevel, this.selectedShip, teamMembers);
         }
@@ -3615,50 +3742,86 @@ export class Game {
 
     // Advanced AI: Dynamic Difficulty Scaling based on selected ship DPS and Passives
     getPlayerScalingMetrics() {
-        const defaultScale = { aiAggression: 1.0, bossSpeed: 1.0, projectileDensity: 1.0, damageMultiplier: 1.0, hpMultiplier: 1.0 };
+        const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+        const defaultScale = {
+            aiAggression: 1.0,
+            speedScale: 1.0,
+            projectileDensity: 1.0,
+            damageMultiplier: 1.0,
+            hpMultiplier: 1.0,
+            hpScale: 1.0,
+            damageScale: 1.0,
+            rawPlayerDPS: 0,
+            shipPowerScore: 1.0,
+            skillPressure: 1.0
+        };
         if (!this.selectedShip) return defaultScale;
 
         const ship = SHIP_DATA[this.selectedShip];
         if (!ship) return defaultScale;
 
-        // Calculate True Player DPS
-        // Interceptor base (3 dmg * 2 count / 1.5 cd) = 4 DPS
-        // Absolute base (60 dmg * 20 count / 0.4 cd) = 3000 DPS
-        // For burst calculation we use 1 / (fireRate + cooldown) as relative uptime, though we mostly care about raw output potential.
-        // Simplified raw burst potential = (Damage * Missile Count) / Missile Cooldown
-        const rawDPS = (ship.damage * ship.missileCount) / Math.max(0.1, ship.missileCooldown);
+        const baseShip = SHIP_DATA['default'];
+        const bulletWeights = {
+            normal: 1.0,
+            spread: 1.42,
+            explosive: 1.34,
+            piercing: 1.2,
+            railgun: 1.24,
+            laser: 1.28
+        };
 
-        // Calculate Passive Threat Score
+        const baseGunDps = (baseShip.damage * (bulletWeights[baseShip.bulletType] || 1)) / Math.max(0.04, baseShip.fireRate);
+        const gunDps = (ship.damage * (bulletWeights[ship.bulletType] || 1)) / Math.max(0.04, ship.fireRate);
+        const baseMissileDps = (baseShip.missileCount * 5) / Math.max(0.1, baseShip.missileCooldown);
+        const missileDps = (ship.missileCount * 5) / Math.max(0.1, ship.missileCooldown);
+
         let passiveThreat = 1.0;
-        if (ship.specialAbility === 'all_passives') passiveThreat = 2.5;
-        else if (ship.specialAbility === 'phase_dodge') passiveThreat = 1.6;
-        else if (ship.specialAbility === 'missile_heal') passiveThreat = 1.4;
-        else if (ship.passive.includes('Heal') || ship.passive.includes('revive')) passiveThreat = 1.4;
-        else if (ship.passive.includes('ignore') || ship.passive.includes('Double damage')) passiveThreat = 1.3;
+        if (ship.specialAbility === 'all_passives') passiveThreat += 0.28;
+        else if (ship.specialAbility === 'phase_dodge') passiveThreat += 0.16;
+        else if (ship.specialAbility === 'missile_heal') passiveThreat += 0.12;
+        else if (ship.specialAbility === 'kill_heal') passiveThreat += 0.1;
 
-        // Base Interceptor comparisons for scaling ratios
-        const baseDPS = 4.0;
-        const baseHp = 5;
-        const baseSpeed = 450;
+        const passiveText = String(ship.passive || '').toLowerCase();
+        if (passiveText.includes('ignore') || passiveText.includes('revive')) passiveThreat += 0.08;
+        if (passiveText.includes('double damage') || passiveText.includes('detonate')) passiveThreat += 0.08;
+        if (passiveText.includes('slow motion') || passiveText.includes('reflect')) passiveThreat += 0.05;
 
-        const dpsRatio = rawDPS / baseDPS; // Can be 1x up to 750x for absolute
-        const hpRatio = ship.hp / baseHp; // Can be 1x up to 8x
+        const gunRatio = gunDps / Math.max(1, baseGunDps);
+        const missileRatio = missileDps / Math.max(1, baseMissileDps);
+        const survivalRatio = ship.hp / Math.max(1, baseShip.hp);
+        const mobilityRatio = ship.speed / Math.max(1, baseShip.speed);
 
-        // The scaling multipliers output:
-        // aiAggression: dictates attack speed and tracking speed.
-        // bossSpeed: dictates boss movement velocity.
-        // projectileDensity: dictates how many bullets or the spread of bullets an enemy uses.
-        // damageMultiplier: directly scales enemy collision and bullet damage.
-        // hpMultiplier: directly scales enemy health to match Time-to-Kill (TTK).
+        const shipPowerScore = (
+            (gunRatio * 0.55) +
+            (missileRatio * 0.2) +
+            (survivalRatio * 0.15) +
+            (mobilityRatio * 0.1)
+        ) * passiveThreat;
+
+        const levelPressure = Math.max(0, (this.currentLevel || 1) - 1) * 0.012;
+        const streakPressure = Math.min(this.currentKillStreak || 0, 25) * 0.01;
+        const scorePressure = Math.min(Math.log10(Math.max(1, this.score || 0) + 1) / 12, 0.12);
+        const experiencePressure = Math.min(this.playCount || 0, 80) * 0.0015;
+        const skillPressure = 1 + clamp(levelPressure + streakPressure + scorePressure + experiencePressure, 0, 0.55);
+
+        const normalizedPower = clamp(Math.pow(shipPowerScore * skillPressure, 0.35), 0.9, 1.75);
+        const hpMultiplier = clamp(1 + (normalizedPower - 1) * 0.42 + Math.max(0, gunRatio - 1) * 0.08, 1, 1.7);
+        const damageMultiplier = clamp(0.95 + (normalizedPower - 1) * 0.26 + Math.max(0, survivalRatio - 1) * 0.08, 0.92, 1.32);
+        const speedScale = clamp(0.94 + (normalizedPower - 1) * 0.12 + Math.max(0, mobilityRatio - 1) * 0.12, 0.9, 1.16);
+        const aiAggression = clamp(0.92 + (normalizedPower - 1) * 0.35, 0.9, 1.28);
+        const projectileDensity = clamp(1 + (normalizedPower - 1) * 0.55, 1, 1.6);
 
         return {
-            aiAggression: Math.max(0.6, 1.0 + (Math.log10(dpsRatio) * 0.25) * passiveThreat),
-            speedScale: Math.min(1.0, Math.max(0.6, 1.0 + ((ship.speed - baseSpeed) / 800))),
-            projectileDensity: Math.max(1, Math.floor(1 + Math.log2(dpsRatio) * 0.2)),
-            damageMultiplier: Math.max(0.7, 1.0 + Math.sqrt(Math.max(0, hpRatio - 1)) * 0.6),
-            hpMultiplier: Math.max(0.25, 1.0 + Math.pow(Math.max(0, dpsRatio - 1), 0.7) * 0.5 * passiveThreat),
-            // Useful flat stat for direct lookups
-            rawPlayerDPS: rawDPS
+            aiAggression,
+            speedScale,
+            projectileDensity,
+            damageMultiplier,
+            hpMultiplier,
+            hpScale: hpMultiplier,
+            damageScale: damageMultiplier,
+            rawPlayerDPS: gunDps + missileDps,
+            shipPowerScore,
+            skillPressure
         };
     }
 
@@ -3960,12 +4123,13 @@ export class Game {
             const data = await response.json();
             if (data.success) {
                 const serverVersion = data.version;
-                const localVersion = parseInt(localStorage.getItem('midnight_data_version') || '1');
+                const localVersion = parseInt(localStorage.getItem('midnight_data_version') || '0');
 
                 if (serverVersion > localVersion) {
                     console.log(`🚨 Data version mismatch! Server: ${serverVersion}, Local: ${localVersion}. Resetting progress...`);
                     this.resetProgress();
                     localStorage.setItem('midnight_data_version', serverVersion);
+                    localStorage.setItem('midnight_game_version', serverVersion);
                 }
             }
         } catch (e) {

@@ -6,7 +6,9 @@ export class Projectile {
         this.angle = angle;
         this.type = type;
         this.side = side;
+        this.owner = side;
         this.markedForDeletion = false;
+        this.age = 0;
 
         this.speed = 1000; // Default bullet speed
         this.damage = 1;
@@ -30,9 +32,17 @@ export class Projectile {
     }
 
     update(deltaTime) {
+        this.age += deltaTime;
+
+        if (this.splitAfter !== undefined && !this.splitTriggered && this.age >= this.splitAfter) {
+            this.splitTriggered = true;
+            this.spawnSplitProjectiles();
+            this.markedForDeletion = true;
+            return;
+        }
+
         // Track age for lifetime-limited projectiles
         if (this.lifetime !== undefined) {
-            this.age = (this.age || 0) + deltaTime;
             if (this.age >= this.lifetime) {
                 this.markedForDeletion = true;
                 return;
@@ -55,7 +65,7 @@ export class Projectile {
                 const targetAngle = Math.atan2(dy, dx);
 
                 // Smooth turning
-                const turnSpeed = 10.0 * deltaTime;
+                const turnSpeed = (this.turnRate || 10.0) * deltaTime;
                 let angleDiff = targetAngle - this.angle;
 
                 // Normalize angle
@@ -70,6 +80,12 @@ export class Projectile {
             }
         }
 
+        if (this.wobbleAmount) {
+            const wobbleFrequency = this.wobbleFrequency || 10;
+            const wobblePhase = this.wobblePhase || 0;
+            this.angle += Math.sin((this.age * wobbleFrequency) + wobblePhase) * this.wobbleAmount * deltaTime;
+        }
+
         this.x += Math.cos(this.angle) * this.speed * deltaTime;
         this.y += Math.sin(this.angle) * this.speed * deltaTime;
 
@@ -77,6 +93,37 @@ export class Projectile {
         if (this.x < -100 || this.x > this.game.logicalWidth + 100 ||
             this.y < -100 || this.y > this.game.logicalHeight + 100) {
             this.markedForDeletion = true;
+        }
+    }
+
+    spawnSplitProjectiles() {
+        const count = Math.max(2, this.splitCount || 3);
+        const splitSpread = this.splitSpread || 0.35;
+        const angleStep = count > 1 ? splitSpread : 0;
+        const startAngle = this.fullCircleSplit
+            ? this.angle
+            : this.angle - (angleStep * (count - 1)) / 2;
+        const projectileType = this.splitProjectileType || 'bullet';
+
+        for (let index = 0; index < count; index++) {
+            const angle = this.fullCircleSplit
+                ? this.angle + ((Math.PI * 2) / count) * index
+                : startAngle + angleStep * index;
+            const child = new Projectile(this.game, this.x, this.y, angle, projectileType, this.side);
+            child.owner = this.owner;
+            child.source = this.source;
+            child.speed = (this.childSpeed || this.speed) * (this.childSpeedScale || 1);
+            child.damage = Math.max(0.5, this.damage * (this.childDamageScale || 0.6));
+            child.radius = Math.max(2, (this.childRadius || this.radius) * (this.childRadiusScale || 0.8));
+            child.color = this.childColor || this.color;
+            child.lifetime = this.childLifetime;
+            child.piercing = !!this.childPiercing;
+            child.explosive = !!this.childExplosive;
+            child.wobbleAmount = this.childWobbleAmount || 0;
+            child.wobbleFrequency = this.childWobbleFrequency || 0;
+            child.wobblePhase = (this.childWobblePhase || 0) + index;
+            child.isHoming = projectileType === 'missile' ? this.childHoming !== false : false;
+            this.game.projectiles.push(child);
         }
     }
 

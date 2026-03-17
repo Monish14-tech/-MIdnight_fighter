@@ -2,7 +2,7 @@ export class AudioController {
     constructor() {
         this.ctx = new (window.AudioContext || window.webkitAudioContext)();
         this.masterGain = this.ctx.createGain();
-        this.masterGain.gain.value = 0.3; // Lower volume
+        this.masterGain.gain.value = 0.45; // Make overall feedback more audible
         this.masterGain.connect(this.ctx.destination);
 
         // Distortion Node for "Rock" feel
@@ -16,7 +16,7 @@ export class AudioController {
         this.musicGain.connect(this.distortion);
 
         this.sfxGain = this.ctx.createGain();
-        this.sfxGain.gain.setValueAtTime(0.8, this.ctx.currentTime);
+        this.sfxGain.gain.setValueAtTime(1.1, this.ctx.currentTime);
         this.sfxGain.connect(this.distortion);
 
         // Jet Engine Hum (Noise)
@@ -37,7 +37,9 @@ export class AudioController {
 
         // Music Mute Persistence
         this.musicEnabled = localStorage.getItem('midnight_music_enabled') !== 'false';
+        this.sfxEnabled = localStorage.getItem('midnight_sfx_enabled') !== 'false';
         this.updateMusicGain();
+        this.updateSfxGain();
     }
 
     async preloadBGM() {
@@ -91,9 +93,18 @@ export class AudioController {
         this.musicGain.gain.setTargetAtTime(this.musicEnabled ? 0.5 : 0, this.ctx.currentTime, 0.1);
     }
 
+    updateSfxGain() {
+        this.sfxGain.gain.setTargetAtTime(this.sfxEnabled ? 1.1 : 0, this.ctx.currentTime, 0.1);
+    }
+
     toggleMusic(enabled) {
         this.musicEnabled = enabled;
         this.updateMusicGain();
+    }
+
+    toggleSfx(enabled) {
+        this.sfxEnabled = enabled;
+        this.updateSfxGain();
     }
 
     playTone(freq, type, duration, target = this.sfxGain, gainVal = 1) {
