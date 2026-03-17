@@ -2555,7 +2555,7 @@ export class Game {
         if (bossName) {
             const baseName = this.bossHudBaseName || bossName.dataset.baseName || bossName.innerText.split(' | HP ')[0] || 'ANOMALY';
             bossName.dataset.baseName = baseName;
-            bossName.innerText = `${baseName} | HP ${Math.max(0, Math.ceil(currentHealth))}/${Math.max(1, Math.ceil(maxHealth))}`;
+            bossName.innerText = baseName;
         }
     }
 
@@ -3835,12 +3835,8 @@ export class Game {
             } else if (this.ownedShips.includes(key)) {
                 btn.innerText = 'EQUIP';
                 btn.onclick = () => this.selectShip(key);
-            } else if (!isPrestige && !prerequisiteMet) {
-                const prevName = SHIP_DATA[previousShip]?.name || previousShip || 'PREVIOUS SHIP';
-                btn.innerText = `🔒 UNLOCK ${prevName}`;
-                btn.disabled = true;
-                btn.title = `Own ${prevName} first`;
             } else if (isPrestige) {
+
                 // Prestige ships: show achievement requirement
                 if (isAchievementUnlocked) {
                     btn.innerText = '✦ CLAIM FREE';
@@ -3873,14 +3869,7 @@ export class Game {
         const ship = SHIP_DATA[type];
 
         if (!ship) return;
-        if (!ship.prestige) {
-            const previousShip = this.getPreviousShip(type);
-            if (previousShip && !this.ownedShips.includes(previousShip)) {
-                const prevName = SHIP_DATA[previousShip]?.name || previousShip;
-                alert(`Unlock ${prevName} first.`);
-                return;
-            }
-        }
+
 
 
         if (this.coins >= ship.price) {

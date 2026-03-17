@@ -457,7 +457,7 @@ export class Boss {
             : { aiAggression: 1, speedScale: 1, projectileDensity: 1, damageMultiplier: 1, hpMultiplier: 1 };
 
         // Base HP scaled to player DPS to maintain Time-to-Kill (TTK) parity
-        this.maxHealth = Math.floor(800 * levelScale * tierMultiplier * playerScale.hpMultiplier);
+        this.maxHealth = Math.floor(1200 * levelScale * tierMultiplier * playerScale.hpMultiplier);
         this.health = this.maxHealth;
         this.points = Math.floor(1500 * levelScale);
         this.coinReward = Math.floor(200 * level * 0.8); // Balanced linear reward

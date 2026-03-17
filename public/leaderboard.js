@@ -32,7 +32,7 @@ export class LeaderboardManager {
     // Fetch leaderboard
     async fetchLeaderboard(limit = 10) {
         try {
-            const response = await fetch(`${this.apiUrl}/leaderboard?limit=${limit}&type=${this.mode}`);
+            const response = await fetch(`${this.apiUrl}/leaderboard?limit=${limit}&type=${this.mode}&t=${Date.now()}`);
             const data = await response.json();
 
             if (data.success) {
@@ -81,7 +81,7 @@ export class LeaderboardManager {
     // Get player stats
     async getPlayerStats(playerName) {
         try {
-            const response = await fetch(`${this.apiUrl}/player/${playerName}`);
+            const response = await fetch(`${this.apiUrl}/player/${playerName}?t=${Date.now()}`);
             const data = await response.json();
 
             if (data.success) {
