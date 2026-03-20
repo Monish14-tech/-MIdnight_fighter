@@ -67,7 +67,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', async () => {
-                const purgeKey = 'midnight_sw_cache_purged_v2';
+                const purgeKey = 'midnight_sw_cache_purged_v3';
 
                 // One-time hard cleanup for stale SW/caches so startup flow fixes always apply.
                 if (!localStorage.getItem(purgeKey)) {

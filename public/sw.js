@@ -1,4 +1,4 @@
-const CACHE_NAME = 'midnight-fighter-v6';
+const CACHE_NAME = 'midnight-fighter-v7';
 const ASSETS = [
   './',
   './index.html',

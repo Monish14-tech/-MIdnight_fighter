@@ -3314,6 +3314,20 @@ body {
     }
 }
 
+.story-skip-btn {
+    position: absolute;
+    bottom: 30px;
+    right: 40px;
+    font-size: 1rem;
+    padding: 10px 25px;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+.story-skip-btn:hover {
+    opacity: 1;
+}
+
 /* Story Victory Overlay */
 #story-victory-overlay {
     position: fixed;

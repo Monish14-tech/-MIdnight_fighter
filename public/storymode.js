@@ -45,8 +45,10 @@ export class StoryMode {
     // ── Intro Cinematic ──────────────────────────────────────────
     startIntro() {
         this.phase = 'intro';
+        this.isSkipping = false;
         this._createIntroOverlay();
         this._playLines(this.introLines, 0, () => {
+            if (this.isSkipping) return;
             this._fadeOutOverlay('story-intro-overlay', () => {
                 this.phase = 'campaign';
                 this.game.resumeFromStoryIntro();
@@ -61,15 +63,41 @@ export class StoryMode {
             overlay.id = 'story-intro-overlay';
             document.body.appendChild(overlay);
         }
-        overlay.innerHTML = '<div id="story-intro-text" class="story-intro-text"></div>';
+        overlay.innerHTML = `
+            <div id="story-intro-text" class="story-intro-text"></div>
+            <button id="story-skip-btn" class="neon-btn story-skip-btn">SKIP &gt;&gt;</button>
+        `;
         overlay.classList.remove('hidden', 'fade-out');
         overlay.style.opacity = '1';
+
+        const skipBtn = document.getElementById('story-skip-btn');
+        if (skipBtn) {
+            skipBtn.addEventListener('click', () => {
+                if (this.isSkipping) return;
+                this.isSkipping = true;
+                if (this.currentTypeInterval) clearInterval(this.currentTypeInterval);
+                if (this.currentPauseTimeout) clearTimeout(this.currentPauseTimeout);
+                
+                // Force finish intro
+                this._fadeOutOverlay('story-intro-overlay', () => {
+                    this.phase = 'campaign';
+                    this.game.resumeFromStoryIntro();
+                });
+            });
+            // Support touch
+            skipBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                skipBtn.click();
+            }, { passive: false });
+        }
     }
 
     _playLines(lines, index, onComplete) {
+        if (this.isSkipping) return;
+        
         if (index >= lines.length) {
             // All lines done — wait 1.5s then call onComplete
-            setTimeout(onComplete, 1500);
+            this.currentPauseTimeout = setTimeout(onComplete, 1500);
             return;
         }
 
@@ -82,14 +110,18 @@ export class StoryMode {
         let charIndex = 0;
 
         // Type character by character
-        const typeInterval = setInterval(() => {
+        this.currentTypeInterval = setInterval(() => {
+            if (this.isSkipping) {
+                clearInterval(this.currentTypeInterval);
+                return;
+            }
             if (charIndex < line.length) {
                 textEl.textContent += line[charIndex];
                 charIndex++;
             } else {
-                clearInterval(typeInterval);
+                clearInterval(this.currentTypeInterval);
                 // Pause for 2s between lines
-                setTimeout(() => {
+                this.currentPauseTimeout = setTimeout(() => {
                     this._playLines(lines, index + 1, onComplete);
                 }, 2200);
             }
