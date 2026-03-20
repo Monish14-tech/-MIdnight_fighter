@@ -441,7 +441,6 @@ h1 {
 #settings-menu,
 #game-over-screen,
 #leaderboard-screen,
-#collab-screen,
 #achievements-screen {
     background: rgba(10, 10, 20, 0.95);
     border: 2px solid var(--neon-blue);
@@ -3231,4 +3230,235 @@ body {
     to {
         width: 100%;
     }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   STORY MODE STYLES
+───────────────────────────────────────────────────────────── */
+
+/* Story Mode Button */
+.story-btn {
+    border-color: #ffb300 !important;
+    color: #ffb300 !important;
+    box-shadow: 0 0 12px #ffb300, inset 0 0 12px rgba(255, 179, 0, 0.2) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.story-btn::before {
+    content: '';
+    position: absolute;
+    top: -2px; left: -2px; right: -2px; bottom: -2px;
+    background: linear-gradient(90deg, transparent, rgba(255, 179, 0, 0.2), transparent);
+    animation: storyBtnShimmer 2s linear infinite;
+}
+
+@keyframes storyBtnShimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.story-btn:hover {
+    background: rgba(255, 179, 0, 0.15) !important;
+    box-shadow: 0 0 25px #ffb300, 0 0 50px rgba(255, 179, 0, 0.4), inset 0 0 20px rgba(255, 179, 0, 0.1) !important;
+    transform: scale(1.03);
+}
+
+/* Story Intro Overlay */
+#story-intro-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.96);
+    z-index: 9000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 1s ease;
+}
+
+#story-intro-overlay.fade-out {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.story-intro-text {
+    max-width: 680px;
+    text-align: center;
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(1.2rem, 2.4vw, 1.9rem);
+    line-height: 1.8;
+    color: #e8f0ff;
+    text-shadow:
+        0 0 12px rgba(120, 160, 255, 0.9),
+        0 0 35px rgba(80, 120, 255, 0.7),
+        0 0 60px rgba(200, 150, 255, 0.4);
+    letter-spacing: 3px;
+    padding: 45px;
+    border: 1px solid rgba(120, 160, 255, 0.4);
+    border-radius: 12px;
+    background: rgba(5, 10, 40, 0.7);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 0 40px rgba(80, 120, 255, 0.15), inset 0 0 25px rgba(80, 120, 255, 0.1);
+    animation: storyTextPulse 4s ease-in-out infinite alternate;
+}
+
+@keyframes storyTextPulse {
+    0% { 
+        text-shadow: 0 0 10px rgba(120, 160, 255, 0.8), 0 0 25px rgba(80, 120, 255, 0.5); 
+        transform: scale(1);
+    }
+    100% { 
+        text-shadow: 0 0 15px rgba(120, 160, 255, 1), 0 0 45px rgba(80, 120, 255, 0.9), 0 0 80px rgba(255, 200, 255, 0.5); 
+        transform: scale(1.02);
+    }
+}
+
+/* Story Victory Overlay */
+#story-victory-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: rgba(0, 0, 8, 0.97);
+    z-index: 9100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+}
+
+.story-victory-text {
+    font-size: clamp(1.2rem, 2.4vw, 1.9rem) !important;
+    color: #ffd700 !important;
+    text-shadow:
+        0 0 15px rgba(255, 215, 0, 0.9),
+        0 0 40px rgba(255, 170, 0, 0.6),
+        0 0 80px rgba(255, 120, 0, 0.3) !important;
+    border-color: rgba(255, 215, 0, 0.3) !important;
+    background: rgba(40, 30, 0, 0.7) !important;
+    animation: victoryPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes victoryPulse {
+    from { text-shadow: 0 0 15px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 170, 0, 0.5); }
+    to   { text-shadow: 0 0 25px rgba(255, 215, 0, 1.0), 0 0 60px rgba(255, 170, 0, 0.8), 0 0 100px rgba(255, 100, 0, 0.4); }
+}
+
+.story-victory-buttons {
+    display: flex;
+    gap: 24px;
+    margin-top: 20px;
+    animation: fadeInUp 0.8s ease both;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Boss Gauntlet Entry Overlay */
+.story-gauntlet-entry {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 8900;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    animation: gauntletIn 0.4s ease both;
+}
+
+.story-gauntlet-entry.fade-out {
+    animation: gauntletOut 1s ease forwards;
+}
+
+@keyframes gauntletIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes gauntletOut {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+}
+
+.gauntlet-title {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(1.8rem, 4vw, 3.5rem);
+    font-weight: 900;
+    color: #ff4400;
+    text-shadow: 0 0 20px #ff4400, 0 0 50px rgba(255, 68, 0, 0.5);
+    letter-spacing: 4px;
+    animation: gauntletTitlePulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes gauntletTitlePulse {
+    from { text-shadow: 0 0 20px #ff4400, 0 0 50px rgba(255, 68, 0, 0.5); }
+    to   { text-shadow: 0 0 40px #ff6600, 0 0 80px rgba(255, 100, 0, 0.8); }
+}
+
+.gauntlet-subtitle {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(0.9rem, 1.8vw, 1.3rem);
+    color: #aaaaaa;
+    letter-spacing: 3px;
+}
+
+.gauntlet-upgrade {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(1rem, 2vw, 1.6rem);
+    font-weight: 700;
+    color: #00ff88;
+    text-shadow: 0 0 15px #00ff88, 0 0 40px rgba(0, 255, 136, 0.5);
+    letter-spacing: 3px;
+    animation: upgradeGlow 1s ease-in-out 0.5s both;
+}
+
+@keyframes upgradeGlow {
+    from { opacity: 0; transform: scale(0.8); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+/* Ship Upgrade Toast */
+.story-upgrade-toast {
+    position: fixed;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 40, 20, 0.95);
+    border: 2px solid #00ff88;
+    color: #00ff88;
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(0.9rem, 1.5vw, 1.2rem);
+    font-weight: 700;
+    padding: 16px 32px;
+    border-radius: 6px;
+    text-align: center;
+    letter-spacing: 3px;
+    box-shadow: 0 0 25px #00ff88, inset 0 0 15px rgba(0, 255, 136, 0.1);
+    z-index: 8800;
+    animation: toastIn 0.4s ease both, toastOut 0.5s ease 2.5s forwards;
+}
+
+@keyframes toastIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(-20px) scale(0.9); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+@keyframes toastOut {
+    from { opacity: 1; }
+    to   { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+}
+
+/* Game Over Subtitle (story defeat message) */
+.game-over-subtitle {
+    font-size: 0.9rem;
+    color: #888;
+    letter-spacing: 2px;
+    margin-bottom: 0.5rem;
+    font-style: italic;
 }

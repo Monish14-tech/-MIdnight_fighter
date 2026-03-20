@@ -58,16 +58,16 @@
             originalLog.apply(console, arguments);
         };
     </script>
-    <link rel="stylesheet" href="style.css?v=57">
-    <link rel="stylesheet" href="ranks.css?v=57">
-    <script type="module" src="main.js?v=57"></script>
+    <link rel="stylesheet" href="style.css?v=58">
+    <link rel="stylesheet" href="ranks.css?v=58">
+    <script type="module" src="main.js?v=58"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', async () => {
-                const purgeKey = 'midnight_sw_cache_purged_v1';
+                const purgeKey = 'midnight_sw_cache_purged_v2';
 
                 // One-time hard cleanup for stale SW/caches so startup flow fixes always apply.
                 if (!localStorage.getItem(purgeKey)) {
@@ -247,14 +247,13 @@
 
                 <div class="menu-buttons">
                     <button id="start-btn" class="neon-btn">INITIATE SEQUENCE</button>
-                    <button id="challenge-btn" class="neon-btn challenge-btn">CHALLENGE SEQUENCE</button>
+                    <button id="story-btn" class="neon-btn story-btn">⚔ STORY MODE</button>
                     <button id="store-btn" class="neon-btn">ARMORY</button>
                     <button id="achievements-menu-btn" class="neon-btn">
                         ACHIEVEMENTS
                         <span id="achievement-notification-dot" class="notification-dot hidden"></span>
                     </button>
                     <button id="leaderboard-btn" class="neon-btn">LEADERBOARD</button>
-                    <button id="collab-btn" class="neon-btn coming-soon" disabled>COLLABORATE (COMING SOON)</button>
                 </div>
                 <p id="total-coins-display">COINS: 0</p>
                 <p id="player-name-display" class="player-name-display">PILOT: <span
@@ -326,6 +325,7 @@
 
             <div id="game-over-screen" class="screen">
                 <h1 class="glitch" data-text="TERMINATED">TERMINATED</h1>
+                <p id="game-over-subtitle" class="game-over-subtitle"></p>
                 <p>FINAL SCORE: <span id="final-score">0</span></p>
                 <p>HIGH SCORE: <span id="final-high-score">0</span></p>
                 <p>RANK: <span id="final-rank" class="highlight-text">ROOKIE PILOT</span></p>
@@ -343,7 +343,6 @@
                 <h2>GLOBAL LEADERBOARD</h2>
                 <div id="leaderboard-tabs" class="tab-container">
                     <button class="tab-btn active" data-mode="solo">SOLO</button>
-                    <button class="tab-btn" data-mode="coop">CO-OP</button>
                 </div>
                 <div id="player-name-section" class="leaderboard-name-section">
                     <input type="text" id="player-name-input" class="leaderboard-name-input" placeholder="Enter your pilot name" maxlength="20">
@@ -372,34 +371,6 @@
                     </div>
                 </div>
                 <button id="back-from-ranks-btn" class="neon-btn btn-top-20">BACK</button>
-            </div>
-
-            <div id="collab-screen" class="screen">
-                <h2>COLLABORATE</h2>
-                <div class="collab-panel">
-                    <div class="collab-section">
-                        <h3>CREATE ROOM</h3>
-                        <p class="collab-subtitle">Host a co-op session</p>
-                        <button id="collab-create-btn" class="neon-btn">CREATE</button>
-                        <div id="collab-room-display" class="collab-room-display hidden">ROOM ID: <span
-                                id="collab-room-id"></span></div>
-                        <div id="collab-waiting" class="collab-waiting hidden">WAITING FOR PARTNER...</div>
-                        <button id="collab-leave-btn" class="neon-btn hidden">LEAVE ROOM</button>
-                    </div>
-                    <div class="collab-divider"></div>
-                    <div class="collab-section">
-                        <h3>JOIN ROOM</h3>
-                        <input type="text" id="collab-room-input" placeholder="ROOM ID" maxlength="12"
-                            class="name-input">
-                        <button id="collab-join-btn" class="neon-btn">JOIN</button>
-                    </div>
-                </div>
-                <div id="collab-status" class="collab-status"></div>
-                <div class="collab-controls">
-                    <div class="instruction-item">P1: WASD + SPACE/ALT/SHIFT</div>
-                    <div class="instruction-item">P2: ARROWS + ENTER/CTRL/SHIFT</div>
-                </div>
-                <button id="collab-back-btn" class="neon-btn">BACK</button>
             </div>
 
 

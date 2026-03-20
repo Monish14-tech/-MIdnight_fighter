@@ -321,6 +321,32 @@ export const ACHIEVEMENT_DATA = [
         type: 'all_achievements', target: 1, reward: 500000,
         shipUnlock: 'absolute'
     },  // Unlocks THE ABSOLUTE (final ship)
+    // ──────────────────── STORY MODE ──────────────────────────────
+    {
+        id: 'story_chapter_one', name: 'FIRST CHAPTER', icon: '📖',
+        desc: 'Complete the first level of Story Mode.',
+        type: 'story_chapter_one', target: 1, reward: 1000
+    },
+    {
+        id: 'story_halfway', name: 'HALFWAY THERE', icon: '🌗',
+        desc: 'Reach Level 13 in Story Mode.',
+        type: 'story_halfway', target: 1, reward: 3000
+    },
+    {
+        id: 'story_first_boss', name: 'BOSS SLAIN', icon: '⚔️',
+        desc: 'Defeat your first Story Mode boss.',
+        type: 'story_first_boss', target: 1, reward: 2000
+    },
+    {
+        id: 'story_gauntlet', name: 'INTO THE GAUNTLET', icon: '🔥',
+        desc: 'Enter the Final Boss Gauntlet in Story Mode.',
+        type: 'story_gauntlet', target: 1, reward: 5000
+    },
+    {
+        id: 'story_complete', name: 'GUARDIAN OF THE GALAXY', icon: '🌌',
+        desc: 'Defeat all 5 anomaly bosses and complete Story Mode.',
+        type: 'story_complete', target: 1, reward: 20000
+    },
 ];
 
 const ACHIEVEMENT_REWARD_CAP = 5000;
@@ -348,6 +374,14 @@ export class AchievementManager {
             dashes: 0,
             max_combo: 0,
             max_killstreak: 0,
+            // Story Mode stats
+            story_chapter_one: 0,
+            story_halfway: 0,
+            story_first_boss: 0,
+            story_gauntlet: 0,
+            story_complete: 0,
+            story_bosses_defeated: 0,
+            story_completed: 0,
         };
         this.claimed = JSON.parse(localStorage.getItem('midnight_claimed_achievements')) || [];
         this.completedButUnclaimed = JSON.parse(localStorage.getItem('midnight_unclaimed_achievements')) || [];
@@ -454,6 +488,11 @@ export class AchievementManager {
     }
 
     checkUnlocks(type) {
+        // Check both main achievements and story achievements
+        const allAchievements = [
+            ...ACHIEVEMENT_DATA,
+            ...ACHIEVEMENT_DATA.filter(a => a.type && a.type.startsWith('story_'))
+        ];
         const relevant = ACHIEVEMENT_DATA.filter(a => a.type === type);
 
         relevant.forEach(ach => {

@@ -7,10 +7,11 @@ import { AudioController } from './audio.js';
 import { ScreenShake, Nebula, CosmicDust, Planet, Asteroid } from './utils.js';
 import { PowerUp } from './entities/powerup.js';
 import { LeaderboardManager } from './leaderboard.js';
-import { ServerAuthoritativeNetplay } from './server-authoritative-netplay.js'; // <-- NEW MULTIPLAYER
+import { ServerAuthoritativeNetplay } from './server-authoritative-netplay.js';
 import { AchievementManager, ACHIEVEMENT_DATA } from './achievements.js';
 import { RANK_DATA, getRankByGlobalPosition } from './ranks.js';
 import { NotificationManager } from './notifications.js';
+import { StoryMode, STORY_ACHIEVEMENT_DATA } from './storymode.js?v=2';
 
 class AssetLoader {
     constructor() {
@@ -320,7 +321,10 @@ export class Game {
         // Settings
         this.autoTargetEnabled = localStorage.getItem('midnight_autotarget_enabled') !== 'false';
         this.screenShakeEnabled = localStorage.getItem('midnight_screen_shake_enabled') !== 'false';
-        this.challengeMode = false;
+        this.challengeMode = false; // kept for legacy compatibility
+        this.storyMode = false;
+        this.storyModeManager = null;
+        this.storyGauntletStarted = false;
 
         // Leaderboard
         this.leaderboard = new LeaderboardManager();
@@ -430,7 +434,8 @@ export class Game {
         };
 
         const requestStart = (mode) => {
-            this.challengeMode = mode === 'challenge';
+            this.challengeMode = false;
+            this.storyMode = mode === 'story';
             this.startRequested = true;
             this.lastStartIntent = Date.now();
             this.startGame();
@@ -445,33 +450,33 @@ export class Game {
             requestStart('normal');
         };
 
-        const handleChallengeStart = (e) => {
-            if (e.type === 'touchstart') e.preventDefault();
-            if (this.audio && this.audio.ctx && this.audio.ctx.state === 'suspended') {
-                this.audio.ctx.resume().catch(() => { });
-            }
-            requestStart('challenge');
-        };
 
         this.startBtn.addEventListener('click', handleStart);
         this.startBtn.addEventListener('touchstart', handleStart, { passive: false });
+
+        // Story Mode button (replaces Challenge Mode)
+        const storyBtn = document.getElementById('story-btn');
+        if (storyBtn) {
+            storyBtn.addEventListener('click', (e) => { e.preventDefault(); requestStart('story'); });
+            storyBtn.addEventListener('touchstart', (e) => { e.preventDefault(); requestStart('story'); }, { passive: false });
+        }
+
+        // Legacy challenge-btn (kept for backward compat if present)
+        const challengeBtn = document.getElementById('challenge-btn');
+        if (challengeBtn) {
+            challengeBtn.addEventListener('click', (e) => { e.preventDefault(); requestStart('normal'); });
+        }
 
         const handleRestart = (e) => {
             if (e.type === 'touchstart') e.preventDefault();
             if (this.audio && this.audio.ctx && this.audio.ctx.state === 'suspended') {
                 this.audio.ctx.resume().catch(() => { });
             }
-            requestStart(this.challengeMode ? 'challenge' : 'normal');
+            requestStart(this.storyMode ? 'story' : 'normal');
         };
 
         this.restartBtn.addEventListener('click', handleRestart);
         this.restartBtn.addEventListener('touchstart', handleRestart, { passive: false });
-
-        const challengeBtn = document.getElementById('challenge-btn');
-        if (challengeBtn) {
-            challengeBtn.addEventListener('click', handleChallengeStart);
-            challengeBtn.addEventListener('touchstart', handleChallengeStart, { passive: false });
-        }
 
         // Store Buttons
         const storeBtn = document.getElementById('store-btn');
@@ -577,13 +582,8 @@ export class Game {
             leaderboardBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.openLeaderboard(); }, { passive: false });
         }
 
-        const collabBtn = document.getElementById('collab-btn');
-        if (collabBtn) {
-            collabBtn.addEventListener('click', () => this.openCollabScreen());
-            collabBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.openCollabScreen(); }, { passive: false });
-        }
 
-        // Leaderboard Tabs (Solo / Co-op)
+        // Leaderboard Tabs (Solo only)
         const tabBtns = document.querySelectorAll('.tab-btn');
         tabBtns.forEach(btn => {
             const handleTab = (e) => {
@@ -605,11 +605,6 @@ export class Game {
             backFromLeaderboardBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.closeLeaderboard(); }, { passive: false });
         }
 
-        const collabBackBtn = document.getElementById('collab-back-btn');
-        if (collabBackBtn) {
-            collabBackBtn.addEventListener('click', () => this.closeCollaborate());
-            collabBackBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.closeCollaborate(); }, { passive: false });
-        }
 
         const backFromRanksBtn = document.getElementById('back-from-ranks-btn');
         if (backFromRanksBtn) {
@@ -1417,7 +1412,7 @@ export class Game {
     }
 
     updateEnemySpawnDirector(dt) {
-        if (this.boss) return;
+        if (this.boss || this.bossEntering) return;
 
         // Batch-spawn rule: keep up to 5 enemies on-screen, and only spawn the next batch
         // when the current on-screen batch is fully destroyed.
@@ -1717,6 +1712,16 @@ export class Game {
             this.enemiesSpawned = 0;
             this.enemiesDefeated = 0;
 
+            // Story Mode Level Hooks
+            if (this.storyMode && this.storyModeManager) {
+                this.storyModeManager.onLevelComplete(this.currentLevel - 1);
+                // After level 25, switch to boss gauntlet instead of spawning enemies
+                if (this.currentLevel > 25 && !this.storyGauntletStarted) {
+                    this.storyModeManager.startGauntlet();
+                    return;
+                }
+            }
+
             if (this.challengeMode) {
                 this.difficultyMultiplier = Math.min(6.5, 1 + (this.currentLevel - 1) * 0.22);
                 this.enemyInterval = Math.max(0.25, 0.95 / this.difficultyMultiplier);
@@ -1728,8 +1733,8 @@ export class Game {
 
             // Removing 'level_up' netplay event because progression is strictly symmetric
 
-            // Trigger Boss Warp every 5 levels
-            if (!this.challengeMode && this.currentLevel % 5 === 0) {
+            // Trigger Boss Warp every 5 levels (both normal and story mode)
+            if (this.currentLevel % 5 === 0) {
                 this.triggerWarp();
             } else {
                 this.levelScore = this.score; // Keep for records
@@ -1777,6 +1782,16 @@ export class Game {
     }
 
     triggerWarp() {
+        // Freeze enemy spawning while boss is entering
+        this.bossEntering = true;
+
+        // Clear all current enemies with a dramatic explosion
+        this.enemies.forEach(e => {
+            e.markedForDeletion = true;
+            this.particles.push(new Explosion(this, e.x, e.y, e.color || '#ff4400'));
+        });
+        this.enemies = [];
+
         // Show boss alert instead of slow motion
         this.showBossAlert();
 
@@ -1813,8 +1828,11 @@ export class Game {
     }
 
     spawnBoss() {
+        // Allowed in normal AND story mode; blocked in legacy challenge-only contexts
         if (this.challengeMode) return;
 
+        // Clear bossEntering flag now that boss is actually spawning
+        this.bossEntering = false;
         if (!this.firstBossAppeared) {
             this.firstBossAppeared = true;
         }
@@ -2031,8 +2049,35 @@ export class Game {
             setTimeout(() => clone.classList.add('hidden'), 2400);
         }
 
-        this.isRunning = true;
-        requestAnimationFrame(this.loop);
+        // Story Mode initialization
+        if (this.storyMode) {
+            this.storyModeManager = new StoryMode(this);
+            this.storyGauntletStarted = false;
+            // Pause the game loop until intro is done
+            this.isRunning = true;
+            this.isPaused = true;
+            this.storyModeManager.startIntro();
+            // requestAnimationFrame still starts so canvas renders (the intro overlays on top)
+            requestAnimationFrame(this.loop);
+        } else {
+            this.isRunning = true;
+            requestAnimationFrame(this.loop);
+        }
+    }
+
+    /**
+     * Called by StoryMode when the intro cinematic finishes. Resumes game play.
+     */
+    resumeFromStoryIntro() {
+        this.isPaused = false;
+        this.lastTime = 0; // Reset delta to prevent first-frame jump
+    }
+
+    /**
+     * Returns to the main menu screen cleanly.
+     */
+    returnToMenu() {
+        this.goToMainMenu();
     }
 
     showGameControls() {
@@ -2112,6 +2157,9 @@ export class Game {
         }
 
         this.challengeMode = false;
+        this.storyMode = false;
+        this.storyModeManager = null;
+        this.storyGauntletStarted = false;
         if (this.hud) this.hud.classList.remove('challenge-only');
 
         // Return to menu without reload so brand splash does not replay.
@@ -2613,6 +2661,10 @@ export class Game {
             if (bossHud) {
                 bossHud.classList.remove('active');
                 bossHud.style.display = 'none';
+            }
+            // Story Mode: notify the story manager about boss defeat
+            if (this.storyMode && this.storyModeManager) {
+                this.storyModeManager.onBossDefeated();
             }
         }
 
@@ -3708,25 +3760,29 @@ export class Game {
         // Show coins earned
         const coinsEarnedEl = document.getElementById('coins-earned-display');
         if (coinsEarnedEl) {
-            coinsEarnedEl.innerText = this.challengeMode
-                ? 'CHALLENGE MODE: COIN REWARDS DISABLED'
+            coinsEarnedEl.innerText = this.storyMode
+                ? 'STORY MODE — Scores not submitted to leaderboard'
                 : `+${earnedCoins} COINS`;
+        }
+
+        // Set story-specific defeat message
+        if (this.storyMode && this.storyModeManager) {
+            this.storyModeManager.onDefeat();
         }
 
         const gameOverLeaderboardBtn = document.getElementById('go-to-leaderboard-btn');
         if (gameOverLeaderboardBtn) {
-            gameOverLeaderboardBtn.style.display = this.challengeMode ? 'none' : 'inline-block';
+            gameOverLeaderboardBtn.style.display = this.storyMode ? 'none' : 'inline-block';
         }
 
         const finalRankEl = document.getElementById('final-rank');
         if (finalRankEl) finalRankEl.innerText = this.getPlayerRank(this.highScore);
 
         // Submit score to leaderboard
-        // In collaborative mode, only the host submits to prevent duplicate entries
-        const shouldSubmit = !this.onlineCoop || this.onlineRole === 'host';
+        // In story mode, never submit to leaderboard.
+        const shouldSubmit = !this.storyMode && (!this.onlineCoop || this.onlineRole === 'host');
         if (shouldSubmit && this.isMetaProgressionEnabled()) {
-            const teamMembers = this.coopMode ? this.collabTeamMembers : null;
-            await this.leaderboard.submitScore(this.score, this.currentLevel, this.selectedShip, teamMembers);
+            await this.leaderboard.submitScore(this.score, this.currentLevel, this.selectedShip, null);
         }
 
         // Hide boss HUD on termination screen
