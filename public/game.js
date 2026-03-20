@@ -1318,26 +1318,22 @@ export class Game {
     }
 
     getWaveEnemyDurabilityHealth(type, baseHealth = 1) {
-        const ship = this.getShipStats(this.selectedShip);
-        const playerShotDamage = Math.max(1, this.player?.bulletDamage || ship.damage || 1);
-        const durabilityHits = this.getWaveDurabilityHits();
-        const durabilityHealth = Math.ceil(durabilityHits * playerShotDamage);
-        return Math.max(Math.ceil(baseHealth), durabilityHealth);
+        return this.getChallengeEnemyDurability(type, baseHealth);
     }
 
     getChallengeEnemyDurability(type, baseHealth = 1) {
-        if (!this.challengeMode) return Math.max(1, Math.ceil(baseHealth));
-
-        const scaling = this.getPlayerScalingMetrics ? this.getPlayerScalingMetrics() : null;
-        const shipPower = scaling?.shipPowerScore || 1;
-        const planeBoost = Math.max(0, Math.min(1.6, shipPower - 1));
-        const level = this.currentLevel || 1;
-
-        // Base rule: enemies should take ~5 hits minimum in challenge mode.
-        const requiredShots = Math.max(5, Math.min(10, Math.round(5 + (planeBoost * 2) + Math.min((level - 1) * 0.22, 2))));
-
         const ship = this.getShipStats(this.selectedShip);
         const playerShotDamage = Math.max(1, this.player?.bulletDamage || ship.damage || 1);
+        const fireRate = Math.max(0.01, this.player?.fireRate || ship.fireRate || 0.12);
+        
+        // Base TTK = 0.6 seconds of sustained fire for a standard 'swarm' enemy.
+        // Increases by 8% per level to provide a rising, normalized challenge.
+        let targetTTK = 0.6;
+        const level = this.currentLevel || 1;
+        targetTTK *= (1 + (level - 1) * 0.08);
+
+        const playerDPS = playerShotDamage / fireRate;
+        const requiredHealth = playerDPS * targetTTK;
 
         const typeMultiplier = {
             swarm: 0.85,
@@ -1356,8 +1352,8 @@ export class Game {
             bomber: 1.4
         };
 
-        const hpFromShots = Math.ceil(requiredShots * playerShotDamage * (typeMultiplier[type] || 1));
-        return Math.max(Math.ceil(baseHealth), hpFromShots);
+        const finalHP = Math.ceil(requiredHealth * (typeMultiplier[type] || 1));
+        return Math.max(Math.ceil(baseHealth), finalHP);
     }
 
     getMaxEnemiesOnScreen() {
@@ -2793,6 +2789,7 @@ export class Game {
     }
 
     addScore(points, useCombo = true) {
+        if (this.storyMode) return; // Story mode does not give score
         if (useCombo) {
             if (this.comboTimer > 0) {
                 this.comboMultiplier = Math.min(this.comboMax, this.comboMultiplier + 0.25);
@@ -3493,7 +3490,9 @@ export class Game {
         }
 
         const loot = this.isMetaProgressionEnabled() ? (this.boss.coinReward || 50) : 0;
-        this.score += this.boss.points;
+        if (!this.storyMode) {
+            this.score += this.boss.points;
+        }
         this.coins += loot;
         if (this.achievementManager && this.isMetaProgressionEnabled()) this.achievementManager.addStat('bosses', 1);
 
@@ -3607,7 +3606,14 @@ export class Game {
         const healthFill = document.getElementById('health-fill');
         const healthFillP2 = document.getElementById('health-fill-p2');
 
-        if (scoreEl) scoreEl.innerText = this.score;
+        if (scoreEl) {
+            if (this.storyMode) {
+                scoreEl.parentElement.style.display = 'none'; // Hide SCORE: container
+            } else {
+                scoreEl.parentElement.style.display = 'block';
+                scoreEl.innerText = this.score;
+            }
+        }
 
         // Update High Score logic
         if (!this.challengeMode && this.score > this.highScore) {
