@@ -436,6 +436,7 @@ export class Game {
         const requestStart = (mode) => {
             this.challengeMode = false;
             this.storyMode = mode === 'story';
+            this.enterFullscreen();
             this.startRequested = true;
             this.lastStartIntent = Date.now();
             this.startGame();
@@ -1982,7 +1983,8 @@ export class Game {
         if (this.hud) this.hud.style.display = 'flex';
         if (this.hud) this.hud.classList.toggle('challenge-only', !!this.challengeMode);
 
-        // Fullscreen is optional and user-controlled; avoid forced calls.
+        // Auto-enter fullscreen on start (browser may ignore if not in a gesture context).
+        this.enterFullscreen();
 
         // Fix: Ensure Boss HUD is hidden on restart
         const bossHud = document.getElementById('boss-hud');
@@ -3823,6 +3825,7 @@ export class Game {
         if (!ship) return defaultScale;
 
         const baseShip = SHIP_DATA['default'];
+        const livePlayer = this.player && !this.player.markedForDeletion ? this.player : null;
         const bulletWeights = {
             normal: 1.0,
             spread: 1.42,
@@ -3832,10 +3835,17 @@ export class Game {
             laser: 1.28
         };
 
+        const shipDamage = Math.max(1, livePlayer?.baseBulletDamage || ship.damage || 1);
+        const shipFireRate = Math.max(0.04, livePlayer?.baseFireRate || ship.fireRate || 0.12);
+        const shipMissileCount = Math.max(1, ship.missileCount || 1);
+        const shipMissileCooldown = Math.max(0.1, livePlayer?.baseMissileCooldown || ship.missileCooldown || 4.0);
+        const shipMaxHp = Math.max(1, livePlayer?.maxHealth || ship.hp || 1);
+        const shipSpeed = Math.max(1, livePlayer?.speed || ship.speed || 1);
+
         const baseGunDps = (baseShip.damage * (bulletWeights[baseShip.bulletType] || 1)) / Math.max(0.04, baseShip.fireRate);
-        const gunDps = (ship.damage * (bulletWeights[ship.bulletType] || 1)) / Math.max(0.04, ship.fireRate);
+        const gunDps = (shipDamage * (bulletWeights[ship.bulletType] || 1)) / shipFireRate;
         const baseMissileDps = (baseShip.missileCount * 5) / Math.max(0.1, baseShip.missileCooldown);
-        const missileDps = (ship.missileCount * 5) / Math.max(0.1, ship.missileCooldown);
+        const missileDps = (shipMissileCount * 5) / shipMissileCooldown;
 
         let passiveThreat = 1.0;
         if (ship.specialAbility === 'all_passives') passiveThreat += 0.28;
@@ -3850,8 +3860,8 @@ export class Game {
 
         const gunRatio = gunDps / Math.max(1, baseGunDps);
         const missileRatio = missileDps / Math.max(1, baseMissileDps);
-        const survivalRatio = ship.hp / Math.max(1, baseShip.hp);
-        const mobilityRatio = ship.speed / Math.max(1, baseShip.speed);
+        const survivalRatio = shipMaxHp / Math.max(1, baseShip.hp);
+        const mobilityRatio = shipSpeed / Math.max(1, baseShip.speed);
 
         const shipPowerScore = (
             (gunRatio * 0.55) +
@@ -3864,14 +3874,17 @@ export class Game {
         const streakPressure = Math.min(this.currentKillStreak || 0, 25) * 0.01;
         const scorePressure = Math.min(Math.log10(Math.max(1, this.score || 0) + 1) / 12, 0.12);
         const experiencePressure = Math.min(this.playCount || 0, 80) * 0.0015;
-        const skillPressure = 1 + clamp(levelPressure + streakPressure + scorePressure + experiencePressure, 0, 0.55);
+        const skillPressure = 1 + clamp(levelPressure + streakPressure + scorePressure + experiencePressure, 0, 0.3);
 
-        const normalizedPower = clamp(Math.pow(shipPowerScore * skillPressure, 0.35), 0.9, 1.75);
-        const hpMultiplier = clamp(1 + (normalizedPower - 1) * 0.42 + Math.max(0, gunRatio - 1) * 0.08, 1, 1.7);
-        const damageMultiplier = clamp(0.95 + (normalizedPower - 1) * 0.26 + Math.max(0, survivalRatio - 1) * 0.08, 0.92, 1.32);
-        const speedScale = clamp(0.94 + (normalizedPower - 1) * 0.12 + Math.max(0, mobilityRatio - 1) * 0.12, 0.9, 1.16);
-        const aiAggression = clamp(0.92 + (normalizedPower - 1) * 0.35, 0.9, 1.28);
-        const projectileDensity = clamp(1 + (normalizedPower - 1) * 0.55, 1, 1.6);
+        // Normalize ship gaps so starter and endgame ships keep similar perceived challenge.
+        const normalizedShipPressure = clamp(1 + (shipPowerScore - 1) * 0.14, 0.95, 1.12);
+        const adaptivePressure = clamp(normalizedShipPressure * skillPressure, 0.95, 1.26);
+
+        const hpMultiplier = clamp(1 + (adaptivePressure - 1) * 0.3 + Math.max(0, gunRatio - 1) * 0.04, 1.0, 1.24);
+        const damageMultiplier = clamp(1 + (adaptivePressure - 1) * 0.24 + Math.max(0, survivalRatio - 1) * 0.04, 0.96, 1.18);
+        const speedScale = clamp(1 + (adaptivePressure - 1) * 0.16 + Math.max(0, mobilityRatio - 1) * 0.05, 0.94, 1.12);
+        const aiAggression = clamp(1 + (adaptivePressure - 1) * 0.2, 0.95, 1.17);
+        const projectileDensity = clamp(1 + (adaptivePressure - 1) * 0.32, 1, 1.24);
 
         return {
             aiAggression,

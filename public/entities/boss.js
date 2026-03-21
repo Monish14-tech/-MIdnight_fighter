@@ -490,6 +490,7 @@ export class Boss {
 
         // Store damage multiplier for collisions/attacks
         this.damageMultiplier = playerScale.damageMultiplier;
+        this.damageScale = this.damageMultiplier;
         this.aiAggression = playerScale.aiAggression;
         this.projectileDensity = playerScale.projectileDensity;
 

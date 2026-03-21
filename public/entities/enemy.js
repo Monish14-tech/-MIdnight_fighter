@@ -78,25 +78,8 @@ class EnemyBrain {
         this.predictedPlayerX = Math.max(20, Math.min(this.game.width - 20, this.predictedPlayerX));
         this.predictedPlayerY = Math.max(20, Math.min(this.game.height - 20, this.predictedPlayerY));
 
-        // ── Threat assessment → pick behavior ───────────────────
-        this.behaviorTimer += deltaTime;
-        if (this.behaviorTimer >= this.behaviorCooldown) {
-            this.behaviorTimer = 0;
-            const dx = player.x - this.enemy.x;
-            const dy = player.y - this.enemy.y;
-            const dist = Math.hypot(dx, dy);
-            const hpRatio = this.enemy.health / (this.enemy.maxStartingHealth || this.enemy.health);
-
-            if (hpRatio < 0.35 && dist < 200) {
-                this.behavior = 'retreat';
-            } else if (dist < 120) {
-                this.behavior = 'orbit';
-            } else if (this.isAlerted && this.flanking) {
-                this.behavior = 'flank';
-            } else {
-                this.behavior = 'aggro';
-            }
-        }
+        // Keep enemies in pressure mode so they always pursue the player.
+        this.behavior = 'aggro';
 
         // ── Alert nearby allies ──────────────────────────────────
         this.alertTimer += deltaTime;
@@ -130,18 +113,17 @@ class EnemyBrain {
 
     // Returns the angle for flanking movement (offset ±90° from direct line)
     getFlankAngle(directAngle) {
-        return directAngle + (Math.PI / 2) * this.flankSide;
+        return directAngle;
     }
 
     // Returns the "retreat" direction (away from player + slight sideways)
     getRetreatAngle(directAngle) {
-        return directAngle + Math.PI + this.flankSide * 0.4;
+        return directAngle;
     }
 
     // Returns an orbit tangent angle (circles the player)
     getOrbitAngle(directAngle) {
-        const orbitSpeed = this._prng(3) > 0.5 ? 1 : -1;
-        return directAngle + (Math.PI / 2) * orbitSpeed;
+        return directAngle;
     }
 
     // Draw targeting bracket (called from Enemy.draw)
@@ -194,6 +176,7 @@ export class Enemy {
         this.radius = 15;
         this.color = '#ff0000';
         this.points = 100;
+        this._stuckTimer = 0;
 
         // Difficulty Scaling
         const difficulty = this.game.difficultyMultiplier || 1;
@@ -469,6 +452,9 @@ export class Enemy {
         if (this.shootTimer !== undefined) {
             this.shootTimer = -(Math.abs(Math.sin(this.getNumericId() * 12.3)) * 2.0);
         }
+
+        this._lastX = this.x;
+        this._lastY = this.y;
     }
 
     // Helper to extract numeric ID from string (e.g., 'enemy_42' -> 42) to prevent NaN in Math functions
@@ -565,6 +551,8 @@ export class Enemy {
         const dy = player.y - this.y;
         const dist = Math.hypot(dx, dy);
         const directAngle = Math.atan2(dy, dx);
+        const prevX = this.x;
+        const prevY = this.y;
         this.angle = directAngle; // default; types may override below
 
         // ── Boids Separation (Flocking) ──────────────────────────
@@ -595,13 +583,7 @@ export class Enemy {
 
         // ── Helper: choose movement angle from brain behavior ────
         const getMoveAngle = (baseAngle) => {
-            if (!this.brain) return baseAngle;
-            switch (this.brain.behavior) {
-                case 'retreat': return this.brain.getRetreatAngle(baseAngle);
-                case 'orbit': return this.brain.getOrbitAngle(baseAngle);
-                case 'flank': return this.brain.getFlankAngle(baseAngle);
-                default: return baseAngle;
-            }
+            return baseAngle;
         };
 
         // ── Per-type Smart AI Movement ───────────────────────────
@@ -614,29 +596,25 @@ export class Enemy {
             this.y += (Math.sin(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
 
         } else if (this.type === 'swarm') {
-            // ★ Coordinated pincer — split into two groups from opposite angles
-            const pincerAngle = directAngle + (Math.PI / 2.2) * (this.brain ? this.brain.flankSide : 1);
-            this.angle = directAngle;
-            this.x += (Math.cos(pincerAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
-            this.y += (Math.sin(pincerAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
+            // Direct pursuit to avoid long orbiting around player.
+            const leadAngle = this.brain ? this.brain.getLeadAngle() : directAngle;
+            this.angle = leadAngle;
+            this.x += (Math.cos(leadAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
+            this.y += (Math.sin(leadAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
 
         } else if (this.type === 'swarmer') {
-            // ★ Coordinated pincer (same mechanic for larger swarmer)
-            const pincerAngle = directAngle + (Math.PI / 2.5) * (this.brain ? this.brain.flankSide : 1);
-            this.angle = directAngle;
-            this.x += (Math.cos(pincerAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
-            this.y += (Math.sin(pincerAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
+            const leadAngle = this.brain ? this.brain.getLeadAngle() : directAngle;
+            this.angle = leadAngle;
+            this.x += (Math.cos(leadAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
+            this.y += (Math.sin(leadAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
 
         } else if (this.type === 'sniper') {
-            // ★ Smart range control + strafe
+            // Keep range discipline but always commit toward/away from player axis.
             let moveAngle = directAngle;
             if (dist < this.preferredRange - 40) {
                 moveAngle = directAngle + Math.PI; // back off
             } else if (dist > this.preferredRange + 60) {
                 moveAngle = directAngle; // close in
-            } else {
-                // Strafe sideways using brain orbit tangent
-                moveAngle = this.brain ? this.brain.getOrbitAngle(directAngle) : directAngle + Math.PI / 2;
             }
             this.x += (Math.cos(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
             this.y += (Math.sin(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
@@ -667,10 +645,8 @@ export class Enemy {
             this.y += (Math.sin(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
 
         } else if (this.type === 'tractor') {
-            // ★ Orbit player while pulling
-            const orbitAngle = this.brain ? this.brain.getOrbitAngle(directAngle) : directAngle;
-            this.x += (Math.cos(orbitAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
-            this.y += (Math.sin(orbitAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
+            this.x += (Math.cos(directAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
+            this.y += (Math.sin(directAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
             // Pull force
             if (dist < this.tractorRange) {
                 player.x += Math.cos(directAngle) * this.tractorPull * deltaTime;
@@ -729,16 +705,8 @@ export class Enemy {
             this.y += (Math.sin(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
 
         } else if (this.type === 'launcher') {
-            // ★ Strafe sideways while keeping firing range
-            if (dist > 250) {
-                this.x += (Math.cos(directAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
-                this.y += (Math.sin(directAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
-            } else {
-                // Strafe
-                const strafeAngle = directAngle + Math.PI / 2;
-                this.x += Math.cos(strafeAngle) * effectiveSpeed * 0.65 * deltaTime;
-                this.y += Math.sin(strafeAngle) * effectiveSpeed * 0.65 * deltaTime;
-            }
+            this.x += (Math.cos(directAngle) * effectiveSpeed + (neighbors > 0 ? (sepX / neighbors) * 50 : 0)) * deltaTime;
+            this.y += (Math.sin(directAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
 
         } else {
             // Generic brain-aware movement
@@ -747,15 +715,10 @@ export class Enemy {
             this.y += (Math.sin(moveAngle) * effectiveSpeed + (neighbors > 0 ? (sepY / neighbors) * 50 : 0)) * deltaTime;
         }
 
-        if (this.game.challengeMode) {
-            // In challenge mode, all enemy jets try to maintain standoff pressure instead of hard-collapsing.
-            const challengeLevel = this.game.currentLevel || this.spawnLevel || 1;
-            const standoffRange = 220 + Math.min(challengeLevel * 5, 130);
-            if (dist < standoffRange && dist > 1) {
-                const repelStrength = ((standoffRange - dist) / standoffRange) * Math.min(180, effectiveSpeed * 0.95);
-                this.x -= (dx / dist) * repelStrength * deltaTime;
-                this.y -= (dy / dist) * repelStrength * deltaTime;
-            }
+        if (dist < 260 && dist > 1) {
+            const collapseBoost = 1 + ((260 - dist) / 260) * 0.6;
+            this.x += Math.cos(directAngle) * effectiveSpeed * 0.12 * collapseBoost * deltaTime;
+            this.y += Math.sin(directAngle) * effectiveSpeed * 0.12 * collapseBoost * deltaTime;
         }
 
         // Soft clamp: keep enemies on screen once they enter
@@ -766,6 +729,26 @@ export class Enemy {
         if (this.y > -m && this.y < this.game.height + m) {
             this.y = Math.max(m, Math.min(this.game.height - m, this.y));
         }
+
+        // Anti-stuck: if movement stalls, force a short chase nudge toward player.
+        const moved = Math.hypot(this.x - prevX, this.y - prevY);
+        const minExpectedMove = Math.max(1.2, effectiveSpeed * deltaTime * 0.03);
+        if (moved < minExpectedMove) {
+            this._stuckTimer += deltaTime;
+            if (this._stuckTimer > 0.35) {
+                const chaseAngle = Math.atan2(player.y - this.y, player.x - this.x);
+                const side = this.seededNoise(113) > 0.5 ? 1 : -1;
+                const unstuckAngle = chaseAngle + side * 0.16;
+                this.x += Math.cos(unstuckAngle) * effectiveSpeed * 0.5 * deltaTime;
+                this.y += Math.sin(unstuckAngle) * effectiveSpeed * 0.5 * deltaTime;
+                this._stuckTimer = 0;
+            }
+        } else {
+            this._stuckTimer = 0;
+        }
+
+        this._lastX = this.x;
+        this._lastY = this.y;
 
         // Shooter Logic (only shooter, sniper, launcher, and pulsar can attack)
         const fireProfile = this.getAdaptiveFireProfile();
