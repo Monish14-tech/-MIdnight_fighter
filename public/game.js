@@ -1,5 +1,7 @@
+```javascript
 import { InputHandler } from './input.js';
 import { Player } from './entities/player.js';
+import { Boss } from './entities/boss.js'; // Static import to prevent loading failures
 import { Enemy } from './entities/enemy.js';
 import { Explosion, FloatingText } from './entities/particle.js';
 import { Projectile } from './entities/projectile.js';
@@ -875,22 +877,18 @@ export class Game {
 
         this.netplay.on('spawn_boss', (data) => {
             if (this.onlineRole === 'guest' && !this.boss) {
-                import('./entities/boss.js?v=4').then(m => {
-                    const BossClass = m.default || m.Boss;
-                    if (BossClass) {
-                        this.boss = new BossClass(this, data.level, data.side, data.modelIndex);
-                        this.boss.remoteId = data.id;
-                        const bossHud = document.getElementById('boss-hud');
-                        if (bossHud) bossHud.classList.add('active');
-                        const bossName = document.getElementById('boss-name');
-                        this.bossHudBaseName = data.name || 'UNIDENTIFIED THREAT';
-                        if (bossName) {
-                            bossName.dataset.baseName = this.bossHudBaseName;
-                            bossName.innerText = this.bossHudBaseName;
-                        }
-                        this.updateBossUI();
-                    }
-                });
+                // Use the statically imported Boss class
+                this.boss = new Boss(this, data.level, data.side, data.modelIndex);
+                this.boss.remoteId = data.id;
+                const bossHud = document.getElementById('boss-hud');
+                if (bossHud) bossHud.classList.add('active');
+                const bossName = document.getElementById('boss-name');
+                this.bossHudBaseName = data.name || 'UNIDENTIFIED THREAT';
+                if (bossName) {
+                    bossName.dataset.baseName = this.bossHudBaseName;
+                    bossName.innerText = this.bossHudBaseName;
+                }
+                this.updateBossUI();
             }
         });
 
@@ -1269,7 +1267,8 @@ export class Game {
             } else {
                 this.startScreen.classList.add('active');
             }
-        } else {
+        }
+        else {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             settingsMenu.classList.add('active');
         }
@@ -1324,16 +1323,17 @@ export class Game {
 
     getChallengeEnemyDurability(type, baseHealth = 1) {
         const ship = this.getShipStats(this.selectedShip);
-        const playerShotDamage = Math.max(1, this.player?.bulletDamage || ship.damage || 1);
-        const fireRate = Math.max(0.01, this.player?.fireRate || ship.fireRate || 0.12);
-        
+        // Use purely base ship stats (NOT live player stats) so powerups still give a massive, visceral advantage.
+        const baseDamage = Math.max(1, ship.damage || 1);
+        const baseFireRate = Math.max(0.01, ship.fireRate || 0.12);
+
         // Base TTK = 0.6 seconds of sustained fire for a standard 'swarm' enemy.
         // Increases by 8% per level to provide a rising, normalized challenge.
         let targetTTK = 0.6;
         const level = this.currentLevel || 1;
         targetTTK *= (1 + (level - 1) * 0.08);
 
-        const playerDPS = playerShotDamage / fireRate;
+        const playerDPS = baseDamage / baseFireRate;
         const requiredHealth = playerDPS * targetTTK;
 
         const typeMultiplier = {
@@ -1841,40 +1841,53 @@ export class Game {
         });
         this.enemies = [];
 
-        import('./entities/boss.js?v=4').then(m => {
-            const sides = ['top', 'left', 'right'];
-            const side = sides[Math.floor(this.random() * sides.length)];
-            const modelIndex = Math.floor(this.random() * 5);
+        // Spawn boss directly using static import
+        const sides = ['top', 'left', 'right'];
+        const side = sides[Math.floor(this.random() * sides.length)];
+        let modelIndex = Math.floor(this.random() * 5);
 
-            const BossClass = m.default || m.Boss;
-            this.boss = new BossClass(this, this.currentLevel, side, modelIndex);
+        // Story mode specific boss
+        if (this.storyMode && this.storyModeManager && this.storyModeManager.phase === 'gauntlet') {
+            // Force specific model based on gauntlet progress
+            modelIndex = this.storyModeManager.gauntletDefeated % 5;
+        }
 
-            const bossHud = document.getElementById('boss-hud');
-            if (bossHud) bossHud.classList.add('active');
+        this.boss = new Boss(this, this.currentLevel, side, modelIndex);
 
-            const enemyCounter = document.getElementById('enemy-counter');
-            if (enemyCounter) enemyCounter.style.display = 'none';
+        const bossHud = document.getElementById('boss-hud');
+        if (bossHud) bossHud.classList.add('active');
 
-            const names = [
-                'ANOMALY: V-STRIKE',
-                'ANOMALY: THE FORTRESS',
-                'ANOMALY: THE APEX',
-                'ANOMALY: SHADOW REAPER',
-                'ANOMALY: VOID CARRIER'
-            ];
-            const name = (this.currentLevel % 10 === 0 ? 'ELITE ' : '') + names[modelIndex];
+        const enemyCounter = document.getElementById('enemy-counter');
+        if (enemyCounter) enemyCounter.style.display = 'none';
 
-            const bossName = document.getElementById('boss-name');
-            this.bossHudBaseName = name;
-            if (bossName) {
-                bossName.dataset.baseName = name;
-                bossName.innerText = name;
-            }
-            this.updateBossUI();
+        const names = [
+            'ANOMALY: V-STRIKE',
+            'ANOMALY: THE FORTRESS',
+            'ANOMALY: THE APEX',
+            'ANOMALY: SHADOW REAPER',
+            'ANOMALY: VOID CARRIER'
+        ];
+        const name = (this.currentLevel % 10 === 0 ? 'ELITE ' : '') + names[modelIndex];
 
-            // Symmetric spawning - both clients assign same ID
-            this.boss.remoteId = 'boss_' + (this.entityCounter++);
-        });
+        const bossName = document.getElementById('boss-name');
+        this.bossHudBaseName = name;
+        if (bossName) {
+            bossName.dataset.baseName = name;
+            bossName.innerText = name;
+        }
+        this.updateBossUI();
+
+        // Symmetric spawning - both clients assign same ID
+        this.boss.remoteId = 'boss_' + (this.entityCounter++);
+
+        if (this.onlineCoop && this.onlineRole === 'host' && this.boss.remoteId) {
+            this.netplay.emit('boss_spawn', {
+                id: this.boss.remoteId,
+                side: side,
+                modelIndex: this.boss.modelIndex,
+                level: this.currentLevel
+            });
+        }
     }
 
     resize() {
@@ -3607,31 +3620,36 @@ export class Game {
         const levelLabelEl = document.getElementById('level-label');
         const healthFill = document.getElementById('health-fill');
         const healthFillP2 = document.getElementById('health-fill-p2');
+        const highScoreEl = document.getElementById('high-score-display');
+        const enemyCounter = document.getElementById('enemy-counter');
 
         if (scoreEl) {
             if (this.storyMode) {
-                scoreEl.parentElement.style.display = 'none'; // Hide SCORE: container
+                scoreEl.parentElement.style.display = 'none'; // Hide SCORE container
+                if (highScoreEl) highScoreEl.parentElement.style.display = 'none'; // Hide HIGH SCORE
+                if (enemyCounter && !this.boss) enemyCounter.style.display = 'block'; // Show ENEMIES
             } else {
                 scoreEl.parentElement.style.display = 'block';
+                if (highScoreEl) highScoreEl.parentElement.style.display = 'block';
+                if (enemyCounter && !this.boss) enemyCounter.style.display = 'none'; // Hide ENEMIES in Initiate Mode
                 scoreEl.innerText = this.score;
             }
         }
 
         // Update High Score logic
-        if (!this.challengeMode && this.score > this.highScore) {
+        if (!this.challengeMode && !this.storyMode && this.score > this.highScore) {
             this.highScore = this.score;
             localStorage.setItem('midnight_highscore', this.highScore);
         }
 
-        const highScoreEl = document.getElementById('high-score-display');
-        if (highScoreEl) highScoreEl.innerText = this.highScore;
+        if (highScoreEl && !this.storyMode) highScoreEl.innerText = this.highScore;
 
         if (levelLabelEl) levelLabelEl.innerText = this.challengeMode ? 'WAVE' : 'LEVEL';
         if (levelEl) levelEl.innerText = this.currentLevel;
         const waveEl = document.getElementById('wave-display');
         if (waveEl) waveEl.innerText = this.currentLevel;
 
-        // Update Enemy Count
+        // Update Enemy Count digits
         const enemyCountEl = document.getElementById('enemy-count');
         if (enemyCountEl) {
             const remaining = (this.enemiesForLevel - this.enemiesDefeated);
