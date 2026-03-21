@@ -11,7 +11,7 @@ import { ServerAuthoritativeNetplay } from './server-authoritative-netplay.js';
 import { AchievementManager, ACHIEVEMENT_DATA } from './achievements.js';
 import { RANK_DATA, getRankByGlobalPosition } from './ranks.js';
 import { NotificationManager } from './notifications.js';
-import { StoryMode, STORY_ACHIEVEMENT_DATA } from './storymode.js?v=2';
+import { StoryMode, STORY_ACHIEVEMENT_DATA } from './storymode.js?v=3';
 
 class AssetLoader {
     constructor() {

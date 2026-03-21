@@ -40,12 +40,17 @@ export class StoryMode {
 
         // Defeat text
         this.defeatMessage = 'The void remains in chains... try again, hero.';
+
+        // Active story playback handles
+        this.currentTypeInterval = null;
+        this.currentPauseTimeout = null;
     }
 
     // ── Intro Cinematic ──────────────────────────────────────────
     startIntro() {
         this.phase = 'intro';
         this.isSkipping = false;
+        this._cancelStoryPlayback();
         this._createIntroOverlay();
         this._playLines(this.introLines, 0, () => {
             if (this.isSkipping) return;
@@ -75,8 +80,7 @@ export class StoryMode {
             skipBtn.addEventListener('click', () => {
                 if (this.isSkipping) return;
                 this.isSkipping = true;
-                if (this.currentTypeInterval) clearInterval(this.currentTypeInterval);
-                if (this.currentPauseTimeout) clearTimeout(this.currentPauseTimeout);
+                this._cancelStoryPlayback();
                 
                 // Force finish intro
                 this._fadeOutOverlay('story-intro-overlay', () => {
@@ -92,7 +96,18 @@ export class StoryMode {
         }
     }
 
-    _playLines(lines, index, onComplete) {
+    _cancelStoryPlayback() {
+        if (this.currentTypeInterval) {
+            clearInterval(this.currentTypeInterval);
+            this.currentTypeInterval = null;
+        }
+        if (this.currentPauseTimeout) {
+            clearTimeout(this.currentPauseTimeout);
+            this.currentPauseTimeout = null;
+        }
+    }
+
+    _playLines(lines, index, onComplete, textElementId = 'story-intro-text') {
         if (this.isSkipping) return;
         
         if (index >= lines.length) {
@@ -101,7 +116,7 @@ export class StoryMode {
             return;
         }
 
-        const textEl = document.getElementById('story-intro-text');
+        const textEl = document.getElementById(textElementId);
         if (!textEl) { onComplete(); return; }
 
         // Clear and type the current line
@@ -122,7 +137,7 @@ export class StoryMode {
                 clearInterval(this.currentTypeInterval);
                 // Pause for 2s between lines
                 this.currentPauseTimeout = setTimeout(() => {
-                    this._playLines(lines, index + 1, onComplete);
+                    this._playLines(lines, index + 1, onComplete, textElementId);
                 }, 2200);
             }
         }, 55); // ~55ms per character
@@ -284,6 +299,8 @@ export class StoryMode {
         if (this.victoryShown) return;
         this.victoryShown = true;
         this.phase = 'victory';
+        this.isSkipping = false;
+        this._cancelStoryPlayback();
 
         this._triggerAchievement('story_complete');
         this.game.achievementManager && this.game.achievementManager.addStat('story_completed', 1);
@@ -301,8 +318,16 @@ export class StoryMode {
         textEl.className = 'story-intro-text story-victory-text';
         overlay.appendChild(textEl);
 
-        // Type victory lines
-        this._playLines(this.victoryLines, 0, () => {
+        const skipBtn = document.createElement('button');
+        skipBtn.id = 'story-victory-skip-btn';
+        skipBtn.className = 'neon-btn story-skip-btn';
+        skipBtn.innerHTML = 'SKIP &gt;&gt;';
+        overlay.appendChild(skipBtn);
+
+        const showVictoryButtons = () => {
+            this._cancelStoryPlayback();
+            skipBtn.remove();
+
             // Show buttons after text
             const btnContainer = document.createElement('div');
             btnContainer.className = 'story-victory-buttons';
@@ -321,7 +346,23 @@ export class StoryMode {
                 overlay.remove();
                 this.game.returnToMenu && this.game.returnToMenu();
             });
+        };
+
+        skipBtn.addEventListener('click', () => {
+            if (this.isSkipping) return;
+            this.isSkipping = true;
+            showVictoryButtons();
         });
+        skipBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            skipBtn.click();
+        }, { passive: false });
+
+        // Type victory lines
+        this._playLines(this.victoryLines, 0, () => {
+            this.isSkipping = false;
+            showVictoryButtons();
+        }, 'story-victory-text');
     }
 
     // ── Defeat ─────────────────────────────────────────────────
