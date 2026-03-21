@@ -1,4 +1,3 @@
-```javascript
 import { InputHandler } from './input.js';
 import { Player } from './entities/player.js';
 import { Boss } from './entities/boss.js'; // Static import to prevent loading failures
@@ -1306,6 +1305,10 @@ export class Game {
     }
 
     getEnemiesRequiredForLevel(level) {
+        if (this.storyMode) {
+            // Keep story mode punchy and extremely fast-paced: L1=3, then +1 enemy per level
+            return 3 + ((Math.max(1, level) - 1) * 2);
+        }
         // Wave system: L1=3 enemies, then +3 enemies each level.
         return 3 + ((Math.max(1, level) - 1) * 3);
     }
@@ -1411,22 +1414,20 @@ export class Game {
     updateEnemySpawnDirector(dt) {
         if (this.boss || this.bossEntering) return;
 
-        // Batch-spawn rule: keep up to 5 enemies on-screen, and only spawn the next batch
-        // when the current on-screen batch is fully destroyed.
-        if (this.enemies.length > 0) return;
+        // How many we still need to spawn to reach the level quota
+        const remainingToSpawn = this.enemiesForLevel - this.enemiesSpawned;
+        if (remainingToSpawn <= 0) return;
 
-        const remaining = Math.max(0, this.enemiesForLevel - this.enemiesDefeated);
-        if (remaining <= 0) return;
-
-        const spawnCount = Math.min(this.getMaxEnemiesOnScreen(), remaining);
-        for (let i = 0; i < spawnCount; i++) {
-            const enemy = this.spawnCombatEnemy();
-            this.enemiesSpawned += this.getSpawnBudgetCost(enemy);
+        // Start constant stream vs batch-spawn pause
+        this.enemyTimer += dt;
+        if (this.enemyTimer >= this.enemyInterval) {
+            // Respect universal screen cap
+            if (this.enemies.length < this.getMaxEnemiesOnScreen()) {
+                const enemy = this.spawnCombatEnemy();
+                this.enemiesSpawned += this.getSpawnBudgetCost(enemy);
+                this.enemyTimer = 0;
+            }
         }
-
-        this.enemyTimer = 0;
-        this.spawnFailSafeTimer = 0;
-        this.minActiveSpawnTimer = 0;
     }
 
     generateLevelThresholds() {

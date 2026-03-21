@@ -456,8 +456,19 @@ export class Boss {
             ? this.game.getPlayerScalingMetrics()
             : { aiAggression: 1, speedScale: 1, projectileDensity: 1, damageMultiplier: 1, hpMultiplier: 1 };
 
+        // Uncapped HP scaling to purely match player Ship DPS for exact TTK parity
+        let rawHpMultiplier = playerScale.hpMultiplier;
+        if (this.game.getShipStats) {
+            const ship = this.game.getShipStats(this.game.selectedShip);
+            const baseDamage = Math.max(1, ship.damage || 1);
+            const baseFireRate = Math.max(0.01, ship.fireRate || 0.12);
+            const playerDPS = baseDamage / baseFireRate;
+            const baselineDPS = 3 / 0.12; // Starter ship Interceptor DPS (25)
+            rawHpMultiplier = Math.max(1, playerDPS / baselineDPS);
+        }
+
         // Base HP scaled to player DPS to maintain Time-to-Kill (TTK) parity
-        this.maxHealth = Math.floor(1200 * levelScale * tierMultiplier * playerScale.hpMultiplier);
+        this.maxHealth = Math.floor(1200 * levelScale * tierMultiplier * rawHpMultiplier);
         this.health = this.maxHealth;
         this.points = Math.floor(1500 * levelScale);
         this.coinReward = Math.floor(200 * level * 0.8); // Balanced linear reward
