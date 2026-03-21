@@ -1414,9 +1414,9 @@ export class Game {
     updateEnemySpawnDirector(dt) {
         if (this.boss || this.bossEntering) return;
 
-        // How many we still need to spawn to reach the level quota
-        const remainingToSpawn = this.enemiesForLevel - this.enemiesSpawned;
-        if (remainingToSpawn <= 0) return;
+        // The exact number of enemies that have either been killed or are currently alive
+        const currentTotal = this.enemiesDefeated + this.enemies.length;
+        if (currentTotal >= this.enemiesForLevel) return;
 
         // Start constant stream vs batch-spawn pause
         this.enemyTimer += dt;
@@ -1424,7 +1424,7 @@ export class Game {
             // Respect universal screen cap
             if (this.enemies.length < this.getMaxEnemiesOnScreen()) {
                 const enemy = this.spawnCombatEnemy();
-                this.enemiesSpawned += this.getSpawnBudgetCost(enemy);
+                this.enemiesSpawned += 1; // Pure count metric
                 this.enemyTimer = 0;
             }
         }
