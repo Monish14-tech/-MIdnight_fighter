@@ -1,4 +1,4 @@
-import { Game } from './game.js?v=58';
+import { Game } from './game.js?v=59';
 import { InputHandler } from './input.js?v=56';
 import { LeaderboardManager } from './leaderboard.js?v=56';
 

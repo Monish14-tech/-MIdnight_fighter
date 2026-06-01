@@ -12,7 +12,7 @@ import { ServerAuthoritativeNetplay } from './server-authoritative-netplay.js';
 import { AchievementManager, ACHIEVEMENT_DATA } from './achievements.js';
 import { RANK_DATA, getRankByGlobalPosition } from './ranks.js';
 import { NotificationManager } from './notifications.js';
-import { StoryMode, STORY_ACHIEVEMENT_DATA } from './storymode.js?v=3';
+import { StoryMode, STORY_ACHIEVEMENT_DATA } from './storymode.js?v=4';
 
 class AssetLoader {
     constructor() {
@@ -283,6 +283,7 @@ export class Game {
         this.isWarping = false;
         this.warpTimer = 0;
         this.boss = null;
+        this.bossEntering = false;
         this.bossHudBaseName = 'DETECTING ANOMALY...';
         this.bossTimer = 0;
         this.bossJustDefeated = false;
@@ -1404,8 +1405,8 @@ export class Game {
         const openingCount = Math.min(maxOnScreen, remaining);
 
         for (let i = 0; i < openingCount; i++) {
-            const enemy = this.spawnCombatEnemy();
-            this.enemiesSpawned += this.getSpawnBudgetCost(enemy);
+            this.spawnCombatEnemy();
+            this.enemiesSpawned += 1;
         }
 
         this.spawnDirector.openingDone = true;
@@ -1743,6 +1744,12 @@ export class Game {
 
                 // Show Level Up Text
                 this.showLevelUpText(this.currentLevel);
+
+                // Prime the next wave immediately after level-up
+                if (!this.onlineCoop || this.onlineRole === 'host') {
+                    this.spawnDirector.openingDone = false;
+                    this.primeOpeningWave();
+                }
             }
 
             // Sync level-up to peer
@@ -1827,7 +1834,10 @@ export class Game {
 
     spawnBoss() {
         // Allowed in normal AND story mode; blocked in legacy challenge-only contexts
-        if (this.challengeMode) return;
+        if (this.challengeMode) {
+            this.bossEntering = false;
+            return;
+        }
 
         // Clear bossEntering flag now that boss is actually spawning
         this.bossEntering = false;
@@ -1882,11 +1892,12 @@ export class Game {
         this.boss.remoteId = 'boss_' + (this.entityCounter++);
 
         if (this.onlineCoop && this.onlineRole === 'host' && this.boss.remoteId) {
-            this.netplay.emit('boss_spawn', {
+            this.netplay.emit('spawn_boss', {
                 id: this.boss.remoteId,
                 side: side,
                 modelIndex: this.boss.modelIndex,
-                level: this.currentLevel
+                level: this.currentLevel,
+                name: this.bossHudBaseName
             });
         }
     }
@@ -3102,8 +3113,7 @@ export class Game {
             }
         }
 
-        // Mark the lowest HP enemy for deletion
-        lowestHPEnemy.markedForDeletion = true;
+        this.handleEnemyDefeat(lowestHPEnemy, false);
     }
 
     spawnPowerUp() {

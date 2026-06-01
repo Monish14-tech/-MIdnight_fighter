@@ -4,6 +4,8 @@
 //  26-30 = 5 sequential bosses), player upgrade, victory sequence.
 // ═══════════════════════════════════════════════════════════════════
 
+import { Boss } from './entities/boss.js';
+
 export class StoryMode {
     constructor(game) {
         this.game = game;
@@ -262,36 +264,35 @@ export class StoryMode {
             'ANOMALY: VOID CARRIER'
         ];
 
-        import('./entities/boss.js?v=4').then(m => {
-            const sides = ['top', 'left', 'right'];
-            const side = sides[modelIndex % sides.length];
+        const sides = ['top', 'left', 'right'];
+        const side = sides[modelIndex % sides.length];
 
-            const BossClass = m.default || m.Boss;
-            // Gauntlet bosses are harder: use level 20 base stats
-            const gauntletLevel = 20 + this.gauntletDefeated * 5;
-            this.game.boss = new BossClass(this.game, gauntletLevel, side, modelIndex);
+        // Gauntlet bosses are harder: use level 20 base stats
+        const gauntletLevel = 20 + this.gauntletDefeated * 5;
+        this.game.boss = new Boss(this.game, gauntletLevel, side, modelIndex);
 
-            // Show boss HUD
-            const bossHud = document.getElementById('boss-hud');
-            if (bossHud) bossHud.classList.add('active');
-            const enemyCounter = document.getElementById('enemy-counter');
-            if (enemyCounter) enemyCounter.style.display = 'none';
+        // Show boss HUD
+        const bossHud = document.getElementById('boss-hud');
+        if (bossHud) {
+            bossHud.classList.add('active');
+            bossHud.style.display = 'flex';
+        }
+        const enemyCounter = document.getElementById('enemy-counter');
+        if (enemyCounter) enemyCounter.style.display = 'none';
 
-            const name = `[${this.gauntletDefeated + 1}/5] ${bossNames[modelIndex]}`;
-            const bossName = document.getElementById('boss-name');
-            if (bossName) {
-                bossName.dataset.baseName = name;
-                bossName.innerText = name;
-            }
-            this.game.updateBossUI && this.game.updateBossUI();
-            this.game.boss.remoteId = 'boss_gauntlet_' + modelIndex;
+        const name = `[${this.gauntletDefeated + 1}/5] ${bossNames[modelIndex]}`;
+        this.game.bossHudBaseName = name;
+        const bossName = document.getElementById('boss-name');
+        if (bossName) {
+            bossName.dataset.baseName = name;
+            bossName.innerText = name;
+        }
+        this.game.updateBossUI && this.game.updateBossUI();
+        this.game.boss.remoteId = 'boss_gauntlet_' + modelIndex;
 
-            // Show boss entry alert
-            this.game.showBossAlert && this.game.showBossAlert(
-                `BOSS ${this.gauntletDefeated + 1} / 5`,
-                bossNames[modelIndex]
-            );
-        });
+        if (this.game.showBossAlert) {
+            this.game.showBossAlert();
+        }
     }
 
     // ── Victory Sequence ───────────────────────────────────────

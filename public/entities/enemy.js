@@ -162,12 +162,14 @@ export class Enemy {
             this.x = x;
             this.y = y;
         } else {
+            const worldW = game.logicalWidth || game.width;
+            const worldH = game.logicalHeight || game.height;
             if (rng() < 0.5) {
-                this.x = rng() < 0.5 ? -50 : this.game.width + 50;
-                this.y = rng() * this.game.height;
+                this.x = rng() < 0.5 ? -50 : worldW + 50;
+                this.y = rng() * worldH;
             } else {
-                this.x = rng() * this.game.width;
-                this.y = rng() < 0.5 ? -50 : this.game.height + 50;
+                this.x = rng() * worldW;
+                this.y = rng() < 0.5 ? -50 : worldH + 50;
             }
         }
 
@@ -721,13 +723,15 @@ export class Enemy {
             this.y += Math.sin(directAngle) * effectiveSpeed * 0.12 * collapseBoost * deltaTime;
         }
 
-        // Soft clamp: keep enemies on screen once they enter
+        // Soft clamp: keep enemies on screen once they enter (logical world space)
+        const worldW = this.game.logicalWidth || this.game.width;
+        const worldH = this.game.logicalHeight || this.game.height;
         const m = this.radius;
-        if (this.x > -m && this.x < this.game.width + m) {
-            this.x = Math.max(m, Math.min(this.game.width - m, this.x));
+        if (this.x > -m && this.x < worldW + m) {
+            this.x = Math.max(m, Math.min(worldW - m, this.x));
         }
-        if (this.y > -m && this.y < this.game.height + m) {
-            this.y = Math.max(m, Math.min(this.game.height - m, this.y));
+        if (this.y > -m && this.y < worldH + m) {
+            this.y = Math.max(m, Math.min(worldH - m, this.y));
         }
 
         // Anti-stuck: if movement stalls, force a short chase nudge toward player.
@@ -963,10 +967,14 @@ export class Enemy {
             }
         }
 
-        // Cleanup if way off screen
-        if (this.x < -200 || this.x > this.game.width + 200 ||
-            this.y < -200 || this.y > this.game.height + 200) {
-            this.markedForDeletion = true;
+        // Cleanup if way off screen — count toward wave quota so levels cannot softlock
+        if (this.x < -200 || this.x > worldW + 200 ||
+            this.y < -200 || this.y > worldH + 200) {
+            if (this.game.handleEnemyDefeat) {
+                this.game.handleEnemyDefeat(this, false);
+            } else {
+                this.markedForDeletion = true;
+            }
         }
     }
 

@@ -4,8 +4,10 @@ import { Projectile } from './projectile.js';
 export class Player {
     constructor(game, shipType = 'default', options = {}) {
         this.game = game;
-        this.x = game.width / 2;
-        this.y = game.height / 2;
+        const worldW = game.logicalWidth || game.width;
+        const worldH = game.logicalHeight || game.height;
+        this.x = worldW / 2;
+        this.y = worldH * 0.85;
         this.radius = 15 * (this.game.renderScale || 1);
         this.playerId = options.playerId || 'player';
 
