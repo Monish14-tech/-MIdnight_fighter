@@ -743,75 +743,183 @@ export class Player {
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
         ctx.lineWidth = 1;
 
+        // ═══════════════════════════════════════════════════
+        //  STRIKER — Cyan/Blue sleek delta fighter
+        // ═══════════════════════════════════════════════════
+        const _drawStriker = (ctx, col1 = '#00f3ff', col2 = '#0044aa') => {
+            const g = ctx.createLinearGradient(-25, 0, 35, 0);
+            g.addColorStop(0, col2); g.addColorStop(0.5, col1); g.addColorStop(1, '#ffffff');
+            ctx.fillStyle = g; ctx.strokeStyle = `${col1}99`; ctx.lineWidth = 1;
+            ctx.shadowBlur = 12; ctx.shadowColor = col1;
+            // Fuselage
+            ctx.beginPath();
+            ctx.moveTo(38, 0); ctx.lineTo(12, 6); ctx.lineTo(-18, 7); ctx.lineTo(-24, 0);
+            ctx.lineTo(-18, -7); ctx.lineTo(12, -6); ctx.closePath(); ctx.fill(); ctx.stroke();
+            // Main swept wings
+            ctx.beginPath(); ctx.moveTo(10,7); ctx.lineTo(-14,28); ctx.lineTo(-22,28); ctx.lineTo(-14,7); ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(10,-7); ctx.lineTo(-14,-28); ctx.lineTo(-22,-28); ctx.lineTo(-14,-7); ctx.closePath(); ctx.fill(); ctx.stroke();
+            // Tail fins
+            ctx.beginPath(); ctx.moveTo(-14,6); ctx.lineTo(-22,15); ctx.lineTo(-26,15); ctx.lineTo(-20,6); ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-14,-6); ctx.lineTo(-22,-15); ctx.lineTo(-26,-15); ctx.lineTo(-20,-6); ctx.closePath(); ctx.fill(); ctx.stroke();
+            // Cockpit glow
+            ctx.fillStyle = '#aaffff'; ctx.globalAlpha = 0.85;
+            ctx.beginPath(); ctx.ellipse(14,0,10,3,0,0,Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
+            // Wing energy lines
+            const p = 0.4 + Math.abs(Math.sin(Date.now()*0.003))*0.5;
+            ctx.strokeStyle = `rgba(0,243,255,${p})`; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(0,8); ctx.lineTo(-14,25); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0,-8); ctx.lineTo(-14,-25); ctx.stroke();
+            ctx.shadowBlur = 0; ctx.lineWidth = 1;
+        };
+
+        // ═══════════════════════════════════════════════════
+        //  VANGUARD — Silver/White heavy assault fighter
+        // ═══════════════════════════════════════════════════
+        const _drawVanguard = (ctx) => {
+            const g = ctx.createLinearGradient(-28,0,35,0);
+            g.addColorStop(0,'#334455'); g.addColorStop(0.5,'#aabbcc'); g.addColorStop(1,'#ffffff');
+            ctx.fillStyle = g; ctx.strokeStyle = 'rgba(180,200,255,0.6)'; ctx.lineWidth = 1;
+            ctx.shadowBlur = 10; ctx.shadowColor = '#88aaff';
+            // Wide fuselage
+            ctx.beginPath();
+            ctx.moveTo(36,0); ctx.lineTo(10,9); ctx.lineTo(-20,10); ctx.lineTo(-26,0);
+            ctx.lineTo(-20,-10); ctx.lineTo(10,-9); ctx.closePath(); ctx.fill(); ctx.stroke();
+            // Broad delta wings
+            ctx.beginPath(); ctx.moveTo(8,9); ctx.lineTo(-16,32); ctx.lineTo(-26,32); ctx.lineTo(-16,9); ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(8,-9); ctx.lineTo(-16,-32); ctx.lineTo(-26,-32); ctx.lineTo(-16,-9); ctx.closePath(); ctx.fill(); ctx.stroke();
+            // Armor plates
+            ctx.fillStyle = 'rgba(150,180,220,0.4)'; ctx.fillRect(-10,-8,20,16);
+            ctx.strokeStyle = 'rgba(200,220,255,0.5)'; ctx.strokeRect(-10,-8,20,16);
+            // Blue cockpit
+            ctx.fillStyle = '#4488ff'; ctx.shadowBlur = 8; ctx.shadowColor = '#4488ff';
+            ctx.beginPath(); ctx.ellipse(14,0,9,3,0,0,Math.PI*2); ctx.fill();
+            ctx.shadowBlur = 0; ctx.lineWidth = 1;
+        };
+
+        // ═══════════════════════════════════════════════════
+        //  PHANTOM — Crimson/Red stealth bomber
+        // ═══════════════════════════════════════════════════
+        const _drawPhantom = (ctx) => {
+            const g = ctx.createLinearGradient(-26,0,35,0);
+            g.addColorStop(0,'#220000'); g.addColorStop(0.45,'#cc1100'); g.addColorStop(1,'#ff4422');
+            ctx.fillStyle = g; ctx.strokeStyle = 'rgba(255,50,0,0.6)'; ctx.lineWidth = 1;
+            ctx.shadowBlur = 14; ctx.shadowColor = '#ff2200';
+            // Swept flying-wing fuselage
+            ctx.beginPath();
+            ctx.moveTo(36,0); ctx.lineTo(6,10); ctx.lineTo(-22,13); ctx.lineTo(-28,0);
+            ctx.lineTo(-22,-13); ctx.lineTo(6,-10); ctx.closePath(); ctx.fill(); ctx.stroke();
+            // Wide angled wings
+            ctx.beginPath(); ctx.moveTo(4,10); ctx.lineTo(-20,36); ctx.lineTo(-30,36); ctx.lineTo(-18,10); ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(4,-10); ctx.lineTo(-20,-36); ctx.lineTo(-30,-36); ctx.lineTo(-18,-10); ctx.closePath(); ctx.fill(); ctx.stroke();
+            // Dark cockpit
+            ctx.fillStyle = 'rgba(255,80,0,0.6)'; ctx.shadowBlur = 8; ctx.shadowColor = '#ff4400';
+            ctx.beginPath(); ctx.moveTo(18,0); ctx.lineTo(2,6); ctx.lineTo(-8,0); ctx.lineTo(2,-6); ctx.closePath(); ctx.fill();
+            // Red wing-tip orbs
+            const rp = 0.5+Math.abs(Math.sin(Date.now()*0.004))*0.5;
+            ctx.fillStyle = `rgba(255,50,0,${rp})`; ctx.shadowBlur = 12; ctx.shadowColor = '#ff2200';
+            ctx.beginPath(); ctx.arc(-28,34,4,0,Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(-28,-34,4,0,Math.PI*2); ctx.fill();
+            ctx.shadowBlur = 0; ctx.lineWidth = 1;
+        };
+
+        // ═══════════════════════════════════════════════════
+        //  ECLIPSE — Purple/Violet spike fighter
+        // ═══════════════════════════════════════════════════
+        const _drawEclipse = (ctx) => {
+            const g = ctx.createRadialGradient(0,0,4,0,0,30);
+            g.addColorStop(0,'#aa00ff'); g.addColorStop(0.5,'#6600cc'); g.addColorStop(1,'#220044');
+            ctx.fillStyle = g; ctx.strokeStyle = 'rgba(170,0,255,0.7)'; ctx.lineWidth = 1;
+            ctx.shadowBlur = 15; ctx.shadowColor = '#aa00ff';
+            // Main delta body
+            ctx.beginPath();
+            ctx.moveTo(40,0); ctx.lineTo(0,14); ctx.lineTo(-28,0); ctx.lineTo(0,-14); ctx.closePath(); ctx.fill(); ctx.stroke();
+            // Side spikes
+            ctx.beginPath(); ctx.moveTo(10,10); ctx.lineTo(-6,32); ctx.lineTo(-18,22); ctx.lineTo(-2,10); ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(10,-10); ctx.lineTo(-6,-32); ctx.lineTo(-18,-22); ctx.lineTo(-2,-10); ctx.closePath(); ctx.fill(); ctx.stroke();
+            // Forward wing blades
+            ctx.beginPath(); ctx.moveTo(30,4); ctx.lineTo(20,18); ctx.lineTo(10,12); ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(30,-4); ctx.lineTo(20,-18); ctx.lineTo(10,-12); ctx.closePath(); ctx.fill(); ctx.stroke();
+            // Purple core crystal
+            const ep = 0.4+Math.abs(Math.sin(Date.now()*0.005))*0.5;
+            ctx.fillStyle = `rgba(200,80,255,${ep})`; ctx.shadowBlur = 16; ctx.shadowColor = '#dd00ff';
+            ctx.beginPath(); ctx.arc(6,0,6,0,Math.PI*2); ctx.fill();
+            ctx.shadowBlur = 0; ctx.lineWidth = 1;
+        };
+
+        // ═══════════════════════════════════════════════════
+        //  HAWK — Green neon hunter jet
+        // ═══════════════════════════════════════════════════
+        const _drawHawk = (ctx) => {
+            const g = ctx.createLinearGradient(-22,0,36,0);
+            g.addColorStop(0,'#001a00'); g.addColorStop(0.45,'#00aa22'); g.addColorStop(1,'#00ff88');
+            ctx.fillStyle = g; ctx.strokeStyle = 'rgba(0,255,100,0.6)'; ctx.lineWidth = 1;
+            ctx.shadowBlur = 12; ctx.shadowColor = '#00ff55';
+            // Agile fuselage
+            ctx.beginPath();
+            ctx.moveTo(38,0); ctx.lineTo(14,5); ctx.lineTo(-16,6); ctx.lineTo(-22,0);
+            ctx.lineTo(-16,-6); ctx.lineTo(14,-5); ctx.closePath(); ctx.fill(); ctx.stroke();
+            // Forward swept wings
+            ctx.beginPath(); ctx.moveTo(8,5); ctx.lineTo(18,26); ctx.lineTo(8,26); ctx.lineTo(-10,6); ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(8,-5); ctx.lineTo(18,-26); ctx.lineTo(8,-26); ctx.lineTo(-10,-6); ctx.closePath(); ctx.fill(); ctx.stroke();
+            // Rear delta wings
+            ctx.beginPath(); ctx.moveTo(-6,6); ctx.lineTo(-18,22); ctx.lineTo(-24,22); ctx.lineTo(-18,6); ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-6,-6); ctx.lineTo(-18,-22); ctx.lineTo(-24,-22); ctx.lineTo(-18,-6); ctx.closePath(); ctx.fill(); ctx.stroke();
+            // Green cockpit
+            ctx.fillStyle = '#00ffaa'; ctx.shadowBlur = 10; ctx.shadowColor = '#00ff88';
+            ctx.beginPath(); ctx.ellipse(16,0,9,3,0,0,Math.PI*2); ctx.fill();
+            const gp = 0.4+Math.abs(Math.sin(Date.now()*0.006))*0.5;
+            ctx.strokeStyle = `rgba(0,255,80,${gp})`; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(5,5); ctx.lineTo(15,22); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(5,-5); ctx.lineTo(15,-22); ctx.stroke();
+            ctx.shadowBlur = 0; ctx.lineWidth = 1;
+        };
+
+        // ═══════════════════════════════════════════════════
+        //  SENTINEL — Yellow/Gold angular sentinel
+        // ═══════════════════════════════════════════════════
+        const _drawSentinel = (ctx) => {
+            const g = ctx.createLinearGradient(-24,0,35,0);
+            g.addColorStop(0,'#442200'); g.addColorStop(0.5,'#ddaa00'); g.addColorStop(1,'#ffffaa');
+            ctx.fillStyle = g; ctx.strokeStyle = 'rgba(255,200,0,0.6)'; ctx.lineWidth = 1;
+            ctx.shadowBlur = 12; ctx.shadowColor = '#ffcc00';
+            // Angular fuselage
+            ctx.beginPath();
+            ctx.moveTo(36,0); ctx.lineTo(10,8); ctx.lineTo(-16,10); ctx.lineTo(-24,0);
+            ctx.lineTo(-16,-10); ctx.lineTo(10,-8); ctx.closePath(); ctx.fill(); ctx.stroke();
+            // Armored delta wings
+            ctx.beginPath(); ctx.moveTo(8,8); ctx.lineTo(-12,30); ctx.lineTo(-24,30); ctx.lineTo(-12,8); ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(8,-8); ctx.lineTo(-12,-30); ctx.lineTo(-24,-30); ctx.lineTo(-12,-8); ctx.closePath(); ctx.fill(); ctx.stroke();
+            // Forward canards
+            ctx.beginPath(); ctx.moveTo(24,6); ctx.lineTo(14,18); ctx.lineTo(10,10); ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(24,-6); ctx.lineTo(14,-18); ctx.lineTo(10,-10); ctx.closePath(); ctx.fill(); ctx.stroke();
+            // Yellow cockpit
+            ctx.fillStyle = '#ffff44'; ctx.shadowBlur = 10; ctx.shadowColor = '#ffcc00';
+            ctx.beginPath(); ctx.ellipse(14,0,9,4,0,0,Math.PI*2); ctx.fill();
+            const yp = 0.4+Math.abs(Math.sin(Date.now()*0.004))*0.5;
+            ctx.fillStyle = `rgba(255,220,0,${yp})`; ctx.shadowBlur = 8; ctx.shadowColor = '#ffdd00';
+            ctx.beginPath(); ctx.arc(-22,28,3,0,Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(-22,-28,3,0,Math.PI*2); ctx.fill();
+            ctx.shadowBlur = 0; ctx.lineWidth = 1;
+        };
+
         switch (type) {
-            case 'default': // INTERCEPTOR - Sleek Jet Fighter
-                // Main Fuselage
-                const defaultGrad = ctx.createLinearGradient(-15, 0, 25, 0);
-                defaultGrad.addColorStop(0, '#003366');
-                defaultGrad.addColorStop(0.5, '#0066ff');
-                defaultGrad.addColorStop(1, '#00ffff');
-                ctx.fillStyle = defaultGrad;
-
-                ctx.beginPath();
-                ctx.moveTo(35, 0);       // Nose
-                ctx.lineTo(10, 6);       // Forward fuselage
-                ctx.lineTo(-15, 6);      // Rear fuselage
-                ctx.lineTo(-20, 0);      // Engine exhaust
-                ctx.lineTo(-15, -6);
-                ctx.lineTo(10, -6);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-
-                // Main Wings (Delta style)
-                ctx.beginPath();
-                ctx.moveTo(8, 6);        // Wing root forward
-                ctx.lineTo(-12, 22);     // Wing tip
-                ctx.lineTo(-18, 22);     // Wing tip rear
-                ctx.lineTo(-12, 6);      // Wing root rear
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.moveTo(8, -6);
-                ctx.lineTo(-12, -22);
-                ctx.lineTo(-18, -22);
-                ctx.lineTo(-12, -6);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-
-                // Horizontal Stabilizers (Tail fins)
-                ctx.beginPath();
-                ctx.moveTo(-12, 4);
-                ctx.lineTo(-22, 12);
-                ctx.lineTo(-25, 12);
-                ctx.lineTo(-18, 4);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.moveTo(-12, -4);
-                ctx.lineTo(-22, -12);
-                ctx.lineTo(-25, -12);
-                ctx.lineTo(-18, -4);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-
-                // Cockpit Canopy
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-                ctx.beginPath();
-                ctx.ellipse(12, 0, 8, 3, 0, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Engine Glow Detail
-                ctx.fillStyle = '#ff6600';
-                ctx.beginPath();
-                ctx.arc(-18, 0, 3, 0, Math.PI * 2);
-                ctx.fill();
+            case 'default': // INTERCEPTOR - STRIKER shape (blue)
+                _drawStriker(ctx, '#00f3ff', '#0044aa');
+                break;
+            case 'striker':
+                _drawStriker(ctx, '#00f3ff', '#0044aa');
+                break;
+            case 'vanguard':
+                _drawVanguard(ctx);
+                break;
+            case 'eclipse':
+                _drawEclipse(ctx);
+                break;
+            case 'hawk':
+                _drawHawk(ctx);
+                break;
+            case 'sentinel':
+                _drawSentinel(ctx);
                 break;
 
             case 'scout': // RAZORBACK - Lightweight Scout Jet

@@ -2,6 +2,15 @@
 <html lang="en">
 
 <head>
+    <!-- Three.js import map — must come BEFORE any type=module scripts -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://esm.sh/three@0.169.0",
+            "three/addons/": "https://esm.sh/three@0.169.0/examples/jsm/"
+        }
+    }
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="mobile-web-app-capable" content="yes">
@@ -141,7 +150,8 @@
     </div>
 
     <div id="game-container">
-        <canvas id="gameCanvas" width="1280" height="720"></canvas>
+        <!-- gameCanvas sits above the Three.js WebGL background canvas (#three-bg-canvas) -->
+        <canvas id="gameCanvas" width="1280" height="720" style="position:relative;z-index:1;"></canvas>
         <div id="ui-layer">
             <div id="hud" class="hidden">
                 <div id="hud-left">

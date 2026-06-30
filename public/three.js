@@ -1,8 +1,5 @@
-// Dummy Three.js module to prevent resolution errors from stale cached files
-export const Scene = class { };
-export const PerspectiveCamera = class { };
-export const WebGLRenderer = class { };
-export const Mesh = class { };
-export const BoxGeometry = class { };
-export const MeshBasicMaterial = class { };
-export default { Scene, PerspectiveCamera, WebGLRenderer, Mesh, BoxGeometry, MeshBasicMaterial };
+// three.js — re-export real Three.js from the importmap (see index.html)
+// This file exists so legacy relative imports like `import { ... } from './three.js'`
+// continue to resolve. The importmap ensures 'three' points to the real CDN build.
+export * from 'three';
+export { default } from 'three';

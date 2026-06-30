@@ -13,6 +13,7 @@ import { AchievementManager, ACHIEVEMENT_DATA } from './achievements.js';
 import { RANK_DATA, getRankByGlobalPosition } from './ranks.js';
 import { NotificationManager } from './notifications.js';
 import { StoryMode, STORY_ACHIEVEMENT_DATA } from './storymode.js?v=4';
+import { getThreeBackground } from './three-background.js';
 
 class AssetLoader {
     constructor() {
@@ -292,6 +293,9 @@ export class Game {
         this.lastBossLevel = 0;
         this.timeScale = 1.0;
         this.slowMoTimer = 0;
+        // BUG FIX: gameTime and empTimer were never initialized causing NaN bugs
+        this.gameTime = 0;
+        this.empTimer = 0;
 
         // Enemy Tracking for Unique Spawning
         this.spawnedEnemyTypes = new Set();
@@ -387,10 +391,19 @@ export class Game {
     }
 
     initAtmosphere() {
+        // Initialize canvas-2D atmospheric elements (nebulas, cosmic dust) for fallback
         import('./utils.js?v=4').then(m => {
             for (let i = 0; i < 5; i++) this.nebulas.push(new m.Nebula(this));
             for (let i = 0; i < 30; i++) this.cosmicDust.push(new m.CosmicDust(this));
         });
+
+        // Initialize Three.js WebGL background — non-blocking, degrades gracefully
+        try {
+            this.threeBg = getThreeBackground();
+        } catch (e) {
+            console.warn('[ThreeBG] WebGL background unavailable:', e);
+            this.threeBg = null;
+        }
     }
 
     triggerImpact(freezeTime = 0.05, flashIntense = 0.2) {
@@ -1254,23 +1267,31 @@ export class Game {
     }
 
 
+    // BUG FIX: Merged two duplicate toggleSettingsMenu definitions into one.
+    // The old version at ~line 2175 had `if (!this.isRunning) return` which blocked
+    // opening settings from the main menu. This unified version handles both contexts.
     toggleSettingsMenu() {
         const settingsMenu = document.getElementById('settings-menu');
         if (!settingsMenu) return;
+
         if (settingsMenu.classList.contains('active')) {
             settingsMenu.classList.remove('active');
-            // Restore whichever screen was visible before
-            if (this.isRunning && !this.gameOver && !this.isPaused) {
-                // nothing to restore - settings was over gameplay
-            } else if (this.isPaused) {
+            // Restore whatever context we came from
+            if (this.isRunning && !this.gameOver && this.isPaused) {
                 document.getElementById('pause-menu')?.classList.add('active');
-            } else {
-                this.startScreen.classList.add('active');
+            } else if (this.isRunning && !this.gameOver) {
+                this.isPaused = false;
+                this.lastTime = 0; // Reset dt to prevent jump on resume
+            } else if (!this.isRunning) {
+                this.startScreen?.classList.add('active');
             }
-        }
-        else {
+        } else {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             settingsMenu.classList.add('active');
+            // Pause gameplay when opening settings
+            if (this.isRunning && !this.gameOver) {
+                this.isPaused = true;
+            }
         }
     }
 
@@ -1807,6 +1828,8 @@ export class Game {
 
         setTimeout(() => {
             this.spawnBoss();
+            // Three.js warp speed lines during boss intro
+            if (this.threeBg) this.threeBg.triggerWarp(2.5);
         }, 2000); // 2 second alert before boss spawns
     }
 
@@ -1917,6 +1940,8 @@ export class Game {
             window.innerHeight / this.logicalHeight
         );
         this.drawBackground();
+        // Relay resize to Three.js WebGL background
+        if (this.threeBg) this.threeBg.resize();
     }
 
     startGame() {
@@ -2159,19 +2184,7 @@ export class Game {
         }
     }
 
-    toggleSettingsMenu() {
-        if (!this.isRunning || this.gameOver) return;
-
-        const settingsMenu = document.getElementById('settings-menu');
-        settingsMenu.classList.toggle('active');
-
-        if (settingsMenu.classList.contains('active')) {
-            this.isPaused = true;
-        } else {
-            this.isPaused = false;
-            this.lastTime = 0; // Reset delta time to prevent jump
-        }
-    }
+    // NOTE: duplicate toggleSettingsMenu removed — see unified version above (~line 1270)
 
     goToMainMenu() {
         if (this.onlineCoop) {
@@ -2526,12 +2539,12 @@ export class Game {
             return;
         }
 
-        // Warp Sequence handling
+        // BUG FIX: Warp sequence was calling d.draw() inside update() causing double-draw.
+        // Now we only modify the speed; the draw() method handles rendering.
         if (this.isWarping) {
-            this.cosmicDust.forEach(d => {
-                d.vy *= 10;
-                d.draw(this.ctx); // Extra speed visual during update loop too
-            });
+            this.cosmicDust.forEach(d => { d.vy *= 10; });
+            // Trigger Three.js warp effect
+            if (this.threeBg) this.threeBg.triggerWarp(2.0);
             return;
         }
 
@@ -2741,8 +2754,12 @@ export class Game {
         this.cosmicDust.forEach(dust => dust.draw(this.ctx));
 
         // Background trail
-        this.ctx.fillStyle = 'rgba(5, 5, 16, 0.3)';
-        this.ctx.fillRect(0, 0, this.width, this.height);
+        if (this.threeBg) {
+            this.ctx.clearRect(0, 0, this.width, this.height);
+        } else {
+            this.ctx.fillStyle = 'rgba(5, 5, 16, 0.3)';
+            this.ctx.fillRect(0, 0, this.width, this.height);
+        }
 
         this.ctx.save();
 
@@ -2785,16 +2802,22 @@ export class Game {
     drawBackground() {
         this.ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
 
-        this.ctx.fillStyle = '#050510';
-        this.ctx.fillRect(0, 0, this.width, this.height);
+        if (this.threeBg) {
+            this.ctx.clearRect(0, 0, this.width, this.height);
+        } else {
+            this.ctx.fillStyle = '#050510';
+            this.ctx.fillRect(0, 0, this.width, this.height);
+        }
 
         this.ctx.save();
         // Scale background grid as well
         this.ctx.scale(this.renderScale, this.renderScale);
 
         // Draw AAA Atmosphere
-        this.nebulas.forEach(n => n.draw(this.ctx));
-        this.cosmicDust.forEach(d => d.draw(this.ctx));
+        if (!this.threeBg) {
+            this.nebulas.forEach(n => n.draw(this.ctx));
+            this.cosmicDust.forEach(d => d.draw(this.ctx));
+        }
 
         // Grid lines (Logical 1920x1080)
         this.ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
@@ -2850,6 +2873,13 @@ export class Game {
         if (this.achievementManager && this.isMetaProgressionEnabled()) this.achievementManager.updateMaxKillstreak(this.currentKillStreak);
         this.particles.push(new Explosion(this, enemy.x, enemy.y, enemy.color));
         if (this.audio) this.audio.explosion();
+
+        // Three.js WebGL explosion burst (converts logical coords to screen)
+        if (this.threeBg) {
+            const screenX = enemy.x * this.renderScale + (window.innerWidth  - this.logicalWidth  * this.renderScale) / 2;
+            const screenY = enemy.y * this.renderScale + (window.innerHeight - this.logicalHeight * this.renderScale) / 2;
+            this.threeBg.triggerExplosion(screenX, screenY, enemy.color || '#ff6600', 24, 55);
+        }
 
         // ── Combo-Based Economy ──
         // Removed combo coin drops as per user request
@@ -3551,6 +3581,14 @@ export class Game {
         }
 
         const bossPos = { x: this.boss.x, y: this.boss.y };
+
+        // Three.js mega boss explosion
+        if (this.threeBg) {
+            const screenX = bossPos.x * this.renderScale + (window.innerWidth  - this.logicalWidth  * this.renderScale) / 2;
+            const screenY = bossPos.y * this.renderScale + (window.innerHeight - this.logicalHeight * this.renderScale) / 2;
+            this.threeBg.triggerBossExplosion(screenX, screenY, this.boss?.color || '#ff2200');
+        }
+
         this.boss = null;
 
         const bossHud = document.getElementById('boss-hud');

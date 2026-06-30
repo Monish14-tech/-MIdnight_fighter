@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "node server.js",
-    "dev": "vercel dev",
+    "dev": "node server.js",
     "test": "node public/test/game.test.js",
     "app": "electron electron-main.js"
   },

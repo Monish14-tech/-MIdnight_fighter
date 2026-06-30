@@ -2003,27 +2003,13 @@ export class Boss {
         ctx.rotate(this.tilt);
 
         switch (this.modelIndex) {
-            case 0: this.drawModelSleek(ctx); break;
-            case 1: this.drawModelHeavy(ctx); break;
-            case 2: this.drawModelTriangle(ctx); break;
-            case 3: this.drawModelStealth(ctx); break;
-            case 4: this.drawModelCarrier(ctx); break;
-            default: this.drawModelSleek(ctx);
+            case 0: this.drawModelVoidOverlord(ctx); break;
+            case 1: this.drawModelMegaDestroyer(ctx); break;
+            case 2: this.drawModelGravityColossus(ctx); break;
+            case 3: this.drawModelNebulaQueen(ctx); break;
+            case 4: this.drawModelApocalypseDragon(ctx); break;
+            default: this.drawModelVoidOverlord(ctx);
         }
-
-        // Cockpit
-        ctx.fillStyle = '#000';
-        ctx.beginPath();
-        ctx.ellipse(30, 0, 15, 8, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = this.color;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        // Cockpit inner glow
-        ctx.shadowBlur = 12; ctx.shadowColor = this.color;
-        ctx.strokeStyle = this.color; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.ellipse(30, 0, 7, 4, 0, 0, Math.PI * 2); ctx.stroke();
-        ctx.shadowBlur = 0;
 
         // Animated thruster bloom behind the ship
         const t = this.game.lastTime * 0.001;
@@ -2048,169 +2034,361 @@ export class Boss {
         ctx.restore();
     }
 
-    drawModelSleek(ctx) {
-        // PHANTOM — sleek stealth jet with purple wing-tip lights
-        const grad = ctx.createLinearGradient(-80, 0, 80, 0);
-        grad.addColorStop(0, '#111'); grad.addColorStop(0.5, this.color); grad.addColorStop(1, '#fff');
-        ctx.fillStyle = grad; ctx.strokeStyle = this.color; ctx.lineWidth = 1.5;
-        ctx.shadowBlur = 8; ctx.shadowColor = this.color;
-        ctx.beginPath();
-        ctx.moveTo(100, 0); ctx.lineTo(55, 12); ctx.lineTo(-40, 16); ctx.lineTo(-80, 8);
-        ctx.lineTo(-80, -8); ctx.lineTo(-40, -16); ctx.lineTo(55, -12);
-        ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(30, 14); ctx.lineTo(-40, 90); ctx.lineTo(-80, 90); ctx.lineTo(-60, 14); ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(30, -14); ctx.lineTo(-40, -90); ctx.lineTo(-80, -90); ctx.lineTo(-60, -14); ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(-50, 14); ctx.lineTo(-70, 38); ctx.lineTo(-80, 38); ctx.lineTo(-65, 14); ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(-50, -14); ctx.lineTo(-70, -38); ctx.lineTo(-80, -38); ctx.lineTo(-65, -14); ctx.closePath(); ctx.fill(); ctx.stroke();
-        // Circuit data-stream lines (pulsing purple)
-        ctx.shadowBlur = 0;
-        const cp = 0.2 + Math.abs(Math.sin(this.game.lastTime * 0.003)) * 0.6;
-        ctx.strokeStyle = `rgba(170,0,255,${cp})`; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(20, 12); ctx.lineTo(20, -12); ctx.moveTo(-20, 15); ctx.lineTo(-20, -15); ctx.stroke();
-        // Wing-tip glowing orbs (purple)
-        const wt = this.game.lastTime * 0.006;
-        const wPulse = 0.55 + Math.abs(Math.sin(wt)) * 0.45;
-        ctx.shadowBlur = 22; ctx.shadowColor = '#cc00ff';
-        ctx.fillStyle = `rgba(180,0,255,${wPulse})`;
-        ctx.beginPath(); ctx.arc(-80, 90, 5, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(-80, -90, 5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = `rgba(220,130,255,${wPulse * 0.65})`;
-        ctx.beginPath(); ctx.arc(-80, 38, 3.5, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(-80, -38, 3.5, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowBlur = 0;
-    }
+    // ══════════════════════════════════════════════════════
+    //  BOSS 0: VOID OVERLORD — Dark Commander (Purple)
+    // ══════════════════════════════════════════════════════
+    drawModelVoidOverlord(ctx) {
+        const t = this.game.lastTime * 0.001;
+        const pulse = 0.5 + Math.abs(Math.sin(t * 2.5)) * 0.5;
 
-    drawModelHeavy(ctx) {
-        // TITAN — bulky dreadnought with orange cannon lights
-        const grad = ctx.createLinearGradient(-120, 0, 120, 0);
-        grad.addColorStop(0, '#110000'); grad.addColorStop(0.5, this.color); grad.addColorStop(1, '#ffffff');
-        ctx.fillStyle = grad; ctx.strokeStyle = this.color; ctx.lineWidth = 1.5;
-        ctx.shadowBlur = 8; ctx.shadowColor = this.color;
-        ctx.beginPath();
-        ctx.moveTo(115, 0); ctx.lineTo(70, 25); ctx.lineTo(-50, 30); ctx.lineTo(-120, 18);
-        ctx.lineTo(-120, -18); ctx.lineTo(-50, -30); ctx.lineTo(70, -25);
-        ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(30, 26); ctx.lineTo(-20, 80); ctx.lineTo(-60, 80); ctx.lineTo(-30, 26); ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(30, -26); ctx.lineTo(-20, -80); ctx.lineTo(-60, -80); ctx.lineTo(-30, -26); ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(60, 24); ctx.lineTo(20, 55); ctx.lineTo(-20, 55); ctx.lineTo(0, 24); ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(60, -24); ctx.lineTo(20, -55); ctx.lineTo(-20, -55); ctx.lineTo(0, -24); ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(-40, -22, 70, 44);
-        ctx.strokeStyle = 'rgba(255,255,255,0.30)'; ctx.lineWidth = 2; ctx.strokeRect(-40, -22, 70, 44);
-        ctx.fillStyle = 'rgba(255,255,255,0.15)';
-        ctx.beginPath(); ctx.moveTo(-60, 28); ctx.lineTo(-110, 70); ctx.lineTo(-80, 55); ctx.closePath(); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(-60, -28); ctx.lineTo(-110, -70); ctx.lineTo(-80, -55); ctx.closePath(); ctx.fill();
-        // Glowing wing cannon muzzle lights (orange, pulsing)
-        const ht = 0.5 + Math.abs(Math.sin(this.game.lastTime * 0.008)) * 0.5;
-        ctx.shadowBlur = 24; ctx.shadowColor = '#ff6600';
-        ctx.fillStyle = `rgba(255,110,0,${ht})`;
-        ctx.beginPath(); ctx.arc(-118, 12, 7, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(-118, -12, 7, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(-58, 28, 5, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(-58, -28, 5, 0, Math.PI * 2); ctx.fill();
-        // Wing-tip glowing orbs (orange)
-        const wt2 = this.game.lastTime * 0.005;
-        ctx.shadowBlur = 26; ctx.shadowColor = '#ff6600';
-        ctx.fillStyle = `rgba(255,140,0,${0.6 + Math.abs(Math.sin(wt2)) * 0.4})`;
-        ctx.beginPath(); ctx.arc(-60, 80, 6, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(-60, -80, 6, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = `rgba(255,180,60,${0.5 + Math.abs(Math.sin(wt2 + 1)) * 0.4})`;
-        ctx.beginPath(); ctx.arc(-20, 55, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(-20, -55, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowBlur = 0;
-    }
+        // Outer dark wings
+        const g = ctx.createLinearGradient(-100, 0, 60, 0);
+        g.addColorStop(0, '#0a000f'); g.addColorStop(0.5, '#3a0066'); g.addColorStop(1, '#8800cc');
+        ctx.fillStyle = g; ctx.strokeStyle = `rgba(170,0,255,0.8)`; ctx.lineWidth = 2;
+        ctx.shadowBlur = 20; ctx.shadowColor = '#aa00ff';
 
-    drawModelTriangle(ctx) {
-        // BERSERKER — aggressive delta wing with red rage lights
-        const grad = ctx.createLinearGradient(-100, 0, 100, 0);
-        grad.addColorStop(0, '#111'); grad.addColorStop(0.5, this.color); grad.addColorStop(1, '#eee');
-        ctx.fillStyle = grad; ctx.strokeStyle = this.color; ctx.lineWidth = 1.5;
-        ctx.shadowBlur = 10; ctx.shadowColor = '#ff2200';
+        // Main dark hull — angular
         ctx.beginPath();
-        ctx.moveTo(110, 0); ctx.lineTo(-80, 100); ctx.lineTo(-60, 0); ctx.lineTo(-80, -100);
+        ctx.moveTo(70, 0);
+        ctx.lineTo(30, 25); ctx.lineTo(-50, 35); ctx.lineTo(-80, 20);
+        ctx.lineTo(-80, -20); ctx.lineTo(-50, -35); ctx.lineTo(30, -25);
         ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.beginPath(); ctx.moveTo(40, 0); ctx.lineTo(-40, 0); ctx.lineTo(-60, -25); ctx.closePath(); ctx.fill();
-        // Rage center stripe
-        ctx.strokeStyle = '#ff4400'; ctx.lineWidth = 2; ctx.globalAlpha = 0.6;
-        ctx.beginPath(); ctx.moveTo(50, 0); ctx.lineTo(-50, 0); ctx.stroke();
-        ctx.globalAlpha = 1.0;
-        ctx.fillStyle = this.color; ctx.globalAlpha = 0.5;
-        ctx.fillRect(-20, 20, 15, 30); ctx.fillRect(-20, -50, 15, 30);
-        ctx.globalAlpha = 1.0;
-        // Wing-tip trail orbs (red-orange, strobe in phase 3)
-        const bt = this.game.lastTime * 0.009;
-        const bPulse = this.phase === 3 ? (Math.abs(Math.sin(bt * 3)) > 0.5 ? 1.0 : 0.15) : (0.5 + Math.abs(Math.sin(bt)) * 0.5);
-        ctx.shadowBlur = 28; ctx.shadowColor = '#ff2200';
-        ctx.fillStyle = `rgba(255,50,0,${bPulse})`;
-        ctx.beginPath(); ctx.arc(-80, 100, 7, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(-80, -100, 7, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = `rgba(255,150,0,${bPulse * 0.7})`;
-        ctx.beginPath(); ctx.arc(-20, 50, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(-20, -50, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowBlur = 0;
-    }
 
-    drawModelStealth(ctx) {
-        // TACTICIAN — angular stealth bomber with cyan data-stream lights
-        ctx.fillStyle = '#0a0a0a';
-        ctx.strokeStyle = this.color; ctx.lineWidth = 2.5;
-        ctx.shadowBlur = 12; ctx.shadowColor = this.color;
+        // Jagged void wings
         ctx.beginPath();
-        ctx.moveTo(120, 0); ctx.lineTo(20, 45); ctx.lineTo(-90, 110); ctx.lineTo(-60, 30);
-        ctx.lineTo(-100, 0); ctx.lineTo(-60, -30); ctx.lineTo(-90, -110); ctx.lineTo(20, -45);
+        ctx.moveTo(20, 28); ctx.lineTo(-30, 90); ctx.lineTo(-70, 100);
+        ctx.lineTo(-55, 60); ctx.lineTo(-80, 50); ctx.lineTo(-60, 30);
         ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.shadowBlur = 0;
-        // Data-stream circuit lines (cyan, pulsing)
-        const sp = 0.2 + Math.abs(Math.sin(this.game.lastTime * 0.004)) * 0.65;
-        ctx.strokeStyle = `rgba(0,200,255,${sp})`; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(40, 20); ctx.lineTo(-40, 20); ctx.moveTo(40, -20); ctx.lineTo(-40, -20); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(-10, 20); ctx.lineTo(-10, -20); ctx.moveTo(60, 0); ctx.lineTo(20, 0); ctx.stroke();
-        // Wing-tip glowing orbs (cyan-blue)
-        const st = this.game.lastTime * 0.007;
-        const sPulse = 0.5 + Math.abs(Math.sin(st)) * 0.5;
-        ctx.shadowBlur = 24; ctx.shadowColor = '#00ccff';
-        ctx.fillStyle = `rgba(0,210,255,${sPulse})`;
-        ctx.beginPath(); ctx.arc(-90, 110, 6, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(-90, -110, 6, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = `rgba(0,160,255,${sPulse * 0.6})`;
-        ctx.beginPath(); ctx.arc(-60, 30, 3.5, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(-60, -30, 3.5, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowBlur = 0;
-    }
+        ctx.beginPath();
+        ctx.moveTo(20, -28); ctx.lineTo(-30, -90); ctx.lineTo(-70, -100);
+        ctx.lineTo(-55, -60); ctx.lineTo(-80, -50); ctx.lineTo(-60, -30);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
 
-    drawModelCarrier(ctx) {
-        // SWARMLORD — wide carrier with yellow pulsing launch bays
-        const grad = ctx.createLinearGradient(-130, 0, 100, 0);
-        grad.addColorStop(0, '#222'); grad.addColorStop(0.5, this.color); grad.addColorStop(1, '#999');
-        ctx.fillStyle = grad; ctx.strokeStyle = this.color; ctx.lineWidth = 1.5;
-        ctx.shadowBlur = 8; ctx.shadowColor = this.color;
-        ctx.beginPath();
-        ctx.moveTo(90, 35); ctx.lineTo(90, -35); ctx.lineTo(-130, -55); ctx.lineTo(-130, 55);
-        ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.fillRect(-100, 55, 60, 45); ctx.fillRect(-100, -100, 60, 45);
-        ctx.strokeRect(-100, 55, 60, 45); ctx.strokeRect(-100, -100, 60, 45);
-        ctx.shadowBlur = 0;
-        // Pulsing launch bay lights (animated cyan)
-        const ct2 = this.game.lastTime * 0.006;
-        const bpulse = 0.4 + Math.abs(Math.sin(ct2)) * 0.6;
-        ctx.shadowBlur = 16; ctx.shadowColor = '#00f3ff';
-        ctx.fillStyle = `rgba(0,243,255,${bpulse})`;
-        for (let i = 0; i < 3; i++) {
-            ctx.fillRect(-80 + i * 25, 65, 10, 25);
-            ctx.fillRect(-80 + i * 25, -90, 10, 25);
+        // Void spine spikes
+        const spikeColor = `rgba(180,0,255,${pulse})`;
+        ctx.fillStyle = spikeColor; ctx.strokeStyle = spikeColor;
+        for (let i = 0; i < 4; i++) {
+            const sx = -20 - i * 14, sy = 0;
+            ctx.beginPath();
+            ctx.moveTo(sx, 0); ctx.lineTo(sx - 8, 18); ctx.lineTo(sx - 4, 0); ctx.lineTo(sx - 8, -18);
+            ctx.closePath(); ctx.fill();
         }
-        // Wing-tip glowing orbs (yellow-green)
-        const wt3 = this.game.lastTime * 0.005;
-        const wPulse3 = 0.6 + Math.abs(Math.sin(wt3)) * 0.4;
-        ctx.shadowBlur = 30; ctx.shadowColor = '#ffee00';
-        ctx.fillStyle = `rgba(255,230,0,${wPulse3})`;
-        ctx.beginPath(); ctx.arc(-130, 55, 7, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(-130, -55, 7, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = `rgba(255,200,0,${wPulse3 * 0.6})`;
-        ctx.beginPath(); ctx.arc(-100, 80, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(-100, -80, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowBlur = 0; ctx.globalAlpha = 1.0;
+
+        // Purple core orb
+        ctx.shadowBlur = 30; ctx.shadowColor = '#dd00ff';
+        const cg = ctx.createRadialGradient(10, 0, 4, 10, 0, 22);
+        cg.addColorStop(0, '#ffffff'); cg.addColorStop(0.4, '#cc00ff'); cg.addColorStop(1, 'rgba(80,0,150,0)');
+        ctx.fillStyle = cg;
+        ctx.beginPath(); ctx.arc(10, 0, 22, 0, Math.PI * 2); ctx.fill();
+
+        // Pulsing wing-tip orbs
+        ctx.fillStyle = `rgba(200,0,255,${pulse})`;
+        ctx.beginPath(); ctx.arc(-70, 100, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-70, -100, 8, 0, Math.PI * 2); ctx.fill();
+
+        // Cockpit eye
+        ctx.fillStyle = '#000'; ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.ellipse(35, 0, 14, 7, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#cc00ff'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = `rgba(180,0,255,${pulse})`;
+        ctx.beginPath(); ctx.ellipse(35, 0, 7, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  BOSS 1: MEGA DESTROYER — War Machine (Red/Black)
+    // ══════════════════════════════════════════════════════
+    drawModelMegaDestroyer(ctx) {
+        const t = this.game.lastTime * 0.001;
+        const pulse = 0.5 + Math.abs(Math.sin(t * 3)) * 0.5;
+
+        // Massive armored hull
+        const g = ctx.createLinearGradient(-130, 0, 100, 0);
+        g.addColorStop(0, '#110000'); g.addColorStop(0.5, '#cc2200'); g.addColorStop(1, '#ff5500');
+        ctx.fillStyle = g; ctx.strokeStyle = 'rgba(255,80,0,0.8)'; ctx.lineWidth = 2;
+        ctx.shadowBlur = 18; ctx.shadowColor = '#ff3300';
+
+        // Main body — wide dreadnought
+        ctx.beginPath();
+        ctx.moveTo(110, 0); ctx.lineTo(60, 30); ctx.lineTo(-60, 40);
+        ctx.lineTo(-130, 25); ctx.lineTo(-130, -25); ctx.lineTo(-60, -40); ctx.lineTo(60, -30);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        // Heavy top/bottom weapon pods
+        ctx.beginPath();
+        ctx.moveTo(40, 36); ctx.lineTo(-20, 85); ctx.lineTo(-70, 88); ctx.lineTo(-45, 38);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(40, -36); ctx.lineTo(-20, -85); ctx.lineTo(-70, -88); ctx.lineTo(-45, -38);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        // Secondary outer wings
+        ctx.beginPath();
+        ctx.moveTo(60, 30); ctx.lineTo(20, 60); ctx.lineTo(-30, 60); ctx.lineTo(0, 30);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(60, -30); ctx.lineTo(20, -60); ctx.lineTo(-30, -60); ctx.lineTo(0, -30);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        // Armor panels
+        ctx.fillStyle = 'rgba(255,100,0,0.12)'; ctx.fillRect(-50, -28, 90, 56);
+        ctx.strokeStyle = 'rgba(255,80,0,0.35)'; ctx.strokeRect(-50, -28, 90, 56);
+        ctx.fillStyle = 'rgba(255,255,255,0.07)';
+        ctx.beginPath(); ctx.moveTo(-70, 38); ctx.lineTo(-120, 75); ctx.lineTo(-90, 60); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-70, -38); ctx.lineTo(-120, -75); ctx.lineTo(-90, -60); ctx.closePath(); ctx.fill();
+
+        // Cannon muzzle lights
+        const ht = 0.4 + Math.abs(Math.sin(t * 4)) * 0.6;
+        ctx.shadowBlur = 28; ctx.shadowColor = '#ff3300';
+        ctx.fillStyle = `rgba(255,80,0,${ht})`;
+        ctx.beginPath(); ctx.arc(-126, 18, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-126, -18, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-68, 38, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-68, -38, 6, 0, Math.PI * 2); ctx.fill();
+
+        // Central red core
+        const rg = ctx.createRadialGradient(20, 0, 3, 20, 0, 20);
+        rg.addColorStop(0, '#ffffff'); rg.addColorStop(0.4, '#ff4400'); rg.addColorStop(1, 'rgba(150,0,0,0)');
+        ctx.fillStyle = rg;
+        ctx.beginPath(); ctx.arc(20, 0, 20, 0, Math.PI * 2); ctx.fill();
+
+        // Wing-tip orbs (orange)
+        ctx.fillStyle = `rgba(255,140,0,${pulse})`;
+        ctx.beginPath(); ctx.arc(-70, 88, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-70, -88, 7, 0, Math.PI * 2); ctx.fill();
+
+        // Cockpit
+        ctx.fillStyle = '#000'; ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.ellipse(50, 0, 18, 9, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#ff3300'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = `rgba(255,60,0,${pulse})`;
+        ctx.beginPath(); ctx.ellipse(50, 0, 9, 4.5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  BOSS 2: GRAVITY COLOSSUS — The Gravity Core (Blue)
+    // ══════════════════════════════════════════════════════
+    drawModelGravityColossus(ctx) {
+        const t = this.game.lastTime * 0.001;
+        const spin = t * 1.5;
+        const pulse = 0.5 + Math.abs(Math.sin(t * 2)) * 0.5;
+
+        // Outer ring arms (4 large mechanical arms)
+        ctx.strokeStyle = 'rgba(0,180,255,0.7)'; ctx.lineWidth = 3;
+        ctx.shadowBlur = 20; ctx.shadowColor = '#00aaff';
+        for (let i = 0; i < 4; i++) {
+            const a = spin + i * Math.PI / 2;
+            const ax = Math.cos(a) * 80, ay = Math.sin(a) * 80;
+            // Arm beam
+            ctx.strokeStyle = `rgba(0,160,255,0.6)`; ctx.lineWidth = 6;
+            ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(ax, ay); ctx.stroke();
+            // Arm tip platform
+            ctx.fillStyle = `rgba(0,200,255,${0.6 + Math.abs(Math.sin(t + i)) * 0.4})`;
+            ctx.strokeStyle = '#00eeff'; ctx.lineWidth = 2;
+            ctx.save(); ctx.translate(ax, ay); ctx.rotate(a + Math.PI / 4);
+            ctx.beginPath();
+            ctx.moveTo(-12, 0); ctx.lineTo(0, -12); ctx.lineTo(12, 0); ctx.lineTo(0, 12);
+            ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+        }
+
+        // Secondary orbital ring
+        ctx.strokeStyle = `rgba(0,220,255,${0.3 + Math.abs(Math.sin(t * 0.8)) * 0.3})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(0, 0, 95, 0, Math.PI * 2); ctx.stroke();
+
+        // Main circular body
+        const bg = ctx.createRadialGradient(0, 0, 5, 0, 0, 55);
+        bg.addColorStop(0, '#001133'); bg.addColorStop(0.5, '#0055aa'); bg.addColorStop(1, '#0088cc');
+        ctx.fillStyle = bg; ctx.strokeStyle = '#00aaff'; ctx.lineWidth = 3;
+        ctx.shadowBlur = 25; ctx.shadowColor = '#00ccff';
+        ctx.beginPath(); ctx.arc(0, 0, 55, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+        // Inner rotating ring
+        ctx.save(); ctx.rotate(-spin * 0.7);
+        ctx.strokeStyle = `rgba(0,240,255,0.8)`; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(0, 0, 38, 0, Math.PI * 2); ctx.stroke();
+        for (let i = 0; i < 8; i++) {
+            const a = (i / 8) * Math.PI * 2;
+            ctx.fillStyle = `rgba(0,200,255,0.7)`;
+            ctx.beginPath(); ctx.arc(Math.cos(a)*38, Math.sin(a)*38, 4, 0, Math.PI*2); ctx.fill();
+        }
+        ctx.restore();
+
+        // Gravity core — bright center
+        const cg = ctx.createRadialGradient(0, 0, 0, 0, 0, 22);
+        cg.addColorStop(0, '#ffffff'); cg.addColorStop(0.3, '#00eeff'); cg.addColorStop(1, 'rgba(0,80,180,0)');
+        ctx.fillStyle = cg;
+        ctx.shadowBlur = 40; ctx.shadowColor = '#00ffff';
+        ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI * 2); ctx.fill();
+
+        // Cockpit eye
+        ctx.fillStyle = '#000'; ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(0,240,255,${pulse})`;
+        ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  BOSS 3: NEBULA QUEEN — Cosmic Empress (Pink/Magenta)
+    // ══════════════════════════════════════════════════════
+    drawModelNebulaQueen(ctx) {
+        const t = this.game.lastTime * 0.001;
+        const pulse = 0.5 + Math.abs(Math.sin(t * 2.8)) * 0.5;
+        const wave = Math.sin(t * 3);
+
+        // Cosmic pink main hull
+        const g = ctx.createLinearGradient(-90, 0, 70, 0);
+        g.addColorStop(0, '#1a0020'); g.addColorStop(0.4, '#cc0066'); g.addColorStop(1, '#ff44aa');
+        ctx.fillStyle = g; ctx.strokeStyle = 'rgba(255,80,180,0.8)'; ctx.lineWidth = 2;
+        ctx.shadowBlur = 22; ctx.shadowColor = '#ff00aa';
+
+        // Empress body — sleek feminine silhouette
+        ctx.beginPath();
+        ctx.moveTo(75, 0); ctx.lineTo(35, 22); ctx.lineTo(-40, 30);
+        ctx.lineTo(-90, 18); ctx.lineTo(-90, -18); ctx.lineTo(-40, -30); ctx.lineTo(35, -22);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        // Flowing wing tendrils
+        ctx.beginPath();
+        ctx.moveTo(20, 24); ctx.quadraticCurveTo(-10, 70, -50, 110);
+        ctx.lineTo(-80, 108); ctx.quadraticCurveTo(-50, 65, -20, 24);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(20, -24); ctx.quadraticCurveTo(-10, -70, -50, -110);
+        ctx.lineTo(-80, -108); ctx.quadraticCurveTo(-50, -65, -20, -24);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        // Rear wing fans
+        ctx.beginPath();
+        ctx.moveTo(-20, 26); ctx.lineTo(-50, 60); ctx.lineTo(-80, 55); ctx.lineTo(-55, 26);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-20, -26); ctx.lineTo(-50, -60); ctx.lineTo(-80, -55); ctx.lineTo(-55, -26);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        // Orbiting energy spheres
+        for (let i = 0; i < 3; i++) {
+            const oa = t * 2.2 + i * (Math.PI * 2 / 3);
+            const ox = Math.cos(oa) * 42, oy = Math.sin(oa) * 42;
+            const sg = ctx.createRadialGradient(ox, oy, 1, ox, oy, 8);
+            sg.addColorStop(0, '#ffffff'); sg.addColorStop(0.5, '#ff44cc'); sg.addColorStop(1, 'rgba(200,0,120,0)');
+            ctx.fillStyle = sg;
+            ctx.shadowBlur = 16; ctx.shadowColor = '#ff00cc';
+            ctx.beginPath(); ctx.arc(ox, oy, 8, 0, Math.PI * 2); ctx.fill();
+        }
+
+        // Pink core
+        const pg = ctx.createRadialGradient(15, 0, 3, 15, 0, 20);
+        pg.addColorStop(0, '#ffffff'); pg.addColorStop(0.4, '#ff44cc'); pg.addColorStop(1, 'rgba(150,0,80,0)');
+        ctx.fillStyle = pg;
+        ctx.shadowBlur = 30; ctx.shadowColor = '#ff00cc';
+        ctx.beginPath(); ctx.arc(15, 0, 20, 0, Math.PI * 2); ctx.fill();
+
+        // Pulsing wing tips
+        ctx.fillStyle = `rgba(255,50,180,${pulse})`;
+        ctx.shadowBlur = 20; ctx.shadowColor = '#ff00cc';
+        ctx.beginPath(); ctx.arc(-50, 110, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-50, -110, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-80, 55, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-80, -55, 5, 0, Math.PI * 2); ctx.fill();
+
+        // Cockpit
+        ctx.fillStyle = '#000'; ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.ellipse(38, 0, 15, 8, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#ff44cc'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = `rgba(255,60,180,${pulse})`;
+        ctx.beginPath(); ctx.ellipse(38, 0, 8, 4, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  BOSS 4: APOCALYPSE DRAGON — The Final Threat (Orange/Fire)
+    // ══════════════════════════════════════════════════════
+    drawModelApocalypseDragon(ctx) {
+        const t = this.game.lastTime * 0.001;
+        const pulse = 0.5 + Math.abs(Math.sin(t * 4)) * 0.5;
+        const flicker = 0.6 + Math.abs(Math.sin(t * 9)) * 0.4;
+
+        // Massive fire-scorched hull
+        const g = ctx.createLinearGradient(-120, 0, 90, 0);
+        g.addColorStop(0, '#0f0500'); g.addColorStop(0.35, '#883300'); g.addColorStop(0.7, '#dd6600'); g.addColorStop(1, '#ff9922');
+        ctx.fillStyle = g; ctx.strokeStyle = 'rgba(255,120,0,0.8)'; ctx.lineWidth = 2;
+        ctx.shadowBlur = 25; ctx.shadowColor = '#ff6600';
+
+        // Dragon body — massive and asymmetric
+        ctx.beginPath();
+        ctx.moveTo(90, 0); ctx.lineTo(50, 30); ctx.lineTo(-30, 45);
+        ctx.lineTo(-100, 30); ctx.lineTo(-120, 0);
+        ctx.lineTo(-100, -30); ctx.lineTo(-30, -45); ctx.lineTo(50, -30);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        // Dragon wings — large jagged fire wings
+        ctx.beginPath();
+        ctx.moveTo(30, 38); ctx.lineTo(10, 75); ctx.lineTo(-20, 110);
+        ctx.lineTo(-60, 120); ctx.lineTo(-50, 90); ctx.lineTo(-90, 70);
+        ctx.lineTo(-70, 40); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(30, -38); ctx.lineTo(10, -75); ctx.lineTo(-20, -110);
+        ctx.lineTo(-60, -120); ctx.lineTo(-50, -90); ctx.lineTo(-90, -70);
+        ctx.lineTo(-70, -40); ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        // Tail whip sections
+        ctx.beginPath();
+        ctx.moveTo(-100, 20); ctx.lineTo(-135, 45); ctx.lineTo(-155, 35);
+        ctx.lineTo(-125, 12); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-100, -20); ctx.lineTo(-135, -45); ctx.lineTo(-155, -35);
+        ctx.lineTo(-125, -12); ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        // Fire effect on wings
+        for (let i = 0; i < 6; i++) {
+            const fx = -20 + i * 18, fy = 45 + Math.sin(t * 5 + i) * 8;
+            const fh = 15 + Math.abs(Math.sin(t * 7 + i)) * 12;
+            const fg = ctx.createLinearGradient(fx, fy, fx, fy - fh);
+            fg.addColorStop(0, `rgba(255,100,0,${flicker})`);
+            fg.addColorStop(0.5, `rgba(255,200,0,${flicker * 0.7})`);
+            fg.addColorStop(1, 'rgba(255,255,100,0)');
+            ctx.fillStyle = fg;
+            ctx.beginPath();
+            ctx.moveTo(fx - 6, fy); ctx.lineTo(fx, fy - fh); ctx.lineTo(fx + 6, fy);
+            ctx.closePath(); ctx.fill();
+            // mirrored
+            ctx.beginPath();
+            ctx.moveTo(fx - 6, -fy); ctx.lineTo(fx, -(fy - fh)); ctx.lineTo(fx + 6, -fy);
+            ctx.closePath(); ctx.fill();
+        }
+
+        // Dragon skull / head crest
+        ctx.fillStyle = 'rgba(255,150,0,0.3)'; ctx.fillRect(30, -32, 40, 64);
+        ctx.strokeStyle = 'rgba(255,120,0,0.4)'; ctx.strokeRect(30, -32, 40, 64);
+
+        // Dragon fire core
+        const dg = ctx.createRadialGradient(25, 0, 2, 25, 0, 25);
+        dg.addColorStop(0, '#ffffff'); dg.addColorStop(0.3, '#ffcc00'); dg.addColorStop(0.7, '#ff6600'); dg.addColorStop(1, 'rgba(150,30,0,0)');
+        ctx.fillStyle = dg;
+        ctx.shadowBlur = 40; ctx.shadowColor = '#ff6600';
+        ctx.beginPath(); ctx.arc(25, 0, 25, 0, Math.PI * 2); ctx.fill();
+
+        // Wing-tip fire orbs
+        ctx.fillStyle = `rgba(255,120,0,${pulse})`;
+        ctx.shadowBlur = 24; ctx.shadowColor = '#ff8800';
+        ctx.beginPath(); ctx.arc(-60, 120, 9, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-60, -120, 9, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-155, 35, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-155, -35, 6, 0, Math.PI * 2); ctx.fill();
+
+        // Dragon eye
+        ctx.fillStyle = '#000'; ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.ellipse(52, 0, 16, 9, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#ff8800'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = `rgba(255,150,0,${flicker})`;
+        ctx.beginPath(); ctx.ellipse(52, 0, 8, 4.5, 0, 0, Math.PI * 2); ctx.fill();
+        // Dragon skull mark
+        ctx.fillStyle = '#000'; ctx.shadowBlur = 0;
+        ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('☠', 52, 0);
+        ctx.shadowBlur = 0;
     }
 }

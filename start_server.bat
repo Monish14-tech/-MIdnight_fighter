@@ -33,7 +33,7 @@ echo [SUCCESS] Server is starting...
 echo ========================================
 echo.
 echo Server will start on: http://localhost:3000
-echo Game URL: http://localhost:3000/public/index.html
+echo Game URL: http://localhost:3000/index.html
 echo.
 echo Do NOT close this window while playing!
 echo.
@@ -47,7 +47,7 @@ set /a retry_count+=1
 echo [%date% %time%] Starting server (attempt !retry_count! of %max_retries%)...
 echo.
 
-npx vercel dev
+node server.js
 
 REM If vercel dev exits, check retry count
 if !retry_count! LSS %max_retries% (

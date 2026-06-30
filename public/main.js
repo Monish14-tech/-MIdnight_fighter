@@ -112,10 +112,22 @@ function showNamePrompt(game) {
             modal.style.display = 'none';
             return;
         }
-        game.updatePlayerNameDisplay();
+        if (typeof game.updatePlayerNameDisplay === 'function') {
+            game.updatePlayerNameDisplay();
+        } else {
+            const nameEl = document.getElementById('current-player-name');
+            if (nameEl) nameEl.innerText = name;
+            const hudNameEl = document.getElementById('p1-hud-name');
+            if (hudNameEl) hudNameEl.innerText = 'P1: ' + name;
+        }
 
         // Hide modal
         modal.style.display = 'none';
+
+        // Auto-start game for better UX
+        game.startRequested = true;
+        game.lastStartIntent = Date.now();
+        game.startGame();
     };
 
     // Submit on button click

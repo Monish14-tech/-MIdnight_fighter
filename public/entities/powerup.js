@@ -17,12 +17,12 @@ export class PowerUp {
 
         // Visual properties per type
         const TYPES = {
-            'speed': { color: '#00ff88', icon: '▶▶', label: 'SPEED BOOST' },
+            'speed': { color: '#00ff88', icon: 'S', label: 'SPEED BOOST' },
             'slowmo': { color: '#dd00ff', icon: '⏸', label: 'SLOW TIME' },
             'invulnerability': { color: '#ffdd00', icon: '★', label: 'INVINCIBLE' },
-            'health_recover': { color: '#ff3333', icon: '♥+', label: 'HEAL +2' },
-            'health_boost': { color: '#ff8800', icon: '♥↑', label: 'MAX HP UP' },
-            'shield': { color: '#00ccff', icon: '◉', label: 'SHIELD' },
+            'health_recover': { color: '#33ff33', icon: '+', label: 'HEAL +2' },
+            'health_boost': { color: '#ff8800', icon: '+HP', label: 'MAX HP UP' },
+            'shield': { color: '#00ccff', icon: 'S', label: 'SHIELD' },
             'double_damage': { color: '#ff0066', icon: '✕2', label: 'DOUBLE DMG' },
             'rapid_fire': { color: '#ffff00', icon: '≋', label: 'RAPID FIRE' },
             'nuke': { color: '#ff6600', icon: '☢', label: 'NUKE' },

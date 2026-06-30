@@ -96,8 +96,10 @@ export class Planet {
         ctx.fill();
 
         // Planet rings (50% chance)
+        // BUG FIX: was using .replace('0.3', '0.2') which was broken since
+        // color opacity was already changed to 0.15 — now uses fixed ring color
         if (this.size > 80 && Math.random() > 0.5) {
-            ctx.strokeStyle = this.color.replace('0.3', '0.2');
+            ctx.strokeStyle = this.color.replace(/[\d.]+\)$/, '0.08)');
             ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.ellipse(this.x, this.y, this.size * 1.5, this.size * 0.3, 0.3, 0, Math.PI * 2);
